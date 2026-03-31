@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from '@/components/ui/Button';
+import Balatro from '@/components/Balatro';
 
 interface HeroStat {
   value: string;
@@ -18,6 +19,18 @@ const Hero: React.FC = () => {
     <section className="hero min-h-screen flex flex-col pt-16" aria-labelledby="hero-heading">
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-8 py-20">
+        {/* Balatro background */}
+        <div className="absolute inset-0 pointer-events-none opacity-80" aria-hidden="true">
+          <Balatro
+            isRotate={false}
+            mouseInteraction
+            pixelFilter={2000}
+            color1="#DE443B"
+            color2="#006BB4"
+            color3="#162325"
+          />
+        </div>
+
         {/* Atmospheric glow */}
         <div className="glow-gold absolute inset-0 pointer-events-none" aria-hidden="true" />
 
