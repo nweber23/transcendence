@@ -170,7 +170,7 @@ const Blackjack: React.FC = () => {
                       max={balance}
                       value={currentBet}
                       onChange={(e) => setCurrentBet(Math.max(0, Math.min(parseInt(e.target.value) || 0, balance)))}
-                      className="flex-1 px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50"
+                      className="flex-1 px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-number-input-spinner]:hidden"
                       placeholder="0"
                     />
                     <button
