@@ -40,17 +40,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--base)] flex flex-col">
-      {/* Logo/Header */}
-      <header className="pt-8 px-8">
-        <div className="max-w-md mx-auto">
-          <p className="eyebrow mb-2">Transcendence</p>
-          <h1 className="font-serif text-3xl font-bold text-[var(--text)]">
-            Premium Casino
-          </h1>
-        </div>
-      </header>
-
+    <div className="h-screen bg-[var(--base)] flex flex-col">
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
