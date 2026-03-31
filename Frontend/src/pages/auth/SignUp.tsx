@@ -2,21 +2,26 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 
-interface LoginFormData {
+interface SignUpFormData {
+  username: string;
   email: string;
   password: string;
-  rememberMe: boolean;
+  confirmPassword: string;
+  agreeToTerms: boolean;
 }
 
-const Login: React.FC = () => {
-  const [formData, setFormData] = useState<LoginFormData>({
+const SignUp: React.FC = () => {
+  const [formData, setFormData] = useState<SignUpFormData>({
+    username: '',
     email: '',
     password: '',
-    rememberMe: false,
+    confirmPassword: '',
+    agreeToTerms: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -39,6 +44,14 @@ const Login: React.FC = () => {
     // Form validation logic would go here
   };
 
+  const isFormValid =
+    formData.username &&
+    formData.email &&
+    formData.password &&
+    formData.confirmPassword &&
+    formData.agreeToTerms &&
+    formData.password === formData.confirmPassword;
+
   return (
     <div className="min-h-screen bg-[var(--base)] flex flex-col">
       {/* Logo/Header */}
@@ -59,15 +72,38 @@ const Login: React.FC = () => {
             {/* Heading */}
             <div className="mb-8">
               <h2 className="font-serif text-2xl font-semibold text-[var(--text)] mb-2">
-                Welcome Back
+                Create Account
               </h2>
               <p className="text-sm text-[var(--text-2)]">
-                Sign in to your account to continue playing
+                Join the game and start playing in seconds
               </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5 mb-8">
+            <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+              {/* Username Field */}
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-[var(--text)] mb-2">
+                  Username
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  placeholder="your_username"
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                    errors.username
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
+                  }`}
+                />
+                {errors.username && (
+                  <p className="text-xs text-red-400 mt-2">{errors.username}</p>
+                )}
+              </div>
+
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-[var(--text)] mb-2">
@@ -105,50 +141,91 @@ const Login: React.FC = () => {
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="••••••••"
-                    className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
-                      errors.password
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
-                    }`}
-                  />
-                </div>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                    errors.password
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
+                  }`}
+                />
                 {errors.password && (
                   <p className="text-xs text-red-400 mt-2">{errors.password}</p>
                 )}
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {/* Confirm Password Field */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="confirmPassword" className="text-sm font-medium text-[var(--text)]">
+                    Confirm Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-xs text-[var(--gold)] hover:text-[var(--text)] transition-colors"
+                  >
+                    {showConfirmPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                    errors.confirmPassword
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
+                  }`}
+                />
+                {errors.confirmPassword && (
+                  <p className="text-xs text-red-400 mt-2">{errors.confirmPassword}</p>
+                )}
+                {formData.password &&
+                  formData.confirmPassword &&
+                  formData.password !== formData.confirmPassword && (
+                    <p className="text-xs text-red-400 mt-2">Passwords do not match</p>
+                  )}
+              </div>
+
+              {/* Terms & Conditions */}
+              <div className="pt-2">
+                <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    name="rememberMe"
-                    checked={formData.rememberMe}
+                    name="agreeToTerms"
+                    checked={formData.agreeToTerms}
                     onChange={handleInputChange}
-                    className="w-4 h-4 rounded border-[rgba(212,175,55,0.3)] bg-[var(--surface-2)] cursor-pointer accent-[var(--gold)]"
+                    className="w-4 h-4 rounded border-[rgba(212,175,55,0.3)] bg-[var(--surface-2)] cursor-pointer accent-[var(--gold)] mt-1 flex-shrink-0"
                   />
-                  <span className="text-sm text-[var(--text-2)]">Remember me</span>
+                  <span className="text-xs text-[var(--text-2)]">
+                    I agree to the{' '}
+                    <Link to="#" className="text-[var(--gold)] hover:underline">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="#" className="text-[var(--gold)] hover:underline">
+                      Privacy Policy
+                    </Link>
+                  </span>
                 </label>
-                <Link to="#" className="text-sm text-[var(--gold)] hover:text-[var(--text)] transition-colors">
-                  Forgot password?
-                </Link>
               </div>
 
               {/* Submit Button */}
               <Button
                 variant="gold"
                 className="w-full mt-6"
-                disabled={isLoading || !formData.email || !formData.password}
+                disabled={!isFormValid || isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
 
@@ -158,7 +235,7 @@ const Login: React.FC = () => {
                 <div className="w-full border-t border-[rgba(212,175,55,0.1)]" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-[var(--surface)] text-[var(--text-3)]">or continue with</span>
+                <span className="px-3 bg-[var(--surface)] text-[var(--text-3)]">or sign up with</span>
               </div>
             </div>
 
@@ -181,19 +258,19 @@ const Login: React.FC = () => {
                   </svg>
                 </div>
                 <div className="text-sm">
-                  <p className="font-medium text-[var(--text)] mb-1">Secure Login</p>
+                  <p className="font-medium text-[var(--text)] mb-1">Secure Signup</p>
                   <p className="text-xs text-[var(--text-2)]">
-                    Two-factor authentication available for extra security
+                    Your account is protected with encryption and optional two-factor authentication
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Sign Up Link */}
+            {/* Sign In Link */}
             <p className="text-center text-sm text-[var(--text-2)]">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-[var(--gold)] hover:text-[var(--text)] font-medium transition-colors">
-                Sign up
+              Already have an account?{' '}
+              <Link to="/login" className="text-[var(--gold)] hover:text-[var(--text)] font-medium transition-colors">
+                Sign in
               </Link>
             </p>
           </div>
@@ -245,9 +322,9 @@ const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
       className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.15)] bg-[var(--surface-2)] text-[var(--text)] font-medium text-sm hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-3)] transition-all duration-200 flex items-center justify-center gap-2"
     >
       {renderIcon()}
-      Continue with {provider}
+      Sign up with {provider}
     </button>
   );
 };
 
-export default Login;
+export default SignUp;

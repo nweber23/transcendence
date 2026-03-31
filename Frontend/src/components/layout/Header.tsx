@@ -55,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               Sign In
             </Button>
           </Link>
-          <Link to="/login">
+          <Link to="/signup">
             <Button variant="nav-primary" size="sm">
               Sign Up
             </Button>

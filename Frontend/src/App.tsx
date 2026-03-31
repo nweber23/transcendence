@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Landing from '@/pages/landing/Landing';
 import Login from '@/pages/auth/Login';
+import SignUp from '@/pages/auth/SignUp';
 import Blackjack from '@/pages/games/Blackjack';
 import '@/styles/globals.css';
 
@@ -15,6 +16,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
           <Route path="/games/blackjack" element={<Blackjack />} />
         </Routes>
         <Footer />

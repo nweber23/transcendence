@@ -20,7 +20,7 @@ const CTA: React.FC = () => {
           Create a free account and start playing in seconds. No deposit, no real money — just the game.
         </p>
 
-        <Link to="/login">
+        <Link to="/signup">
           <Button variant="gold" size="md" className="mb-5">
             Create Free Account
           </Button>
