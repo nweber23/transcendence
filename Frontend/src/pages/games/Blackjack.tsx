@@ -124,21 +124,65 @@ const Blackjack: React.FC = () => {
                 <label className="block text-sm font-semibold text-[var(--text-2)] mb-4">
                   Place Your Bet
                 </label>
-                <div className="flex gap-3 flex-wrap mb-6">
-                  {[10, 50, 100, 500].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setCurrentBet(amount)}
-                      className={`px-4 py-2 rounded border transition-all ${
-                        currentBet === amount
-                          ? 'border-[var(--gold)] bg-[rgba(212,175,55,0.1)] text-[var(--gold)]'
-                          : 'border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-[rgba(212,175,55,0.3)]'
-                      }`}
-                    >
-                      ${amount}
-                    </button>
-                  ))}
+
+                {/* Quick buttons - Positive */}
+                <div className="mb-4">
+                  <p className="text-xs text-[var(--text-3)] mb-2">Quick Add</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {[10, 50, 100, 500].map((amount) => (
+                      <button
+                        key={`add-${amount}`}
+                        onClick={() => setCurrentBet(prev => Math.min(prev + amount, balance))}
+                        className="px-4 py-2 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all"
+                      >
+                        +${amount}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Quick buttons - Negative */}
+                <div className="mb-6">
+                  <p className="text-xs text-[var(--text-3)] mb-2">Quick Remove</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {[10, 50, 100, 500].map((amount) => (
+                      <button
+                        key={`remove-${amount}`}
+                        onClick={() => setCurrentBet(prev => Math.max(prev - amount, 0))}
+                        className="px-4 py-2 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-red-500 hover:text-red-500 transition-all"
+                      >
+                        -${amount}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Manual bet input */}
+                <div className="mb-6">
+                  <label htmlFor="betInput" className="block text-xs text-[var(--text-3)] mb-2">
+                    Enter Amount
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      id="betInput"
+                      type="number"
+                      min="0"
+                      max={balance}
+                      value={currentBet}
+                      onChange={(e) => setCurrentBet(Math.max(0, Math.min(parseInt(e.target.value) || 0, balance)))}
+                      className="flex-1 px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50"
+                      placeholder="0"
+                    />
+                    <button
+                      onClick={() => setCurrentBet(0)}
+                      className="px-6 py-3 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all font-medium"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current bet display */}
                 <div className="bg-[var(--surface-2)] rounded p-4 mb-6">
                   <p className="text-xs text-[var(--text-3)] mb-2">Current Bet</p>
                   <p className="font-serif text-2xl text-[var(--gold)]">${currentBet}</p>
