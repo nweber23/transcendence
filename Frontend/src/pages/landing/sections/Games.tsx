@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
@@ -13,6 +14,7 @@ interface GameCardData {
     type: 'live' | 'ai' | 'new';
   };
   visual: string;
+  path: string;
 }
 
 const GAMES: GameCardData[] = [
@@ -23,6 +25,7 @@ const GAMES: GameCardData[] = [
     icon: BlackjackIcon,
     badge: { text: 'Live', type: 'live' },
     visual: 'bg-[#091a12]',
+    path: '/games/blackjack',
   },
   {
     id: 'poker',
@@ -32,6 +35,7 @@ const GAMES: GameCardData[] = [
     icon: PokerIcon,
     badge: { text: 'AI', type: 'ai' },
     visual: 'bg-[#08131e]',
+    path: '/games/poker',
   },
   {
     id: 'slots',
@@ -40,6 +44,7 @@ const GAMES: GameCardData[] = [
     icon: SlotsIcon,
     badge: { text: 'New', type: 'new' },
     visual: 'bg-[#140910]',
+    path: '/games/slots',
   },
 ];
 
@@ -49,31 +54,33 @@ const badgeStyles = {
   new: 'bg-[rgba(139,38,53,0.26)] text-[#E07A8A] border border-[rgba(139,38,53,0.48)]',
 };
 
-const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge, visual }) => {
+const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge, visual, path }) => {
   return (
-    <Card hoverable tabIndex={0} aria-label={`${name} — Play Now`} className="h-full flex flex-col">
-      {/* Visual area */}
-      <div className={`h-44 flex items-center justify-center relative overflow-hidden ${visual} flex-shrink-0`}>
-        <Icon width={120} height={100} />
-      </div>
+    <Link to={path}>
+      <Card hoverable tabIndex={0} aria-label={`${name} — Play Now`} className="h-full flex flex-col">
+        {/* Visual area */}
+        <div className={`h-44 flex items-center justify-center relative overflow-hidden ${visual} flex-shrink-0`}>
+          <Icon width={120} height={100} />
+        </div>
 
-      {/* Body */}
-      <div className="p-6 flex flex-col flex-1">
-        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.09em] px-2.5 py-1 rounded-full mb-3.5 ${badgeStyles[badge.type]}`}>
-          {badge.type === 'live' && (
-            <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
-          )}
-          {badge.text}
-        </span>
+        {/* Body */}
+        <div className="p-6 flex flex-col flex-1">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.09em] px-2.5 py-1 rounded-full mb-3.5 ${badgeStyles[badge.type]}`}>
+            {badge.type === 'live' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
+            )}
+            {badge.text}
+          </span>
 
-        <h3 className="font-serif text-2xl font-semibold leading-tight mb-2">{name}</h3>
-        <p className="text-base text-text-2 leading-relaxed mb-5.5 flex-1">{description}</p>
+          <h3 className="font-serif text-2xl font-semibold leading-tight mb-2">{name}</h3>
+          <p className="text-base text-text-2 leading-relaxed mb-5.5 flex-1">{description}</p>
 
-        <Button variant="ghost" size="sm" className="mt-auto">
-          Play Now
-        </Button>
-      </div>
-    </Card>
+          <Button variant="ghost" size="sm" className="mt-auto">
+            Play Now
+          </Button>
+        </div>
+      </Card>
+    </Link>
   );
 };
 

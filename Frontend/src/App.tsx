@@ -1,16 +1,25 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Landing from '@/pages/landing/Landing';
+import Login from '@/pages/auth/Login';
+import Blackjack from '@/pages/games/Blackjack';
 import '@/styles/globals.css';
 
 const App: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
-      <Header />
-      <Landing />
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
+        <Header />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/games/blackjack" element={<Blackjack />} />
+        </Routes>
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 };
 

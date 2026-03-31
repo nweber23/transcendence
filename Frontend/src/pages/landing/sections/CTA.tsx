@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 
 const CTA: React.FC = () => {
@@ -19,15 +20,17 @@ const CTA: React.FC = () => {
           Create a free account and start playing in seconds. No deposit, no real money — just the game.
         </p>
 
-        <Button variant="gold" size="md" className="mb-5">
-          Create Free Account
-        </Button>
+        <Link to="/login">
+          <Button variant="gold" size="md" className="mb-5">
+            Create Free Account
+          </Button>
+        </Link>
 
         <p className="text-sm text-[var(--text-3)] leading-relaxed">
           Already have an account?{' '}
-          <a href="#" className="text-[var(--gold)] underline underline-offset-[3px] hover:opacity-85 transition-opacity duration-200">
+          <Link to="/login" className="text-[var(--gold)] underline underline-offset-[3px] hover:opacity-85 transition-opacity duration-200">
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </section>
