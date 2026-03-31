@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS VARIABLES (DESIGN TOKENS) ─── */
+:root {
+  --base: #0f1419;
+  --surface: #131c24;
+  --surface-2: #192430;
+  --surface-3: #1e2d3c;
+
+  --gold: #d4af37;
+  --gold-rgb: 212, 175, 55;
+
+  --emerald: #2d7a63;
+  --red: #8b2635;
+
+  --text: #e8e0cc;
+  --text-2: #a2b0bc;
+  --text-3: #56687a;
+
+  --border: #1e2e3c;
+  --border-2: #253340;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--base)] text-[var(--text)] antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ─── UTILITY CLASSES ─── */
+@layer components {
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)] opacity-90;
+  }
+
+  .container-max {
+    @apply max-w-5xl mx-auto px-8;
+  }
+
+  /* Subtle atmospheric glow — not decorative */
+  .glow-gold {
+    background: radial-gradient(
+      ellipse 60% 55% at 50% 50%,
+      rgba(212, 175, 55, 0.07) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .glow-emerald {
+    background: radial-gradient(
+      ellipse 60% 55% at 50% 50%,
+      rgba(45, 122, 99, 0.13) 0%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Smooth transitions on all interactive elements */
+  button,
+  a {
+    @apply transition-all duration-200;
+  }
+
+  /* Better text rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
