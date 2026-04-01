@@ -138,73 +138,90 @@ export default function Balatro({
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
-    const renderer = new Renderer();
-    const gl = renderer.gl;
-    gl.clearColor(0, 0, 0, 1);
 
-    let program: Program;
+    try {
+      const renderer = new Renderer();
+      const gl = renderer.gl;
 
-    function resize() {
-      renderer.setSize(container.offsetWidth, container.offsetHeight);
-      if (program) {
-        program.uniforms.iResolution.value = [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height];
+      if (!gl) {
+        console.warn('WebGL context not available');
+        return;
       }
-    }
-    window.addEventListener('resize', resize);
-    resize();
 
-    const geometry = new Triangle(gl);
-    program = new Program(gl, {
-      vertex: vertexShader,
-      fragment: fragmentShader,
-      uniforms: {
-        iTime: { value: 0 },
-        iResolution: {
-          value: [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height]
-        },
-        uSpinRotation: { value: spinRotation },
-        uSpinSpeed: { value: spinSpeed },
-        uOffset: { value: offset },
-        uColor1: { value: hexToVec4(color1) },
-        uColor2: { value: hexToVec4(color2) },
-        uColor3: { value: hexToVec4(color3) },
-        uContrast: { value: contrast },
-        uLighting: { value: lighting },
-        uSpinAmount: { value: spinAmount },
-        uPixelFilter: { value: pixelFilter },
-        uSpinEase: { value: spinEase },
-        uIsRotate: { value: isRotate },
-        uMouse: { value: [0.5, 0.5] }
+      gl.clearColor(0, 0, 0, 1);
+
+      let program: Program;
+
+      function resize() {
+        renderer.setSize(container.offsetWidth, container.offsetHeight);
+        if (program) {
+          program.uniforms.iResolution.value = [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height];
+        }
       }
-    });
+      window.addEventListener('resize', resize);
+      resize();
 
-    const mesh = new Mesh(gl, { geometry, program });
-    let animationFrameId: number;
+      const geometry = new Triangle(gl);
+      program = new Program(gl, {
+        vertex: vertexShader,
+        fragment: fragmentShader,
+        uniforms: {
+          iTime: { value: 0 },
+          iResolution: {
+            value: [gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height]
+          },
+          uSpinRotation: { value: spinRotation },
+          uSpinSpeed: { value: spinSpeed },
+          uOffset: { value: offset },
+          uColor1: { value: hexToVec4(color1) },
+          uColor2: { value: hexToVec4(color2) },
+          uColor3: { value: hexToVec4(color3) },
+          uContrast: { value: contrast },
+          uLighting: { value: lighting },
+          uSpinAmount: { value: spinAmount },
+          uPixelFilter: { value: pixelFilter },
+          uSpinEase: { value: spinEase },
+          uIsRotate: { value: isRotate },
+          uMouse: { value: [0.5, 0.5] }
+        }
+      });
 
-    function update(time: number) {
+      const mesh = new Mesh(gl, { geometry, program });
+      let animationFrameId: number;
+
+      function update(time: number) {
+        animationFrameId = requestAnimationFrame(update);
+        program.uniforms.iTime.value = time * 0.001;
+        renderer.render({ scene: mesh });
+      }
       animationFrameId = requestAnimationFrame(update);
-      program.uniforms.iTime.value = time * 0.001;
-      renderer.render({ scene: mesh });
-    }
-    animationFrameId = requestAnimationFrame(update);
-    container.appendChild(gl.canvas);
+      container.appendChild(gl.canvas);
 
-    function handleMouseMove(e: MouseEvent) {
-      if (!mouseInteraction) return;
-      const rect = container.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = 1.0 - (e.clientY - rect.top) / rect.height;
-      program.uniforms.uMouse.value = [x, y];
-    }
-    container.addEventListener('mousemove', handleMouseMove);
+      function handleMouseMove(e: MouseEvent) {
+        if (!mouseInteraction) return;
+        const rect = container.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = 1.0 - (e.clientY - rect.top) / rect.height;
+        program.uniforms.uMouse.value = [x, y];
+      }
+      container.addEventListener('mousemove', handleMouseMove);
 
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', resize);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeChild(gl.canvas);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        window.removeEventListener('resize', resize);
+        container.removeEventListener('mousemove', handleMouseMove);
+        if (container.contains(gl.canvas)) {
+          container.removeChild(gl.canvas);
+        }
+        try {
+          gl.getExtension('WEBGL_lose_context')?.loseContext();
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      };
+    } catch (error) {
+      console.error('Failed to initialize WebGL renderer:', error);
+    }
   }, [
     spinRotation,
     spinSpeed,
@@ -221,5 +238,13 @@ export default function Balatro({
     mouseInteraction
   ]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full"
+      style={{
+        background: 'linear-gradient(135deg, rgba(222, 68, 59, 0.1) 0%, rgba(0, 107, 180, 0.1) 50%, rgba(22, 35, 37, 0.1) 100%)'
+      }}
+    />
+  );
 }
