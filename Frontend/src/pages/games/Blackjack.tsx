@@ -128,12 +128,12 @@ const Blackjack: React.FC = () => {
                 {/* Quick buttons - Positive */}
                 <div className="mb-4">
                   <p className="text-xs text-[var(--text-3)] mb-2">Quick Add</p>
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-3 flex-wrap items-center">
                     {[10, 50, 100, 500].map((amount) => (
                       <button
                         key={`add-${amount}`}
                         onClick={() => setCurrentBet(prev => Math.min(prev + amount, balance))}
-                        className="px-4 py-2 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all"
+                        className="px-4 py-3 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] text-sm font-medium hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all min-w-20"
                       >
                         +${amount}
                       </button>
@@ -144,12 +144,12 @@ const Blackjack: React.FC = () => {
                 {/* Quick buttons - Negative */}
                 <div className="mb-6">
                   <p className="text-xs text-[var(--text-3)] mb-2">Quick Remove</p>
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-3 flex-wrap items-center">
                     {[10, 50, 100, 500].map((amount) => (
                       <button
                         key={`remove-${amount}`}
                         onClick={() => setCurrentBet(prev => Math.max(prev - amount, 0))}
-                        className="px-4 py-2 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] hover:border-red-500 hover:text-red-500 transition-all"
+                        className="px-4 py-3 rounded border border-[rgba(212,175,55,0.1)] text-[var(--text-2)] text-sm font-medium hover:border-red-500 hover:text-red-500 transition-all min-w-20"
                       >
                         -${amount}
                       </button>
