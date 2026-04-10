@@ -53,9 +53,9 @@ const SignUp: React.FC = () => {
     formData.password === formData.confirmPassword;
 
   return (
-    <div className="h-screen bg-[var(--base)] flex flex-col">
+    <div className="min-h-screen bg-[var(--base)] flex flex-col">
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-8 py-12">
+      <main className="flex-1 flex items-center justify-center px-8 py-8 pt-20">
         <div className="w-full max-w-md">
           {/* Card Container */}
           <div className="border border-[rgba(212,175,55,0.15)] rounded-2xl bg-[var(--surface)] p-8 md:p-10 hover:border-[rgba(212,175,55,0.25)] transition-colors duration-300">
@@ -264,19 +264,19 @@ const SignUp: React.FC = () => {
               </Link>
             </p>
           </div>
-
-          {/* Footer Link */}
-          <div className="text-center mt-8">
-            <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
-              Terms of Service
-            </Link>
-            <span className="text-[var(--text-3)] mx-2">•</span>
-            <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
-              Privacy Policy
-            </Link>
-          </div>
         </div>
       </main>
+
+      {/* Footer Link */}
+      <footer className="text-center py-6 px-8">
+        <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+          Terms of Service
+        </Link>
+        <span className="text-[var(--text-3)] mx-2">•</span>
+        <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+          Privacy Policy
+        </Link>
+      </footer>
 
       {/* Decorative Glow */}
       <div className="glow-gold fixed -top-1/2 -right-1/4 w-96 h-96 pointer-events-none -z-10" />
