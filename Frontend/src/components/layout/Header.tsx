@@ -10,9 +10,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const location = useLocation();
   const isHome = location.pathname === '/';
 
-  const navLinks = [
-    { label: 'Games', href: '/#games', id: 'games' },
-  ];
+  const navLinks: { label: string; href: string; id: string }[] = [];
 
   const handleNavClick = (id: string) => {
     onScroll?.(id);
