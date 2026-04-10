@@ -188,13 +188,13 @@ const SignUp: React.FC = () => {
 
               {/* Terms & Conditions */}
               <div className="pt-2">
-                <label className="flex items-start gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     name="agreeToTerms"
                     checked={formData.agreeToTerms}
                     onChange={handleInputChange}
-                    className="w-4 h-4 rounded border-[rgba(212,175,55,0.3)] bg-[var(--surface-2)] cursor-pointer accent-[var(--gold)] mt-1 flex-shrink-0"
+                    className="w-4 h-4 rounded border-[rgba(212,175,55,0.3)] bg-[var(--surface-2)] cursor-pointer accent-[var(--gold)] flex-shrink-0"
                   />
                   <span className="text-xs text-[var(--text-2)]">
                     I agree to the{' '}
