@@ -1,30 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
-import ShapeGrid from '@/components/ui/ShapeGrid';
-
-// Design system colors for ShapeGrid
-const BORDER_COLOR = '#1e2e3c';
-const HOVER_FILL_COLOR = 'rgba(30, 46, 60, 0.3)';
 
 const CTA: React.FC = () => {
   return (
-    <section className="py-40 px-8 relative overflow-hidden">
-      {/* ShapeGrid Background Layer */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <ShapeGrid
-          direction="diagonal"
-          speed={0.4}
-          squareSize={30}
-          borderColor={BORDER_COLOR}
-          hoverFillColor={HOVER_FILL_COLOR}
-          shape="square"
-          hoverTrailAmount={4}
-        />
-      </div>
-
+    <section className="py-40 px-8 relative">
       {/* Atmospheric glow */}
-      <div className="glow-emerald absolute inset-0 z-1 pointer-events-none" aria-hidden="true" />
+      <div className="glow-emerald absolute inset-0 pointer-events-none" aria-hidden="true" />
 
       {/* Content */}
       <div className="relative z-10 max-w-2xl mx-auto text-center">

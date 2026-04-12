@@ -2,12 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import ShapeGrid from '@/components/ui/ShapeGrid';
 import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
-
-// Design system colors for ShapeGrid
-const BORDER_COLOR = '#1e2e3c';
-const HOVER_FILL_COLOR = 'rgba(30, 46, 60, 0.3)';
 
 interface GameCardData {
   id: string;
@@ -91,22 +86,8 @@ const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge
 
 const Games: React.FC = () => {
   return (
-    <section id="games" className="py-24 px-8 relative" aria-labelledby="games-heading">
-      {/* ShapeGrid Background Layer */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <ShapeGrid
-          direction="diagonal"
-          speed={0.4}
-          squareSize={30}
-          borderColor={BORDER_COLOR}
-          hoverFillColor={HOVER_FILL_COLOR}
-          shape="square"
-          hoverTrailAmount={4}
-        />
-      </div>
-
-      {/* Content Layer */}
-      <div className="max-w-5xl mx-auto relative z-10">
+    <section id="games" className="py-24 px-8" aria-labelledby="games-heading">
+      <div className="max-w-5xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-14">
           <p className="eyebrow mb-3.5">Featured Games</p>
