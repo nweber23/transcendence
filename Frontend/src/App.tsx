@@ -7,6 +7,7 @@ import Login from '@/pages/auth/Login';
 import SignUp from '@/pages/auth/SignUp';
 import Blackjack from '@/pages/games/Blackjack';
 import Poker from '@/pages/games/Poker';
+import SlotMachine from '@/pages/games/SlotMachine';
 import '@/styles/globals.css';
 
 const App: React.FC = () => {
@@ -20,6 +21,7 @@ const App: React.FC = () => {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/games/blackjack" element={<Blackjack />} />
           <Route path="/games/poker" element={<Poker />} />
+          <Route path="/games/slots" element={<SlotMachine />} />
         </Routes>
         <Footer />
       </div>
