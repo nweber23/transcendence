@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Footer: React.FC = () => {
-  const footerLinks = ['Privacy', 'Terms', 'Support'];
+  const footerLinks = ['Privacy', 'Terms'];
 
   return (
     <footer className="bg-[var(--surface)] border-t border-[var(--border)] px-8 py-8" role="contentinfo">
@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
         </span>
 
         <p className="text-sm text-[var(--text-3)] text-center md:text-left">
-          A university project. All currency is fictional and has no real-world value.
+          All currency is fictional and has no real-world value.
         </p>
 
         <ul className="flex gap-6 list-none md:flex-none">

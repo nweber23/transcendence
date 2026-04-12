@@ -95,7 +95,7 @@ const Games: React.FC = () => {
             Choose Your Game
           </h2>
           <p className="text-base text-text max-w-sm mx-auto leading-relaxed">
-            Three classic casino experiences, each with multiplayer and AI support.
+            Three classic casino experiences.
           </p>
         </div>
 
