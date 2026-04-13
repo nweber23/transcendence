@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Landing from '@/pages/landing/Landing';
@@ -10,21 +10,31 @@ import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
 import '@/styles/globals.css';
 
+// Inner component so useLocation can access the router context
+const AppLayout: React.FC = () => {
+  const { pathname } = useLocation();
+  const isGamePage = pathname.startsWith('/games/');
+
+  return (
+    <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
+      <Header />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/games/blackjack" element={<Blackjack />} />
+        <Route path="/games/poker" element={<Poker />} />
+        <Route path="/games/slots" element={<SlotMachine />} />
+      </Routes>
+      {!isGamePage && <Footer />}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
-        <Header />
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/games/blackjack" element={<Blackjack />} />
-          <Route path="/games/poker" element={<Poker />} />
-          <Route path="/games/slots" element={<SlotMachine />} />
-        </Routes>
-        <Footer />
-      </div>
+      <AppLayout />
     </BrowserRouter>
   );
 };

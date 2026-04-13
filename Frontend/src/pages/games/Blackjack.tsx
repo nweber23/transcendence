@@ -34,7 +34,7 @@ const Blackjack: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden bg-[var(--base)]">
+    <div className="mt-16 flex flex-col h-[calc(100dvh-4rem)] overflow-hidden bg-[var(--base)]">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="shrink-0 bg-[var(--surface)] border-b border-[rgba(212,175,55,0.1)] px-6 h-14 flex items-center justify-between">
@@ -46,10 +46,7 @@ const Blackjack: React.FC = () => {
           ← Back
         </button>
         <h1 className="font-serif text-xl font-semibold">Blackjack</h1>
-        <div className="text-right">
-          <p className="text-[10px] text-[var(--text-3)] uppercase tracking-widest leading-none mb-0.5">Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)] leading-none">${balance.toLocaleString()}</p>
-        </div>
+        <div className="w-16" />
       </header>
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
