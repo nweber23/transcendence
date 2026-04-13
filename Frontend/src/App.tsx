@@ -13,7 +13,7 @@ import '@/styles/globals.css';
 // Inner component so useLocation can access the router context
 const AppLayout: React.FC = () => {
   const { pathname } = useLocation();
-  const isGamePage = pathname.startsWith('/games/');
+  const showFooter = pathname === '/';
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
@@ -26,7 +26,7 @@ const AppLayout: React.FC = () => {
         <Route path="/games/poker" element={<Poker />} />
         <Route path="/games/slots" element={<SlotMachine />} />
       </Routes>
-      {!isGamePage && <Footer />}
+      {showFooter && <Footer />}
     </div>
   );
 };
