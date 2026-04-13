@@ -54,15 +54,15 @@ const SignUp: React.FC = () => {
     formData.password === formData.confirmPassword;
 
   return (
-    <div className="min-h-screen bg-[var(--base)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Beams background */}
-      <div className="fixed inset-0 -z-10" aria-hidden="true">
+      <div className="fixed inset-0 z-0" aria-hidden="true">
         <Beams
           beamWidth={2.5}
           beamHeight={28}
           beamNumber={18}
           lightColor="#d4af37"
-          speed={1.4}
+          speed={1.9}
           noiseIntensity={1.6}
           scale={0.18}
           rotation={25}
@@ -72,7 +72,7 @@ const SignUp: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-8 py-8 pt-20">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-8 py-8 pt-20">
         <div className="w-full max-w-md">
           {/* Card Container */}
           <div className="border border-[rgba(212,175,55,0.15)] rounded-2xl bg-[var(--surface)] p-8 md:p-10 hover:border-[rgba(212,175,55,0.25)] transition-colors duration-300">
@@ -285,7 +285,7 @@ const SignUp: React.FC = () => {
       </main>
 
       {/* Footer Link */}
-      <footer className="text-center py-6 px-8">
+      <footer className="relative z-10 text-center py-6 px-8">
         <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
           Terms of Service
         </Link>
