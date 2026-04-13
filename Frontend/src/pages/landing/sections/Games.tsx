@@ -59,13 +59,13 @@ const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge
     <Link to={path}>
       <Card hoverable tabIndex={0} aria-label={`${name} — Play Now`} className="h-full flex flex-col">
         {/* Visual area */}
-        <div className={`h-44 flex items-center justify-center relative overflow-hidden ${visual} flex-shrink-0`}>
-          <Icon width={120} height={100} />
+        <div className={`h-56 flex items-center justify-center relative overflow-hidden ${visual} flex-shrink-0`}>
+          <Icon width={160} height={130} />
         </div>
 
         {/* Body */}
-        <div className="p-6 flex flex-col flex-1">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.09em] px-2.5 py-1 rounded-full mb-3.5 ${badgeStyles[badge.type]}`}>
+        <div className="p-7 flex flex-col flex-1">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.09em] px-2.5 py-1 rounded-full mb-4 ${badgeStyles[badge.type]}`}>
             {badge.type === 'live' && (
               <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
             )}
@@ -100,7 +100,7 @@ const Games: React.FC = () => {
         </div>
 
         {/* Games grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto" role="list">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="list">
           {GAMES.map((game) => (
             <div key={game.id} role="listitem">
               <GameCard {...game} />
