@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Balatro from '@/components/Balatro';
 
@@ -34,6 +35,13 @@ const Hero: React.FC = () => {
         {/* Atmospheric glow */}
         <div className="glow-gold absolute inset-0 pointer-events-none" aria-hidden="true" />
 
+        {/* Bottom fade — clean cutoff into the next section */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, transparent, var(--base))' }}
+          aria-hidden="true"
+        />
+
         {/* Content */}
         <div className="relative z-10 max-w-2xl mx-auto text-center">
           <p className="eyebrow mb-5">Premium Casino Platform</p>
@@ -54,12 +62,12 @@ const Hero: React.FC = () => {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button variant="gold" size="md">
-              Play for Free
-            </Button>
-            <Button variant="gold" size="md">
-              Explore Games
-            </Button>
+            <Link to="/login">
+              <Button variant="gold" size="md">Play for Free</Button>
+            </Link>
+            <a href="#games">
+              <Button variant="gold" size="md">Explore Games</Button>
+            </a>
           </div>
         </div>
       </div>

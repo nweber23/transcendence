@@ -12,7 +12,7 @@ const Landing: React.FC = () => {
     <main className="w-full">
       <Hero />
       {/* Unified Games + CTA section with shared background */}
-      <div className="relative">
+      <div className="relative bg-[var(--base)]">
         {/* ShapeGrid Background Layer */}
         <div className="absolute inset-0 z-0">
           <ShapeGrid
