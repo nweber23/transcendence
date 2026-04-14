@@ -1,7 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
-  const footerLinks = ['Privacy', 'Terms'];
+  const footerLinks = [
+    { label: 'Privacy', href: '/privacy' },
+    { label: 'Terms', href: '/terms' },
+  ];
 
   return (
     <footer className="bg-[var(--surface)] border-t border-[var(--border)] px-8 py-8" role="contentinfo">
@@ -16,13 +20,13 @@ const Footer: React.FC = () => {
 
         <ul className="flex gap-6 list-none md:flex-none">
           {footerLinks.map((link) => (
-            <li key={link}>
-              <a
-                href="#"
+            <li key={link.label}>
+              <Link
+                to={link.href}
                 className="text-sm text-[var(--text-3)] transition-colors duration-150 hover:text-[var(--text-2)]"
               >
-                {link}
-              </a>
+                {link.label}
+              </Link>
             </li>
           ))}
         </ul>
