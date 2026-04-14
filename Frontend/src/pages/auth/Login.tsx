@@ -209,11 +209,11 @@ const Login: React.FC = () => {
 
       {/* Footer Link */}
       <footer className="relative z-10 text-center py-6 px-8">
-        <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+        <Link to="/terms" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
           Terms of Service
         </Link>
         <span className="text-[var(--text-3)] mx-2">•</span>
-        <Link to="#" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+        <Link to="/privacy" className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
           Privacy Policy
         </Link>
       </footer>
