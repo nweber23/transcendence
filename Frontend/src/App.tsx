@@ -10,6 +10,9 @@ import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
 import Privacy from '@/pages/legal/Privacy';
 import Terms from '@/pages/legal/Terms';
+import { NotFound } from '@/pages/errors/NotFound';
+import { AccessDenied } from '@/pages/errors/AccessDenied';
+import { ServerError } from '@/pages/errors/ServerError';
 import '@/styles/globals.css';
 
 // Inner component so useLocation can access the router context
@@ -29,6 +32,9 @@ const AppLayout: React.FC = () => {
         <Route path="/games/slots" element={<SlotMachine />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/403" element={<AccessDenied />} />
+        <Route path="/500" element={<ServerError />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       {showFooter && <Footer />}
     </div>
