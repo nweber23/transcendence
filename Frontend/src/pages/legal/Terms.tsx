@@ -31,7 +31,7 @@ const Terms: React.FC = () => {
           {/* Introduction */}
           <section className="space-y-4">
             <p className="text-[var(--text-2)]">
-              Welcome to Transcendence. By accessing and using this platform, you agree to comply with these Terms of Service. If you do not agree with any part of these terms, please do not use our service.
+              Welcome to ft_casino. By accessing and using this platform, you agree to comply with these Terms of Service. If you do not agree with any part of these terms, please do not use our service.
             </p>
           </section>
 
@@ -51,7 +51,7 @@ const Terms: React.FC = () => {
               User Conduct
             </h2>
             <p className="text-[var(--text-3)] mb-3">
-              When using Transcendence, you agree not to:
+              When using ft_casino, you agree not to:
             </p>
             <ul className="space-y-2 text-[var(--text-3)]">
               <li className="flex gap-3">
@@ -79,7 +79,7 @@ const Terms: React.FC = () => {
               Fictional Currency
             </h2>
             <p className="text-[var(--text-3)]">
-              All currency on Transcendence is fictional and has no real-world value. You cannot exchange, withdraw, or convert in-game currency into actual money. Your account balance is for entertainment purposes only.
+              All currency on ft_casino is fictional and has no real-world value. You cannot exchange, withdraw, or convert in-game currency into actual money. Your account balance is for entertainment purposes only.
             </p>
           </section>
 
@@ -89,7 +89,7 @@ const Terms: React.FC = () => {
               Intellectual Property
             </h2>
             <p className="text-[var(--text-3)]">
-              All content, graphics, and functionality on Transcendence are owned by us or our licensors. You may not reproduce, distribute, or modify any content without express permission.
+              All content, graphics, and functionality on ft_casino are owned by us or our licensors. You may not reproduce, distribute, or modify any content without express permission.
             </p>
           </section>
 
@@ -99,7 +99,7 @@ const Terms: React.FC = () => {
               Limitation of Liability
             </h2>
             <p className="text-[var(--text-3)]">
-              Transcendence is provided "as is" without warranties of any kind. We are not liable for any indirect or consequential damages arising from your use of the platform.
+              ft_casino is provided "as is" without warranties of any kind. We are not liable for any indirect or consequential damages arising from your use of the platform.
             </p>
           </section>
 
@@ -119,14 +119,14 @@ const Terms: React.FC = () => {
               Changes to Terms
             </h2>
             <p className="text-[var(--text-3)]">
-              We may update these Terms of Service at any time. Continued use of Transcendence following such changes constitutes your acceptance of the updated terms.
+              We may update these Terms of Service at any time. Continued use of ft_casino following such changes constitutes your acceptance of the updated terms.
             </p>
           </section>
 
           {/* Disclaimer */}
           <div className="mt-12 pt-8 border-t border-[var(--border)]">
             <p className="text-xs text-[var(--text-3)]">
-              All currency and transactions on Transcendence are fictional and have no real-world value.
+              All currency and transactions on ft_casino are fictional and have no real-world value.
             </p>
           </div>
         </div>

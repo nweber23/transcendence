@@ -27,9 +27,9 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         <Link
           to="/"
           className="font-serif text-lg font-semibold tracking-widest text-[var(--gold)] hover:text-[var(--text)] transition-colors"
-          aria-label="Transcendence home"
+          aria-label="ft_casino home"
         >
-          TRANSCENDENCE
+          FT_CASINO
         </Link>
 
         {/* Nav links */}

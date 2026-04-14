@@ -1,7 +1,7 @@
 {
-  "name": "transcendence-frontend",
+  "name": "ft_casino-frontend",
   "version": "1.0.0",
-  "description": "Transcendence Casino Platform - Frontend",
+  "description": "ft_casino Casino Platform - Frontend",
   "type": "module",
   "scripts": {
     "dev": "vite",

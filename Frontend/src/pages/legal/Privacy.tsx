@@ -31,7 +31,7 @@ const Privacy: React.FC = () => {
           {/* Introduction */}
           <section className="space-y-4">
             <p className="text-[var(--text-2)]">
-              At Transcendence, we respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform.
+              At ft_casino, we respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform.
             </p>
           </section>
 
@@ -126,7 +126,7 @@ const Privacy: React.FC = () => {
           {/* Disclaimer */}
           <div className="mt-12 pt-8 border-t border-[var(--border)]">
             <p className="text-xs text-[var(--text-3)]">
-              All currency and transactions on Transcendence are fictional and have no real-world value.
+              All currency and transactions on ft_casino are fictional and have no real-world value.
             </p>
           </div>
         </div>

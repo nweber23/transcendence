@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
     <footer className="bg-[var(--surface)] border-t border-[var(--border)] px-8 py-8" role="contentinfo">
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 md:gap-6">
         <span className="font-serif text-base font-semibold tracking-widest text-gold">
-          TRANSCENDENCE
+          FT_CASINO
         </span>
 
         <p className="text-sm text-[var(--text-3)] text-center md:text-left">
