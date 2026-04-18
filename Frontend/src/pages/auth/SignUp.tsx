@@ -100,7 +100,7 @@ const SignUp: React.FC = () => {
                   value={formData.username}
                   onChange={handleInputChange}
                   placeholder="your_username"
-                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
                     errors.username
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
@@ -123,7 +123,7 @@ const SignUp: React.FC = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="you@example.com"
-                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
                     errors.email
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
@@ -155,7 +155,7 @@ const SignUp: React.FC = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
                     errors.password
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
@@ -187,7 +187,7 @@ const SignUp: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border transition-colors text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
+                  className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
                     errors.confirmPassword
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
