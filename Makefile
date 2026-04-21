@@ -3,15 +3,15 @@
 help:
 	@echo "Transcendence Docker Commands"
 	@echo "=============================="
-	@echo "make up          - Start all services"
-	@echo "make down        - Stop all services"
-	@echo "make rebuild     - Rebuild images and start services"
-	@echo "make build       - Build Docker images without starting"
-	@echo "make logs        - View logs from all services"
+	@echo "make up            - Start all services"
+	@echo "make down          - Stop all services"
+	@echo "make rebuild       - Rebuild images and start services"
+	@echo "make build         - Build Docker images without starting"
+	@echo "make logs          - View logs from all services"
 	@echo "make logs-frontend - View logs from frontend only"
-	@echo "make ps          - Show running containers"
-	@echo "make clean       - Remove containers and images"
-	@echo "make help        - Show this help message"
+	@echo "make ps            - Show running containers"
+	@echo "make clean         - Remove containers and images"
+	@echo "make help          - Show this help message"
 
 up:
 	docker compose up -d
