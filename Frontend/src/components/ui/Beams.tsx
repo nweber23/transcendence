@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useEffect, useRef, useMemo, FC, ReactNode } from 'react';
+import { forwardRef, useImperativeHandle, useEffect, useRef, useMemo, useState, Component, FC, ReactNode } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
@@ -138,6 +138,21 @@ float cnoise(vec3 P){
 }
 `;
 
+class BeamsErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() { return this.state.hasError ? null : this.props.children; }
+}
+
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 export interface BeamsProps {
   beamWidth?: number;
   beamHeight?: number;
@@ -149,7 +164,7 @@ export interface BeamsProps {
   rotation?: number;
 }
 
-const Beams: FC<BeamsProps> = ({
+const BeamsInner: FC<BeamsProps> = ({
   beamWidth = 2,
   beamHeight = 15,
   beamNumber = 12,
@@ -317,6 +332,22 @@ const DirLight: FC<{ position: [number, number, number]; color: string }> = ({ p
     dir.current.shadow.bias = -0.004;
   }, []);
   return <directionalLight ref={dir} color={color} intensity={1} position={position} />;
+};
+
+const Beams: FC<BeamsProps> = (props) => {
+  const [webglOk, setWebglOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setWebglOk(isWebGLAvailable());
+  }, []);
+
+  if (!webglOk) return null;
+
+  return (
+    <BeamsErrorBoundary>
+      <BeamsInner {...props} />
+    </BeamsErrorBoundary>
+  );
 };
 
 export default Beams;
