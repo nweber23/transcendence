@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { motion, easeOut } from 'framer-motion'
 import Button from '@/components/ui/Button'
+import CasinoBackground from '@/components/ui/CasinoBackground'
 import Beams from '@/components/ui/Beams'
 
 const containerVariants = {
@@ -34,7 +35,8 @@ export function ServerError() {
 
   return (
     <div className="min-h-screen bg-base relative overflow-hidden flex items-center justify-center">
-      <div className="absolute inset-0 pointer-events-none">
+      <CasinoBackground />
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
         <Beams
           beamWidth={2.5}
           beamHeight={28}

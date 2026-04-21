@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
+import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
 
 interface LoginFormData {
@@ -42,8 +43,8 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Beams background */}
-      <div className="fixed inset-0 z-0" aria-hidden="true">
+      <CasinoBackground />
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 1 }} aria-hidden="true">
         <Beams
           beamWidth={2.5}
           beamHeight={28}
@@ -54,8 +55,7 @@ const Login: React.FC = () => {
           scale={0.18}
           rotation={25}
         />
-        {/* Dark overlay so the form stays readable */}
-        <div className="absolute inset-0 bg-[rgba(10,14,18,0.72)]" />
+        <div className="absolute inset-0 bg-[rgba(10,14,18,0.55)]" />
       </div>
 
       {/* Main Content */}
