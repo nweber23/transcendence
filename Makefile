@@ -36,8 +36,7 @@ ps:
 	docker compose ps
 
 clean:
-	docker compose down -v
-	docker compose rmi
+	docker compose down -v --rmi all
 
 frontend-shell:
 	docker compose exec frontend sh
