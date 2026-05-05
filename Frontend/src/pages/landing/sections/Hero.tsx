@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Balatro from '@/components/Balatro';
+import { useCountUp } from '@/hooks/useCountUp';
 
 interface HeroStat {
   value: string;
@@ -16,6 +17,31 @@ const STATS: HeroStat[] = [
 ];
 
 const Hero: React.FC = () => {
+  const statsRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1, rootMargin: '-50px' }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const gameCount = useCountUp(3, 1200, isVisible);
+  const tableCount = useCountUp(100, 1400, isVisible);
+  const aiCount = useCountUp(5, 1300, isVisible);
+
   return (
     <section className="hero min-h-screen flex flex-col pt-16" aria-labelledby="hero-heading">
       {/* Main content */}
@@ -44,24 +70,25 @@ const Hero: React.FC = () => {
 
         {/* Content */}
         <div className="relative z-10 max-w-2xl mx-auto text-center">
-          <p className="eyebrow mb-5">Premium Casino Platform</p>
+          <p className="eyebrow mb-5 fade-in-up" style={{ animationDelay: '0ms' }}>Premium Casino Platform</p>
 
           <h1
             id="hero-heading"
-            className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight mb-6"
+            className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight mb-6 fade-in-up"
+            style={{ animationDelay: '100ms' }}
           >
             Where Strategy
             <br />
             Meets <em className="italic text-[var(--gold)]">Fortune</em>
           </h1>
 
-          <p className="text-lg text-text max-w-lg mx-auto mb-8 leading-relaxed">
+          <p className="text-lg text-text max-w-lg mx-auto mb-8 leading-relaxed fade-in-up" style={{ animationDelay: '200ms' }}>
             Experience sophisticated casino gaming — blackjack, poker, and slots. Compete against AI or
             challenge real players in live, real-time tables.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 fade-in-up" style={{ animationDelay: '300ms' }}>
             <Link to="/login">
               <Button variant="gold" size="md">Play for Free</Button>
             </Link>
@@ -73,18 +100,40 @@ const Hero: React.FC = () => {
       </div>
 
       {/* Stats strip */}
-      <div className="border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)]">
+      <div className="border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)]" ref={statsRef}>
         <div className="grid grid-cols-2 md:grid-cols-4 max-w-5xl mx-auto divide-x divide-[rgba(212,175,55,0.08)]">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="px-4 py-6 text-center">
-              <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
-                {stat.value}
-              </span>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
-                {stat.label}
-              </p>
-            </div>
-          ))}
+          <div className="px-4 py-6 text-center">
+            <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
+              {gameCount}+
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
+              Casino Games
+            </p>
+          </div>
+          <div className="px-4 py-6 text-center">
+            <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
+              Live
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
+              Real-time Tables
+            </p>
+          </div>
+          <div className="px-4 py-6 text-center">
+            <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
+              {aiCount}
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
+              Smart Opponents
+            </p>
+          </div>
+          <div className="px-4 py-6 text-center">
+            <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
+              Free
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
+              No Real Money
+            </p>
+          </div>
         </div>
       </div>
     </section>

@@ -10,9 +10,13 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const location = useLocation();
   const isHome = location.pathname === '/';
 
-  const navLinks: { label: string; href: string; id: string }[] = [];
+  const navLinks: { label: string; href: string; id: string }[] = [
+    { label: 'Games', href: '#games', id: 'games' },
+  ];
+  const [activeNav, setActiveNav] = React.useState<string>('');
 
   const handleNavClick = (id: string) => {
+    setActiveNav(id);
     onScroll?.(id);
     if (isHome) {
       const element = document.getElementById(id);
@@ -38,7 +42,11 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
             <li key={link.label}>
               <button
                 onClick={() => handleNavClick(link.id)}
-                className="text-sm font-medium text-[var(--text-2)] px-3 py-1.5 rounded nav-link-transition active:scale-97 active:bg-[rgba(255,255,255,0.12)] hover:text-[var(--text)] hover:bg-[rgba(255,255,255,0.04)]"
+                className={`text-sm font-medium px-3 py-1.5 rounded nav-link-transition nav-indicator active:scale-97 ${
+                  activeNav === link.id
+                    ? 'text-[var(--text)] active'
+                    : 'text-[var(--text-2)] hover:text-[var(--text)]'
+                } hover:bg-[rgba(255,255,255,0.04)]`}
               >
                 {link.label}
               </button>

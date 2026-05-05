@@ -57,7 +57,16 @@
   input:focus,
   textarea:focus,
   select:focus {
-    transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background-color 150ms var(--ease-out);
+    transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background-color 150ms var(--ease-out), background-image 150ms var(--ease-out);
+  }
+
+  /* Enhanced input focus feedback with glow effect */
+  input:focus {
+    background-image: linear-gradient(
+      to bottom,
+      rgba(212, 175, 55, 0.02),
+      transparent
+    );
   }
 }
 
@@ -107,7 +116,23 @@
 
   /* Gold button transition */
   .btn-gold-transition {
-    transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+    transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), box-shadow 160ms var(--ease-out), filter 160ms var(--ease-out);
+  }
+
+  /* Premium gold button hover with glow */
+  @media (hover: hover) and (pointer: fine) {
+    .btn-gold-transition:hover {
+      filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
+    }
+  }
+
+  /* Asymmetric press/release timing for CTAs */
+  .btn-gold-transition:active {
+    transition: transform 300ms ease-in, opacity 150ms var(--ease-out), box-shadow 300ms ease-in, filter 300ms ease-in;
+  }
+
+  .btn-gold-transition:not(:active) {
+    transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), box-shadow 160ms var(--ease-out), filter 160ms var(--ease-out);
   }
 
   /* Outline button transition */
@@ -135,9 +160,51 @@
     transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms ease;
   }
 
+  /* Enhanced card hover with premium feel */
+  @media (hover: hover) and (pointer: fine) {
+    .card-transition:hover {
+      border-color: rgba(212, 175, 55, 0.6);
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 12px 48px rgba(212, 175, 55, 0.2);
+    }
+
+    /* Badge pops on card hover */
+    .card-transition:hover span[class*="badge"],
+    .card-transition:hover [role="img"] {
+      transform: scale(1.05);
+    }
+
+    /* Button becomes prominent on card hover */
+    .card-transition:hover button {
+      opacity: 1;
+      transform: scale(1.02);
+    }
+  }
+
   /* Nav link transition */
   .nav-link-transition {
     transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+
+  /* Nav indicator with clip-path reveal */
+  .nav-indicator {
+    position: relative;
+  }
+
+  .nav-indicator::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gold);
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 200ms var(--ease-out);
+  }
+
+  .nav-indicator.active::after {
+    clip-path: inset(0 0 0 0);
   }
 
   /* Input focus transition */
@@ -193,6 +260,88 @@
 
 .casino-glow-secondary {
   animation: casino-drift-secondary 24s ease-in-out infinite;
+}
+
+/* ─── ENTRANCE ANIMATIONS ─── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 600ms var(--ease-out) forwards;
+}
+
+.fade-in {
+  animation: fadeIn 600ms var(--ease-out) forwards;
+}
+
+/* ─── MODAL ANIMATIONS ─── */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Modal dialog with smooth entrance */
+[role="dialog"] {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* ─── SPINNER ANIMATIONS ─── */
+@keyframes spin-fast {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.animate-spin-fast {
+  animation: spin-fast 0.6s linear infinite;
 }
 
 /* ─── SCROLLBAR ─── */

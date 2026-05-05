@@ -90,19 +90,19 @@ const Games: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-14">
-          <p className="eyebrow mb-3.5">Featured Games</p>
-          <h2 id="games-heading" className="font-serif text-4xl md:text-5xl font-semibold leading-tight mb-3.5">
+          <p className="eyebrow mb-3.5 fade-in-up" style={{ animationDelay: '0ms' }}>Featured Games</p>
+          <h2 id="games-heading" className="font-serif text-4xl md:text-5xl font-semibold leading-tight mb-3.5 fade-in-up" style={{ animationDelay: '100ms' }}>
             Choose Your Game
           </h2>
-          <p className="text-base text-text max-w-sm mx-auto leading-relaxed">
+          <p className="text-base text-text max-w-sm mx-auto leading-relaxed fade-in-up" style={{ animationDelay: '200ms' }}>
             Three classic casino experiences.
           </p>
         </div>
 
         {/* Games grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="list">
-          {GAMES.map((game) => (
-            <div key={game.id} role="listitem">
+          {GAMES.map((game, index) => (
+            <div key={game.id} role="listitem" className="fade-in-up" style={{ animationDelay: `${300 + index * 50}ms` }}>
               <GameCard {...game} />
             </div>
           ))}
