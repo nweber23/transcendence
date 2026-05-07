@@ -1,1 +1,1 @@
-See [Agents.MD](./Agents.MD) for agent configurations and workflows
+See [AGENTS.MD](./AGENTS.MD) for agent configurations and workflows
