@@ -35,6 +35,27 @@ Use the Playwright MCP to verify changes that affect the frontend or have indire
 
 ---
 
+## Git Branching Strategy
+
+All feature development must follow a structured branching workflow to ensure code quality and stability.
+
+### Branching Rules:
+1. **Create issue first**: Create a GitHub issue for each new feature before starting development
+2. **Feature branches from issues**: Create a feature branch for each issue (GitHub allows creating branches directly from issues)
+3. **Branch naming**: Use descriptive names following the pattern `feature/feature-name` or `fix/bug-name`
+4. **Merge to dev first**: Submit a pull request to merge your feature branch into the `dev` branch for testing
+5. **Test on dev**: Allow testing and verification on the dev branch before merging to main
+6. **Merge to main**: Only merge to main after testing is complete and the PR is approved
+7. **No direct commits to main**: Never commit directly to main—all changes must go through feature branches and dev
+8. **Auto-delete enabled**: Repository is configured to automatically delete feature branches after merge—no manual cleanup needed
+
+### Workflow:
+```
+feature/your-feature → dev (test) → main (production)
+```
+
+---
+
 ## Database Schema & Migrations
 
 **Important**: The database schema is documented in [DB.md](./DB.md). This is the single source of truth.
