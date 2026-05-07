@@ -1,6 +1,6 @@
 # Database Design - PostgreSQL
 
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-05-07
 
 > **IMPORTANT:** Any database schema changes, table additions, column modifications, or indexing updates must be reflected in this document. This is the single source of truth for the database structure. Update this file before or alongside any migration.
 
