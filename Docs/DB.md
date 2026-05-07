@@ -508,17 +508,3 @@ VALUES (1, -100); -- Should fail
 - Index effectiveness: Monitor missing index suggestions
 - Connection pool saturation: Alert if > 80% of connections in use
 
----
-
-## Backup & Disaster Recovery
-
-### Backup Strategy
-- **Frequency**: Continuous WAL archiving + daily full backups
-- **Retention**: 30-day rolling backups
-- **Location**: Geographically separate storage (S3, etc.)
-- **Testing**: Monthly restore drills from backup
-
-### Recovery Procedures
-- RTO (Recovery Time Objective): < 1 hour
-- RPO (Recovery Point Objective): < 5 minutes
-- Point-in-time restore capability via WAL archiving
