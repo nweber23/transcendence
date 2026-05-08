@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: transcendence-postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: transcendence-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+
+  engine:
+    image: transcendence-engine:latest
+    container_name: transcendence-engine
+    ports:
+      - "9090:9090"
+    expose:
+      - "9090"
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: transcendence
