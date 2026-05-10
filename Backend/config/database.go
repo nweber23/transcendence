@@ -10,7 +10,7 @@ import (
 )
 
 // InitDB initializes PostgreSQL database connection and runs migrations
-func initDB(cfg *Config) (*gorm.DB, error) {
+func InitDB(cfg *Config) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL()), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
