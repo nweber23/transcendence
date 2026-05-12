@@ -1,0 +1,37 @@
+package middleware
+
+import (
+	"strings"
+
+	"transcendence/utils"
+
+	"github.com/gin-gonic/gin"
+)
+
+// AuthMiddleware validates JWT token from Authorization header
+func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			utils.RespondError(c, 401, "unauthorized", "missing authorization header")
+			c.Abort()
+			return
+		}
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			utils.RespondError(c, 401, "unauthorized", "invalid authorization header")
+			c.Abort()
+			return
+		}
+		tokenString := parts[1]
+		claims, err := utils.ValidateToken(tokenString, jwtSecret)
+		if err != nil {
+			utils.RespondError(c, 401, "unauthorized", "invalid or expired token")
+			c.Abort()
+			return
+		}
+		// Store user ID in context for handlers to use
+		c.Set("user_id", claims.UserID)
+		c.Next()
+	}
+}

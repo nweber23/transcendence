@@ -1,4 +1,38 @@
 services:
+  postgres:
+    image: postgres:18
+    container_name: transcendence-postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transcendence-network
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: transcendence-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ./.env
+    ports:
+      - "8080:8080"
+    networks:
+      - transcendence-network
+
   frontend:
     build:
       context: ./Frontend
@@ -11,6 +45,9 @@ services:
     restart: unless-stopped
     networks:
       - transcendence-network
+
+volumes:
+  postgres_data:
 
 networks:
   transcendence-network:
