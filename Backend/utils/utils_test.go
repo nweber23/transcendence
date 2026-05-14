@@ -57,7 +57,7 @@ func TestPasswords(testInterface *testing.T) {
 	passwords := []string {
 		"password",
 		"12345",
-		""
+		"",
 	}
 	const size int = len(passwords)
 	var index int
