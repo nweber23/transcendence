@@ -9,13 +9,14 @@ COPY . .
 
 RUN go build -o backend main.go
 
-FROM alpine:latest
+#FROM golang:1.26-alpine
 
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-COPY --from=builder /app/backend .
+#COPY /app/backend .
+RUN cp /app/backend .
 
 EXPOSE 8080
 
