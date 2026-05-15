@@ -18,22 +18,15 @@ export interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('auth_token');
+  });
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('auth_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('auth_user');
-    if (savedToken) {
-      setToken(savedToken);
-    }
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
