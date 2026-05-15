@@ -2,9 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import Landing from '@/pages/landing/Landing';
 import Login from '@/pages/auth/Login';
 import SignUp from '@/pages/auth/SignUp';
+import Account from '@/pages/Account';
 import Blackjack from '@/pages/games/Blackjack';
 import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
@@ -19,17 +21,47 @@ import '@/styles/globals.css';
 const AppLayout: React.FC = () => {
   const { pathname } = useLocation();
   const showFooter = pathname === '/';
+  const hideHeader = pathname === '/login' || pathname === '/signup';
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
-      <Header />
+      {!hideHeader && <Header />}
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/games/blackjack" element={<Blackjack />} />
-        <Route path="/games/poker" element={<Poker />} />
-        <Route path="/games/slots" element={<SlotMachine />} />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/games/blackjack"
+          element={
+            <ProtectedRoute>
+              <Blackjack />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/games/poker"
+          element={
+            <ProtectedRoute>
+              <Poker />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/games/slots"
+          element={
+            <ProtectedRoute>
+              <SlotMachine />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/403" element={<AccessDenied />} />
