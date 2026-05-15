@@ -38,6 +38,7 @@ export function useAuth(): UseAuthReturn {
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     setError(null);
+    const controller = new AbortController();
     try {
       const response = await apiCall<{ token: string; user_id: number }>(
         'POST',
@@ -47,15 +48,25 @@ export function useAuth(): UseAuthReturn {
       localStorage.setItem('auth_token', response.token);
       setToken(response.token);
       // Fetch user profile after login
-      const profile = await apiCall<User>('GET', '/user/profile');
-      localStorage.setItem('auth_user', JSON.stringify(profile));
-      setUser(profile);
+      try {
+        const profile = await apiCall<User>('GET', '/user/profile');
+        localStorage.setItem('auth_user', JSON.stringify(profile));
+        setUser(profile);
+      } catch (profileErr) {
+        // If profile fetch fails, clear the token and error out
+        localStorage.removeItem('auth_token');
+        setToken(null);
+        const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);
+      controller.abort();
     }
   };
 
@@ -66,6 +77,7 @@ export function useAuth(): UseAuthReturn {
   ) => {
     setIsLoading(true);
     setError(null);
+    const controller = new AbortController();
     try {
       const response = await apiCall<{ token: string; user_id: number }>(
         'POST',
@@ -75,15 +87,25 @@ export function useAuth(): UseAuthReturn {
       localStorage.setItem('auth_token', response.token);
       setToken(response.token);
       // Fetch user profile after registration
-      const profile = await apiCall<User>('GET', '/user/profile');
-      localStorage.setItem('auth_user', JSON.stringify(profile));
-      setUser(profile);
+      try {
+        const profile = await apiCall<User>('GET', '/user/profile');
+        localStorage.setItem('auth_user', JSON.stringify(profile));
+        setUser(profile);
+      } catch (profileErr) {
+        // If profile fetch fails, clear the token and error out
+        localStorage.removeItem('auth_token');
+        setToken(null);
+        const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);
+      controller.abort();
     }
   };
 
