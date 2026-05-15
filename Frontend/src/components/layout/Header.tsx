@@ -65,12 +65,19 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         {/* Action buttons */}
         <div className="flex items-center gap-2">
           {token ? (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-[var(--gold)] hover:text-[var(--text)] transition-colors"
-            >
-              Logout
-            </button>
+            <>
+              <Link to="/account">
+                <Button variant="nav-ghost" size="sm">
+                  Account
+                </Button>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-[var(--gold)] hover:text-[var(--text)] transition-colors"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <Link to="/login">

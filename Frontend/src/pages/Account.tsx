@@ -60,7 +60,7 @@ const Account: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--base)] text-[var(--text)] py-12 px-4">
+    <div className="min-h-screen bg-[var(--base)] text-[var(--text)] pt-24 pb-12 px-4">
       <CasinoBackground />
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Header */}
