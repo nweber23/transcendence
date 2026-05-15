@@ -38,7 +38,6 @@ export function useAuth(): UseAuthReturn {
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     setError(null);
-    const controller = new AbortController();
     try {
       const response = await apiCall<{ token: string; user_id: number }>(
         'POST',
@@ -66,7 +65,6 @@ export function useAuth(): UseAuthReturn {
       throw err;
     } finally {
       setIsLoading(false);
-      controller.abort();
     }
   };
 
@@ -77,7 +75,6 @@ export function useAuth(): UseAuthReturn {
   ) => {
     setIsLoading(true);
     setError(null);
-    const controller = new AbortController();
     try {
       const response = await apiCall<{ token: string; user_id: number }>(
         'POST',
@@ -105,7 +102,6 @@ export function useAuth(): UseAuthReturn {
       throw err;
     } finally {
       setIsLoading(false);
-      controller.abort();
     }
   };
 
