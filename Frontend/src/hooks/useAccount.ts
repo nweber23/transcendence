@@ -40,8 +40,9 @@ export function useAccount(autoFetch = true): UseAccountReturn {
       const result = await apiCall<Account>('GET', '/user/account');
       setAccount(result);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account data';
       setError(errorMessage);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -57,8 +58,9 @@ export function useAccount(autoFetch = true): UseAccountReturn {
       );
       setTransactions(result.transactions);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch transactions';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch transaction history';
       setError(errorMessage);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -101,8 +103,9 @@ export function useAccount(autoFetch = true): UseAccountReturn {
   // Auto-fetch on mount if token exists and autoFetch is true
   useEffect(() => {
     if (autoFetch && localStorage.getItem('auth_token')) {
-      getAccount();
-      getTransactions();
+      Promise.all([getAccount(), getTransactions()]).catch(() => {
+        // Silently fail auto-fetch on mount
+      });
     }
   }, [autoFetch, getAccount, getTransactions]);
 
