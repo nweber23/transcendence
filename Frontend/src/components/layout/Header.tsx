@@ -1,6 +1,7 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
   onScroll?: (section: string) => void;
@@ -8,6 +9,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { token, logout } = useAuth();
   const isHome = location.pathname === '/';
 
   const navLinks: { label: string; href: string; id: string }[] = [
@@ -22,6 +25,11 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
       const element = document.getElementById(id);
       element?.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -56,16 +64,27 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
-          <Link to="/login">
-            <Button variant="nav-ghost" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/signup">
-            <Button variant="nav-primary" size="sm">
-              Sign Up
-            </Button>
-          </Link>
+          {token ? (
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm font-medium text-[var(--gold)] hover:text-[var(--text)] transition-colors"
+            >
+              Logout
+            </button>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="nav-ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button variant="nav-primary" size="sm">
+                  Sign Up
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>
