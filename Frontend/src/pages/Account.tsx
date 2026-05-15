@@ -100,10 +100,10 @@ const Account: React.FC = () => {
               <span className="text-[var(--gold)] font-semibold">{user?.username}</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="gold" className="px-8 py-3 text-base">
+              <Button variant="gold" className="px-8 py-3 text-base btn-gold-transition">
                 View Activity
               </Button>
-              <Button variant="gold" className="px-8 py-3 text-base">
+              <Button variant="gold" className="px-8 py-3 text-base btn-gold-transition">
                 Settings
               </Button>
             </div>
@@ -117,7 +117,7 @@ const Account: React.FC = () => {
                 ref={balanceRef}
                 className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(212,175,55,0.4)] relative"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
                   <p className="text-xs uppercase tracking-widest text-[var(--text-2)] mb-4 font-semibold">Current Balance</p>
                   <p className="text-3xl md:text-5xl font-bold text-[var(--gold)] font-serif mb-4 break-words overflow-hidden" style={{ fontSize: 'clamp(1.875rem, 8vw, 3rem)' }}>
@@ -186,12 +186,12 @@ const Account: React.FC = () => {
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder="Enter amount"
-                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 transition-all duration-300"
+                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 focus:scale-105 transition-all duration-300"
                   />
                 </div>
                 <Button
                   variant="gold"
-                  className="w-full py-4 text-base font-semibold btn-gold-transition"
+                  className="w-full py-4 text-base font-semibold btn-gold-transition disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={depositLoading || !depositAmount}
                 >
                   {depositLoading ? 'Processing...' : 'Deposit Now'}
@@ -214,12 +214,12 @@ const Account: React.FC = () => {
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="Enter amount"
-                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 transition-all duration-300"
+                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 focus:scale-105 transition-all duration-300"
                   />
                 </div>
                 <Button
                   variant="gold"
-                  className="w-full py-4 text-base font-semibold btn-gold-transition"
+                  className="w-full py-4 text-base font-semibold btn-gold-transition disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={withdrawLoading || !withdrawAmount}
                 >
                   {withdrawLoading ? 'Processing...' : 'Withdraw Now'}
@@ -244,7 +244,7 @@ const Account: React.FC = () => {
                 {transactions.map((tx, idx) => (
                   <div
                     key={tx.id}
-                    className="group card-transition overflow-hidden rounded-xl border border-[rgba(212,175,55,0.1)] bg-[var(--surface)] backdrop-blur-sm hover:border-[rgba(212,175,55,0.3)] cursor-pointer transition-all duration-300"
+                    className="group card-transition overflow-hidden rounded-xl border border-[rgba(212,175,55,0.1)] bg-[var(--surface)] backdrop-blur-sm hover:border-[rgba(212,175,55,0.3)] cursor-pointer transition-all duration-300 fade-in-up"
                     style={{ animationDelay: `${idx * 50}ms` }}
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
                   >
@@ -285,7 +285,7 @@ const Account: React.FC = () => {
 
                       {/* Expanded Details */}
                       {expandedTx === tx.id && (
-                        <div className="mt-6 pt-6 border-t border-[rgba(212,175,55,0.1)] space-y-3 animate-in fade-in slide-in-from-top-2">
+                        <div className="mt-6 pt-6 border-t border-[rgba(212,175,55,0.1)] space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                           <div className="flex justify-between text-sm">
                             <span className="text-[var(--text-2)]">Transaction ID</span>
                             <span className="text-[var(--text)] font-mono text-xs">#{tx.id}</span>
