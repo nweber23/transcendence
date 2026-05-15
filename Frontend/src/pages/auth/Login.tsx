@@ -44,6 +44,14 @@ const Login: React.FC = () => {
         return newErrors;
       });
     }
+    // Also clear submit error when user modifies form
+    if (errors.submit) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.submit;
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,10 +69,9 @@ const Login: React.FC = () => {
     try {
       await login(formData.username, formData.password);
       navigate('/account');
-    } catch {
-      if (authError) {
-        setErrors({ submit: authError });
-      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setErrors({ submit: errorMessage });
     }
   };
 
@@ -140,6 +147,8 @@ const Login: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={`${showPassword ? 'Hide' : 'Show'} password`}
+                    aria-pressed={showPassword}
                     className="text-xs text-[var(--gold)] hover:text-[var(--text)] transition-colors"
                   >
                     {showPassword ? 'Hide' : 'Show'}
