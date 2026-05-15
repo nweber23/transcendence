@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/hooks/useAccount';
 import Button from '@/components/ui/Button';
+import CasinoBackground from '@/components/ui/CasinoBackground';
 
 const Account: React.FC = () => {
   const { user } = useAuth();
@@ -60,7 +61,8 @@ const Account: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+      <CasinoBackground />
+      <div className="relative z-10 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-12">
           <h1 className="font-serif text-4xl font-semibold text-[var(--text)] mb-2">
