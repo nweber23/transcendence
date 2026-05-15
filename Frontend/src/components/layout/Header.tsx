@@ -20,10 +20,12 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
   const handleNavClick = (id: string) => {
     setActiveNav(id);
-    onScroll?.(id);
     if (isHome) {
+      onScroll?.(id);
       const element = document.getElementById(id);
       element?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/');
     }
   };
 
@@ -44,23 +46,25 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           FT_CASINO
         </Link>
 
-        {/* Nav links */}
-        <ul className="hidden md:flex items-center gap-1 list-none">
-          {navLinks.map((link) => (
-            <li key={link.label}>
-              <button
-                onClick={() => handleNavClick(link.id)}
-                className={`text-sm font-medium px-3 py-1.5 rounded nav-link-transition nav-indicator active:scale-97 ${
-                  activeNav === link.id
-                    ? 'text-[var(--text)] active'
-                    : 'text-[var(--text-2)] hover:text-[var(--text)]'
-                } hover:bg-[rgba(255,255,255,0.04)]`}
-              >
-                {link.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {/* Nav links - only show on home */}
+        {isHome && (
+          <ul className="hidden md:flex items-center gap-1 list-none">
+            {navLinks.map((link) => (
+              <li key={link.label}>
+                <button
+                  onClick={() => handleNavClick(link.id)}
+                  className={`text-sm font-medium px-3 py-1.5 rounded nav-link-transition nav-indicator active:scale-97 ${
+                    activeNav === link.id
+                      ? 'text-[var(--text)] active'
+                      : 'text-[var(--text-2)] hover:text-[var(--text)]'
+                  } hover:bg-[rgba(255,255,255,0.04)]`}
+                >
+                  {link.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
