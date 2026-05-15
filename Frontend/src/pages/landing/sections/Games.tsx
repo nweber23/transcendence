@@ -102,7 +102,7 @@ const Games: React.FC = () => {
         {/* Games grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="list">
           {GAMES.map((game, index) => (
-            <div key={game.id} role="listitem" className="fade-in-up" style={{ animationDelay: `${300 + index * 50}ms` }}>
+            <div key={game.id} role="listitem" className="fade-in-up" style={{ animationDelay: `${300 + index * 100}ms` }}>
               <GameCard {...game} />
             </div>
           ))}

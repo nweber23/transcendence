@@ -110,7 +110,7 @@ const Login: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5 mb-8">
               {errors.submit && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 animate-[fadeIn_300ms_ease-out_forwards]">
                   {errors.submit}
                 </div>
               )}
@@ -134,7 +134,7 @@ const Login: React.FC = () => {
                   }`}
                 />
                 {errors.username && (
-                  <p className="text-xs text-red-400 mt-2">{errors.username}</p>
+                  <p className="text-xs text-red-400 mt-2 animate-[fadeIn_300ms_ease-out_forwards]">{errors.username}</p>
                 )}
               </div>
 

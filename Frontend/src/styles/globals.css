@@ -128,7 +128,7 @@
 
   /* Asymmetric press/release timing for CTAs */
   .btn-gold-transition:active {
-    transition: transform 300ms ease-in, opacity 150ms var(--ease-out), box-shadow 300ms ease-in, filter 300ms ease-in;
+    transition: transform 160ms var(--ease-out), opacity 150ms var(--ease-out), box-shadow 160ms var(--ease-out), filter 160ms var(--ease-out);
   }
 
   .btn-gold-transition:not(:active) {
@@ -200,7 +200,7 @@
     height: 2px;
     background: var(--gold);
     clip-path: inset(0 100% 0 0);
-    transition: clip-path 200ms var(--ease-out);
+    transition: clip-path 150ms var(--ease-out);
   }
 
   .nav-indicator.active::after {
@@ -284,11 +284,11 @@
 }
 
 .fade-in-up {
-  animation: fadeInUp 600ms var(--ease-out) forwards;
+  animation: fadeInUp 400ms var(--ease-out) forwards;
 }
 
 .fade-in {
-  animation: fadeIn 600ms var(--ease-out) forwards;
+  animation: fadeIn 400ms var(--ease-out) forwards;
 }
 
 /* ─── MODAL ANIMATIONS ─── */
@@ -321,6 +321,18 @@
   @starting-style {
     opacity: 0;
     transform: scale(0.95);
+  }
+}
+
+/* ─── TOAST ANIMATIONS ─── */
+[role="alert"] {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(100%);
   }
 }
 

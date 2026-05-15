@@ -75,12 +75,13 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                   Account
                 </Button>
               </Link>
-              <button
+              <Button
+                variant="nav-ghost"
+                size="sm"
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-[var(--gold)] hover:text-[var(--text)] transition-colors"
               >
                 Logout
-              </button>
+              </Button>
             </>
           ) : (
             <>
