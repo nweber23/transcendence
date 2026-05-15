@@ -34,5 +34,10 @@ export async function apiCall<T>(
   }
 
   const result: ApiResponse<T> = await response.json();
+
+  if (!result || typeof result !== 'object' || !('data' in result)) {
+    throw new Error('Invalid API response format');
+  }
+
   return result.data;
 }
