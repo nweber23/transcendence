@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
@@ -9,29 +10,36 @@ interface SignUpFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  agreeToTerms: boolean;
 }
 
 const SignUp: React.FC = () => {
+  const navigate = useNavigate();
+  const { register, isLoading, error: authError, token } = useAuth();
   const [formData, setFormData] = useState<SignUpFormData>({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    agreeToTerms: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      navigate('/account');
+    }
+  }, [token, navigate]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
-    // Clear error when user starts typing
+    // Clear errors when user starts typing
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -39,20 +47,40 @@ const SignUp: React.FC = () => {
         return newErrors;
       });
     }
+    if (errors.submit) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.submit;
+        return newErrors;
+      });
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form validation logic would go here
-  };
+    const newErrors: Record<string, string> = {};
 
-  const isFormValid =
-    formData.username &&
-    formData.email &&
-    formData.password &&
-    formData.confirmPassword &&
-    formData.agreeToTerms &&
-    formData.password === formData.confirmPassword;
+    if (!formData.username) newErrors.username = 'Username is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    if (formData.password.length < 8)
+      newErrors.password = 'Password must be at least 8 characters';
+    if (formData.password !== formData.confirmPassword)
+      newErrors.confirmPassword = 'Passwords do not match';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      await register(formData.username, formData.email, formData.password);
+      navigate('/account');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setErrors({ submit: errorMessage });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -82,12 +110,18 @@ const SignUp: React.FC = () => {
                 Create Account
               </h2>
               <p className="text-sm text-[var(--text-2)]">
-                Join the game and start playing in seconds
+                Sign up to start playing at Transcendence Casino
               </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+            <form onSubmit={handleSubmit} className="space-y-5 mb-8">
+              {errors.submit && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 animate-[fadeIn_300ms_ease-out_forwards]">
+                  {errors.submit}
+                </div>
+              )}
+
               {/* Username Field */}
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-[var(--text)] mb-2">
@@ -99,7 +133,7 @@ const SignUp: React.FC = () => {
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="your_username"
+                  placeholder="choose a username"
                   className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
                     errors.username
                       ? 'border-red-500 focus:ring-red-500'
@@ -107,7 +141,7 @@ const SignUp: React.FC = () => {
                   }`}
                 />
                 {errors.username && (
-                  <p className="text-xs text-red-400 mt-2">{errors.username}</p>
+                  <p className="text-xs text-red-400 mt-2 animate-[fadeIn_300ms_ease-out_forwards]">{errors.username}</p>
                 )}
               </div>
 
@@ -143,6 +177,8 @@ const SignUp: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={`${showPassword ? 'Hide' : 'Show'} password`}
+                    aria-pressed={showPassword}
                     className="text-xs text-[var(--gold)] hover:text-[var(--text)] transition-colors"
                   >
                     {showPassword ? 'Hide' : 'Show'}
@@ -175,6 +211,8 @@ const SignUp: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={`${showConfirmPassword ? 'Hide' : 'Show'} confirm password`}
+                    aria-pressed={showConfirmPassword}
                     className="text-xs text-[var(--gold)] hover:text-[var(--text)] transition-colors"
                   >
                     {showConfirmPassword ? 'Hide' : 'Show'}
@@ -196,54 +234,31 @@ const SignUp: React.FC = () => {
                 {errors.confirmPassword && (
                   <p className="text-xs text-red-400 mt-2">{errors.confirmPassword}</p>
                 )}
-                {formData.password &&
-                  formData.confirmPassword &&
-                  formData.password !== formData.confirmPassword && (
-                    <p className="text-xs text-red-400 mt-2">Passwords do not match</p>
-                  )}
-              </div>
-
-              {/* Terms & Conditions */}
-              <div className="pt-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="agreeToTerms"
-                    checked={formData.agreeToTerms}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 rounded border-[rgba(212,175,55,0.3)] bg-[var(--surface-2)] cursor-pointer accent-[var(--gold)] flex-shrink-0"
-                  />
-                  <span className="text-xs text-[var(--text-2)]">
-                    I agree to the{' '}
-                    <Link to="/terms" className="text-[var(--gold)] hover:underline">
-                      Terms of Service
-                    </Link>{' '}
-                    and{' '}
-                    <Link to="/privacy" className="text-[var(--gold)] hover:underline">
-                      Privacy Policy
-                    </Link>
-                  </span>
-                </label>
               </div>
 
               {/* Submit Button */}
               <Button
                 variant="gold"
                 className="w-full mt-6"
-                disabled={!isFormValid || isLoading}
+                disabled={
+                  isLoading ||
+                  !formData.username ||
+                  !formData.email ||
+                  !formData.password ||
+                  !formData.confirmPassword
+                }
               >
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
 
             {/* Divider */}
-            <div className="relative mb-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[rgba(212,175,55,0.1)]" />
-              </div>
+            <div className="relative flex items-center gap-4 mb-8">
+              <div className="flex-1 h-px bg-[rgba(212,175,55,0.1)]" />
               <div className="relative flex justify-center text-sm">
                 <span className="px-3 bg-[var(--surface)] text-[var(--text-3)]">or sign up with</span>
               </div>
+              <div className="flex-1 h-px bg-[rgba(212,175,55,0.1)]" />
             </div>
 
             {/* OAuth Buttons */}
@@ -301,7 +316,6 @@ const SignUp: React.FC = () => {
   );
 };
 
-// OAuth Button Component
 const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
   const renderIcon = () => {
     if (provider === 'Google') {
@@ -329,7 +343,7 @@ const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
       className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.15)] bg-[var(--surface-2)] text-[var(--text)] font-medium text-sm hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-3)] transition-all duration-200 flex items-center justify-center gap-2"
     >
       {renderIcon()}
-      Sign up with {provider}
+      Continue with {provider}
     </button>
   );
 };

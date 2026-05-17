@@ -1,6 +1,7 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
   onScroll?: (section: string) => void;
@@ -8,6 +9,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { token, logout } = useAuth();
   const isHome = location.pathname === '/';
 
   const navLinks: { label: string; href: string; id: string }[] = [
@@ -17,11 +20,18 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
   const handleNavClick = (id: string) => {
     setActiveNav(id);
-    onScroll?.(id);
     if (isHome) {
+      onScroll?.(id);
       const element = document.getElementById(id);
       element?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/');
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -36,36 +46,57 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           FT_CASINO
         </Link>
 
-        {/* Nav links */}
-        <ul className="hidden md:flex items-center gap-1 list-none">
-          {navLinks.map((link) => (
-            <li key={link.label}>
-              <button
-                onClick={() => handleNavClick(link.id)}
-                className={`text-sm font-medium px-3 py-1.5 rounded nav-link-transition nav-indicator active:scale-97 ${
-                  activeNav === link.id
-                    ? 'text-[var(--text)] active'
-                    : 'text-[var(--text-2)] hover:text-[var(--text)]'
-                } hover:bg-[rgba(255,255,255,0.04)]`}
-              >
-                {link.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {/* Nav links - only show on home */}
+        {isHome && (
+          <ul className="hidden md:flex items-center gap-1 list-none">
+            {navLinks.map((link) => (
+              <li key={link.label}>
+                <button
+                  onClick={() => handleNavClick(link.id)}
+                  className={`text-sm font-medium px-3 py-1.5 rounded nav-link-transition nav-indicator active:scale-97 ${
+                    activeNav === link.id
+                      ? 'text-[var(--text)] active'
+                      : 'text-[var(--text-2)] hover:text-[var(--text)]'
+                  } hover:bg-[rgba(255,255,255,0.04)]`}
+                >
+                  {link.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
-          <Link to="/login">
-            <Button variant="nav-ghost" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/signup">
-            <Button variant="nav-primary" size="sm">
-              Sign Up
-            </Button>
-          </Link>
+          {token ? (
+            <>
+              <Link to="/account">
+                <Button variant="nav-ghost" size="sm">
+                  Account
+                </Button>
+              </Link>
+              <Button
+                variant="nav-ghost"
+                size="sm"
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="nav-ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button variant="nav-primary" size="sm">
+                  Sign Up
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>
