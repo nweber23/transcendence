@@ -86,6 +86,12 @@ func TestPasswords(testInterface *testing.T) {
 		if VerifyPassword(hash, hash) {
 			testInterface.Errorf(`Password %s shouldn't verify against hashed self`, password)
 		}
+		if len(password) > 0 && VerifyPassword(hash, password[1:]) {
+			testInterface.Errorf(`Password %s shouldn't verify against front-trimmed self`, password)
+		}
+		if len(password) > 0 && VerifyPassword(hash, password[:len(password)-1]) {
+			testInterface.Errorf(`Password %s shouldn't verify against back-trimmed self`, password)
+		}
 		if VerifyPassword(hash, "") && password != "" {
 			testInterface.Errorf(`Password %s shouldn't verify against empty string`, password)
 		}
