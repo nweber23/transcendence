@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 	"reflect"
+	"time"
+	"github.com/shopspring/decimal"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -105,12 +107,17 @@ func displayTransactions(testInterface *testing.T, expected *models.Transaction,
 	var expectedValue   reflect.Value = reflect.ValueOf(*expected)
 	var actualValue     reflect.Value = reflect.ValueOf(*actual)
 	var fieldIndex int
+	testInterface.Errorf("| ---------------field | ------------expected | --------------actual |")
 	fieldIndex = 0
 	for fieldIndex < transactionType.NumField() {
 		var field         reflect.StructField = transactionType.Field(fieldIndex)
 		var expectedField reflect.Value       = expectedValue.Field(fieldIndex)
 		var actualField   reflect.Value       = actualValue.Field(fieldIndex)
-		testInterface.Errorf("| %20s | %20s | %20s |", field.Name, expectedField.String(), actualField.String())
+		testInterface.Errorf("| %20s | %20v | %20v |",
+			field.Name,
+			expectedField,
+			actualField,
+		)
 		fieldIndex++
 	}
 }
@@ -130,14 +137,19 @@ func getTransactionHistoryExpect(
 		testInterface.FailNow()
 	}
 	if length != len(actualTransactions) {
-		testInterface.Errorf("Actual transactions don't matcht the expected ones in terms of length")
+		testInterface.Errorf("Actual transactions don't match the expected ones in terms of length")
 		return
 	}
 	transactionIndex := 0
 	for transactionIndex < length {
 		expected := &expectedTransactions[transactionIndex]
 		actual   := &actualTransactions[transactionIndex]
-		if reflect.DeepEqual(*expected, *actual) {
+
+		// Some data cannot be reliably replicated or tested
+		expected.CreatedAt = actual.CreatedAt
+		expected.Metadata = actual.Metadata
+
+		if !reflect.DeepEqual(*expected, *actual) {
 			testInterface.Errorf("Transactions differ at index %d, here is a breakdown of their differences:\n",
 				transactionIndex)
 			displayTransactions(testInterface, expected, actual)
@@ -212,12 +224,49 @@ func TestAccountService(testInterface *testing.T) {
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
 
-	var transactions []models.Transaction
-	transactions, err = accountService.GetTransactionHistory(2, 50, 0)
-	index := 0
-	for index < len(transactions) {
-		transaction := &transactions[index]
-		fmt.Printf("%s\n", transaction.Type)
-		index++
+	// Test transaction history
+	expectedTransactions := []models.Transaction {
+		models.Transaction {
+			ID:           3,
+			AccountID:    2,
+			Type:         "deposit",
+			Amount:       decimal.NewFromInt(2),
+			BalanceAfter: decimal.NewFromInt(12),
+			Status:       "completed",
+			Metadata:     []byte {},
+			CreatedAt:    time.Now(),
+		},
+		models.Transaction {
+			ID:           2,
+			AccountID:    2,
+			Type:         "withdrawal",
+			Amount:       decimal.NewFromInt(40),
+			BalanceAfter: decimal.NewFromInt(10),
+			Status:       "completed",
+			Metadata:     []byte {},
+			CreatedAt:    time.Now(),
+		},
+		models.Transaction {
+			ID:           1,
+			AccountID:    2,
+			Type:         "deposit",
+			Amount:       decimal.NewFromInt(50),
+			BalanceAfter: decimal.NewFromInt(50),
+			Status:       "completed",
+			Metadata:     []byte {},
+			CreatedAt:    time.Now(),
+		},
 	}
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:],  2, 50, 0)
+	getTransactionHistoryExpect(testInterface, accountService, []models.Transaction {},   2, 50, 34)
+	getTransactionHistoryExpect(testInterface, accountService, []models.Transaction {},   2, 0,  0)
+	getTransactionHistoryExpect(testInterface, accountService, []models.Transaction {},   1, 49, 0)
+	// All transactions on ID failed, thus there should be no entries for it
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[2:],  2, 50, 1)
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:2], 2, 1,  0)
+	accountService.Deposit_f(2, 2)
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[0:],  2, 50, 0)
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[:2],  2, 2,  0)
+	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:3], 2, 2,  1)
+	getTransactionHistoryExpect(testInterface, accountService, []models.Transaction {},   1, 54, 0)
 }
