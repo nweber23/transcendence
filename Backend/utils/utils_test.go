@@ -15,10 +15,10 @@ func TestValidateEmail(testInterface *testing.T) {
 			"gabrielhodges2006@yahoo.com",
 			true,
 		},
-		/*ExpectEmail {
+		ExpectEmail {
 			"ghodges@student.42heilbronn.de",
 			true,
-		},*/
+		},
 		ExpectEmail {
 			"aahahhahahahhahahaha",
 			false,

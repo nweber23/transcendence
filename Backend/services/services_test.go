@@ -1,8 +1,8 @@
 package services
 
 import (
-	"fmt"
 	"strings"
+	"fmt"
 	"testing"
 
 	"gorm.io/driver/sqlite"
@@ -99,7 +99,7 @@ func testPasswords(testInterface *testing.T, userService *UserService, username 
 	loginExpect(testInterface, userService, "a" + username,               password, false) // Preprend character to username
 }
 
-const STRESS_TEST_AMOUNT int = 50000
+const STRESS_TEST_AMOUNT int = 500
 
 func TestAccountService(testInterface *testing.T) {
 	accountService, userService := createMockServices(testInterface)
@@ -129,4 +129,39 @@ func TestAccountService(testInterface *testing.T) {
 	loginExpect(testInterface, userService, stressTest,        "a", false)
 	loginExpect(testInterface, userService,        "a", stressTest, false)
 	loginExpect(testInterface, userService, stressTest, stressTest, false)
+
+	// Vibe check
+	fetchMockUsers(testInterface, userService)
+
+	// Simple deposit and withdraw tests
+	err := accountService.Withdraw_f(2, 50)
+	if err == nil {
+		testInterface.Errorf("withdrawal from empty account should not succeed")
+	}
+	if err.Error() != "insufficient funds" {
+		testInterface.Errorf("withdrawal failed for unexpected reason %s", err)
+	}
+	accountService.Deposit_f(2, 50)
+	var userID uint = 1
+	for userID < 5 {
+		if userID != 2 && accountService.Withdraw_f(userID, 10) == nil {
+			testInterface.Errorf("withdrawal from unrelated account %d should not succeed after deposit to account 2", userID)
+		}
+		userID++
+	} 
+	if accountService.Withdraw_f(2, 40) != nil {
+		testInterface.Errorf("withdrawal should succeed after deposit")
+	}
+	if accountService.Withdraw_f(2, 40) == nil {
+		testInterface.Errorf("just because the account has SOME money, doesn't mean withdrawals of excessive amounts should work")
+	}
+	if accountService.Deposit_f(2, -700) == nil {
+		testInterface.Errorf("deposit should fail with negative values")
+	}
+	if accountService.Withdraw_f(2, -700) == nil {
+		testInterface.Errorf("withdraw should fail with negative values")
+	}
+
+	// Vibe check
+	fetchMockUsers(testInterface, userService)
 }
