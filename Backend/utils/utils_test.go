@@ -23,6 +23,22 @@ func TestValidateEmail(testInterface *testing.T) {
 			"aahahhahahahhahahaha",
 			false,
 		},
+		ExpectEmail {
+			"@",
+			false,
+		},
+		ExpectEmail {
+			"@@@",
+			false,
+		},
+		ExpectEmail {
+			"supericeg@gmail.com",
+			true,
+		},
+		ExpectEmail {
+			"",
+			false,
+		},
 	}
 	size := len(expectTable)
 	index := 0
@@ -59,25 +75,18 @@ func TestPasswords(testInterface *testing.T) {
 		"12345",
 		"",
 	}
-	const size int = len(passwords)
+	var size int = len(passwords)
 	var index int
-	for index = 0; index < size {
-		password := &string[index]
-		if !VerifyPassword(HashPassword(*password), password) {
+	for index = 0; index < size; {
+		password := passwords[index]
+		hash, _ := HashPassword(password)
+		if !VerifyPassword(hash, password) {
 			testInterface.Errorf(`Password %s does not verify against itself as it ought to be`, password)
 		}
-		index++
-	}
-	for index = 0; index < size {
-		password := &string[index]
-		if VerifyPassword(HashPassword(*password), HashPassword(*password)) {
+		if VerifyPassword(hash, hash) {
 			testInterface.Errorf(`Password %s shouldn't verify against hashed self`, password)
 		}
-		index++
-	}
-	for index = 0; index < size {
-		password := &string[index]
-		if VerifyPassword(HashPassword(*password), "") {
+		if VerifyPassword(hash, "") && password != "" {
 			testInterface.Errorf(`Password %s shouldn't verify against empty string`, password)
 		}
 		index++

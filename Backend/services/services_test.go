@@ -147,7 +147,7 @@ func getTransactionHistoryExpect(
 
 		// Some data cannot be reliably replicated or tested
 		expected.CreatedAt = actual.CreatedAt
-		expected.Metadata = actual.Metadata
+		expected.Metadata  = actual.Metadata
 
 		if !reflect.DeepEqual(*expected, *actual) {
 			testInterface.Errorf("Transactions differ at index %d, here is a breakdown of their differences:\n",
@@ -269,4 +269,7 @@ func TestAccountService(testInterface *testing.T) {
 	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[:2],  2, 2,  0)
 	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:3], 2, 2,  1)
 	getTransactionHistoryExpect(testInterface, accountService, []models.Transaction {},   1, 54, 0)
+
+	// Vibe check
+	fetchMockUsers(testInterface, userService)
 }
