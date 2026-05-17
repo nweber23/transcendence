@@ -4,6 +4,7 @@ import (
 	"strings"
 	"fmt"
 	"testing"
+	"reflect"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -99,6 +100,52 @@ func testPasswords(testInterface *testing.T, userService *UserService, username 
 	loginExpect(testInterface, userService, "a" + username,               password, false) // Preprend character to username
 }
 
+func displayTransactions(testInterface *testing.T, expected *models.Transaction, actual *models.Transaction) {
+	var transactionType reflect.Type  = reflect.TypeFor[models.Transaction]()
+	var expectedValue   reflect.Value = reflect.ValueOf(*expected)
+	var actualValue     reflect.Value = reflect.ValueOf(*actual)
+	var fieldIndex int
+	fieldIndex = 0
+	for fieldIndex < transactionType.NumField() {
+		var field         reflect.StructField = transactionType.Field(fieldIndex)
+		var expectedField reflect.Value       = expectedValue.Field(fieldIndex)
+		var actualField   reflect.Value       = actualValue.Field(fieldIndex)
+		testInterface.Errorf("| %20s | %20s | %20s |", field.Name, expectedField.String(), actualField.String())
+		fieldIndex++
+	}
+}
+
+func getTransactionHistoryExpect(
+	testInterface        *testing.T,
+	accountService       *AccountService,
+	expectedTransactions []models.Transaction,
+	userID               uint,
+	limit                int,
+	offset               int,
+) {
+	var length int = len(expectedTransactions)
+	actualTransactions, err := accountService.GetTransactionHistory(userID, limit, offset)
+	if err != nil {
+		testInterface.Errorf("Getting transaction history should not fail")
+		testInterface.FailNow()
+	}
+	if length != len(actualTransactions) {
+		testInterface.Errorf("Actual transactions don't matcht the expected ones in terms of length")
+		return
+	}
+	transactionIndex := 0
+	for transactionIndex < length {
+		expected := &expectedTransactions[transactionIndex]
+		actual   := &actualTransactions[transactionIndex]
+		if reflect.DeepEqual(*expected, *actual) {
+			testInterface.Errorf("Transactions differ at index %d, here is a breakdown of their differences:\n",
+				transactionIndex)
+			displayTransactions(testInterface, expected, actual)
+		}
+		transactionIndex++
+	}
+}
+
 const STRESS_TEST_AMOUNT int = 500
 
 func TestAccountService(testInterface *testing.T) {
@@ -164,4 +211,13 @@ func TestAccountService(testInterface *testing.T) {
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
+
+	var transactions []models.Transaction
+	transactions, err = accountService.GetTransactionHistory(2, 50, 0)
+	index := 0
+	for index < len(transactions) {
+		transaction := &transactions[index]
+		fmt.Printf("%s\n", transaction.Type)
+		index++
+	}
 }
