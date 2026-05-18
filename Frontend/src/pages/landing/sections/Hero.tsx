@@ -39,8 +39,6 @@ const Hero: React.FC = () => {
   }, []);
 
   const gameCount = useCountUp(3, 1200, isVisible);
-  const tableCount = useCountUp(100, 1400, isVisible);
-  const aiCount = useCountUp(5, 1300, isVisible);
 
   return (
     <section className="hero min-h-screen flex flex-col pt-16" aria-labelledby="hero-heading">
@@ -120,7 +118,7 @@ const Hero: React.FC = () => {
           </div>
           <div className="px-4 py-6 text-center">
             <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
-              {aiCount}
+              5
             </span>
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)] mt-2">
               Smart Opponents

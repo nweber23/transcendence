@@ -58,13 +58,12 @@ const Toast: React.FC<ToastProps> = ({
     <div
       className={`
         max-w-sm px-5 py-4 rounded-lg border flex items-center gap-3
-        transition-all duration-200 ease-out
         ${bgColors[type]}
         ${textColors[type]}
         ${
           isExiting
-            ? 'opacity-0 transform translate-y-2'
-            : 'opacity-100 transform translate-y-0'
+            ? 'opacity-0 translate-y-2'
+            : 'opacity-100 translate-y-0'
         }
       `}
       role="alert"

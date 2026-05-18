@@ -50,7 +50,7 @@ const Modal: React.FC<ModalProps> = ({
       <div
         className={`
           absolute inset-0 bg-[rgba(10,14,18,0.6)] backdrop-blur-sm
-          transition-opacity duration-200
+          transition-opacity duration-300 ease-out
           ${isOpen ? 'opacity-100' : 'opacity-0'}
         `}
         onClick={onClose}
@@ -83,7 +83,7 @@ const Modal: React.FC<ModalProps> = ({
             {closeButton && (
               <button
                 onClick={onClose}
-                className="text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                className="text-[var(--text-2)] hover:text-[var(--text)] active:scale-97 transition-colors active:transition-transform duration-160 ease-out"
                 aria-label="Close modal"
               >
                 <svg

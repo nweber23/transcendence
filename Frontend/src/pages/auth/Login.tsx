@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
 
 interface LoginFormData {
-  email: string;
+  username: string;
   password: string;
   rememberMe: boolean;
 }
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const { login, isLoading, error: authError, token } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
+    username: '',
     password: '',
     rememberMe: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      navigate('/account');
+    }
+  }, [token, navigate]);
+
   const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,11 +44,35 @@ const Login: React.FC = () => {
         return newErrors;
       });
     }
+    // Also clear submit error when user modifies form
+    if (errors.submit) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.submit;
+        return newErrors;
+      });
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form validation logic would go here
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.username) newErrors.username = 'Username is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      await login(formData.username, formData.password);
+      navigate('/account');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setErrors({ submit: errorMessage });
+    }
   };
 
   return (
@@ -75,26 +109,32 @@ const Login: React.FC = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5 mb-8">
-              {/* Email Field */}
+              {errors.submit && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 animate-[fadeIn_300ms_ease-out_forwards]">
+                  {errors.submit}
+                </div>
+              )}
+
+              {/* Username Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[var(--text)] mb-2">
-                  Email Address
+                <label htmlFor="username" className="block text-sm font-medium text-[var(--text)] mb-2">
+                  Username
                 </label>
                 <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                  id="username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="you@example.com"
+                  placeholder="your username"
                   className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 ${
-                    errors.email
+                    errors.username
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
                   }`}
                 />
-                {errors.email && (
-                  <p className="text-xs text-red-400 mt-2">{errors.email}</p>
+                {errors.username && (
+                  <p className="text-xs text-red-400 mt-2 animate-[fadeIn_300ms_ease-out_forwards]">{errors.username}</p>
                 )}
               </div>
 
@@ -107,6 +147,8 @@ const Login: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={`${showPassword ? 'Hide' : 'Show'} password`}
+                    aria-pressed={showPassword}
                     className="text-xs text-[var(--gold)] hover:text-[var(--text)] transition-colors"
                   >
                     {showPassword ? 'Hide' : 'Show'}
@@ -132,8 +174,8 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between pt-2">
+              {/* Remember Me */}
+              <div className="flex items-center pt-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -144,29 +186,25 @@ const Login: React.FC = () => {
                   />
                   <span className="text-sm text-[var(--text-2)]">Remember me</span>
                 </label>
-                <Link to="#" className="text-sm text-[var(--gold)] hover:text-[var(--text)] transition-colors">
-                  Forgot password?
-                </Link>
               </div>
 
               {/* Submit Button */}
               <Button
                 variant="gold"
                 className="w-full mt-6"
-                disabled={isLoading || !formData.email || !formData.password}
+                disabled={isLoading || !formData.username || !formData.password}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
             {/* Divider */}
-            <div className="relative mb-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[rgba(212,175,55,0.1)]" />
-              </div>
+            <div className="relative flex items-center gap-4 mb-8">
+              <div className="flex-1 h-px bg-[rgba(212,175,55,0.1)]" />
               <div className="relative flex justify-center text-sm">
                 <span className="px-3 bg-[var(--surface)] text-[var(--text-3)]">or continue with</span>
               </div>
+              <div className="flex-1 h-px bg-[rgba(212,175,55,0.1)]" />
             </div>
 
             {/* OAuth Buttons */}
@@ -224,7 +262,6 @@ const Login: React.FC = () => {
   );
 };
 
-// OAuth Button Component
 const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
   const renderIcon = () => {
     if (provider === 'Google') {

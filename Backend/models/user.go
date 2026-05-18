@@ -1,0 +1,19 @@
+package models
+
+import (
+	"time"
+)
+
+type User struct {
+	ID           uint   `gorm:"primaryKey"`
+	Username     string `gorm:"uniqueIndex,size:50"`
+	Email        string `gorm:"uniqueIndex,size:255"`
+	PasswordHash string `gorm:"size:255"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    *time.Time `gorm:"index"`
+}
+
+func (User) TableName() string {
+	return "users"
+}
