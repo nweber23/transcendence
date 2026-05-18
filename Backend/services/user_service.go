@@ -89,7 +89,7 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 }
 
 // UpdateUser updates a user by userID
-func (s *UserService) UpdateUser(userID uint, username string, email string, password string) (*models.User, error) {
+func (s *UserService) UpdateUser(userID uint, username string, email string, passwordHash string) (*models.User, error) {
 	if err := ValidateUsername(username); err != nil {
 		return nil, err
 	}
@@ -114,10 +114,6 @@ func (s *UserService) UpdateUser(userID uint, username string, email string, pas
 		if err != nil {
 			return nil, fmt.Errorf("failed to get user: %w", err)
 		}
-	}
-	passwordHash, err := utils.HashPassword(password)
-	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 	user.Username     = username
 	user.Email        = email
