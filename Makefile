@@ -1,4 +1,4 @@
-.PHONY: help up down logs build rebuild clean ps dev-up dev-down
+.PHONY: help up down logs build rebuild clean ps dev-up dev-down test retest
 
 help:
 	@echo "Transcendence Docker Commands"
@@ -48,6 +48,6 @@ dev-down:
 	docker compose down
 
 test:
-	docker exec -it transcendence-backend /app/test.sh
+	docker exec transcendence-backend /app/test.sh
 
 retest: rebuild test

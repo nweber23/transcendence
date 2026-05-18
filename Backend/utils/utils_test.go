@@ -65,7 +65,7 @@ func TestTokens(testInterface *testing.T) {
 	var token string
 	token = GenerateToken(0, "728", 10)
 	ValidateTokenAndReport(testInterface, token, "728", true)
-	token = GenerateToken(0, "pipopipo", 0)
+	token = GenerateToken(0, "pipopipo", -1)
 	ValidateTokenAndReport(testInterface, token, "pipopipo", false)
 }
 
@@ -78,7 +78,10 @@ func TestPasswords(testInterface *testing.T) {
 	var size int = len(passwords)
 	for index := 0; index < size; {
 		password := passwords[index]
-		hash, _ := HashPassword(password)
+		hash, err := HashPassword(password)
+		if err != nil {
+			testInterface.Errorf(`Failed to hash password %s`, password)
+		}
 		if !VerifyPassword(hash, password) {
 			testInterface.Errorf(`Password %s does not verify against itself as it ought to be`, password)
 		}

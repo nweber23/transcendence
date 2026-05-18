@@ -17,7 +17,7 @@ import (
 func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		testInterface.Errorf(`failed to create in memory database: %s`, err.Error())
+		testInterface.Errorf(`failed to create in memory database: %v`, err)
 		testInterface.FailNow()
 	}
 	if err := db.AutoMigrate(
@@ -30,7 +30,7 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 		&models.SlotsGame{},
 		&models.GameStatistics{},
 	); err != nil {
-		testInterface.Errorf(`failed to run migrations: %s`, err.Error())
+		testInterface.Errorf(`failed to run migrations: %v`, err)
 		testInterface.FailNow()
 	}
 	return db
@@ -197,7 +197,7 @@ func TestAccountService(testInterface *testing.T) {
 		testInterface.Errorf("withdrawal from empty account should not succeed")
 	}
 	if err.Error() != "insufficient funds" {
-		testInterface.Errorf("withdrawal failed for unexpected reason %s", err)
+		testInterface.Errorf("withdrawal failed for unexpected reason %v", err)
 	}
 	accountService.Deposit_f(2, 50)
 	var userID uint
