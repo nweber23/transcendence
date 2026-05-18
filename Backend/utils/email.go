@@ -12,12 +12,16 @@ func ValidateEmail(email string) bool {
 	if !emailRegex.MatchString(email) {
 		return false
 	}
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
+	emailParts := strings.Split(email, "@")
+	if len(emailParts) != 2 {
 		return false
 	}
-	domain := parts[1]
-	mxRecords, err := net.LookupMX(domain)
+	domainParts := strings.Split(emailParts[1], ".")
+	if len(domainParts) < 2 {
+		return false
+	}
+	domainBase := strings.Join(domainParts[len(domainParts)-2:], ".")
+	mxRecords, err := net.LookupMX(domainBase)
 	if err != nil || len(mxRecords) == 0 {
 		return false
 	}

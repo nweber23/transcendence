@@ -67,6 +67,10 @@ func (s *AccountService) Deposit(userID uint, amount decimal.Decimal) error {
 	})
 }
 
+func (s *AccountService) Deposit_f(userID uint, amount float64) error {
+	return s.Deposit(userID, decimal.NewFromFloat(amount))
+}
+
 // Withdraw removes the funds from accounts with transaction record
 func (s *AccountService) Withdraw(userID uint, amount decimal.Decimal) error {
 	if amount.LessThanOrEqual(decimal.Zero) {
@@ -96,6 +100,10 @@ func (s *AccountService) Withdraw(userID uint, amount decimal.Decimal) error {
 		}
 		return nil
 	})
+}
+
+func (s *AccountService) Withdraw_f(userID uint, amount float64) error {
+	return s.Withdraw(userID, decimal.NewFromFloat(amount))
 }
 
 // GetTransactionHistory retrieves users transaction history
