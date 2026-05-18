@@ -98,13 +98,12 @@ func (s *UserService) UpdateUser(userID uint, username string, email string, pas
 	}
 	var duplicateUser models.User
 	var err error
-	err = s.db.Where("username = ?", username).First(&duplicateUser).Error
-	if err == nil && duplicateUser.ID != userID {
+	err = s.db.Where("username = ? AND id <> ?", username, userID).First(&duplicateUser).Error
+	if err == nil {
 		return nil, errors.New("username already exists")
 	}
-	duplicateUser = models.User {}
-	err = s.db.Where("email = ?", email).First(&duplicateUser).Error
-	if err == nil && duplicateUser.ID != userID {
+	err = s.db.Where("email = ?    AND id <> ?", email,    userID).First(&duplicateUser).Error
+	if err == nil {
 		return nil, errors.New("email already exists")
 	}
 	var user *models.User
