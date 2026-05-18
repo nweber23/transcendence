@@ -18,10 +18,17 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
+func ValidateUsername(username string) error {
+	if len(username) < 3 || len(username) > 32 {
+		return errors.New("username must be between 3 and 32 characters")
+	}
+	return nil
+}
+
 // RegisterUser creates a new user with hashed password and initializes account
 func (s *UserService) RegisterUser(username, email, password string) (*models.User, error) {
-	if len(username) < 3 || len(username) > 32 {
-		return nil, errors.New("username must be between 3 and 32 characters")
+	if err := ValidateUsername(username); err != nil {
+		return nil, err
 	}
 	if !utils.ValidateEmail(email) {
 		return nil, errors.New("invalid email")
@@ -79,4 +86,45 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return &user, nil
+}
+
+// UpdateUser updates a user by userID
+func (s *UserService) UpdateUser(userID uint, username string, email string, password string) (*models.User, error) {
+	if err := ValidateUsername(username); err != nil {
+		return nil, err
+	}
+	if !utils.ValidateEmail(email) {
+		return nil, errors.New("invalid email")
+	}
+	var duplicateUser models.User
+	var err error
+	err = s.db.Where("username = ?", username).First(&duplicateUser).Error
+	if err == nil && duplicateUser.ID != userID {
+		return nil, errors.New("username already exists")
+	}
+	duplicateUser = models.User {}
+	err = s.db.Where("email = ?", email).First(&duplicateUser).Error
+	if err == nil && duplicateUser.ID != userID {
+		return nil, errors.New("email already exists")
+	}
+	var user *models.User
+	if err == nil {
+		user = &duplicateUser
+	} else {
+		user, err = s.GetUserByID(userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
+		}
+	}
+	passwordHash, err := utils.HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+	user.Username     = username
+	user.Email        = email
+	user.PasswordHash = passwordHash
+	if err := s.db.UpdateColumns(user).Where("id = ?", userID).Error; err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+	return user, nil
 }

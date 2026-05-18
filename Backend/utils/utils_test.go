@@ -73,6 +73,7 @@ func TestPasswords(testInterface *testing.T) {
 	passwords := []string {
 		"password",
 		"12345",
+		"jiji",
 		"",
 	}
 	var size int = len(passwords)
@@ -81,6 +82,7 @@ func TestPasswords(testInterface *testing.T) {
 		hash, err := HashPassword(password)
 		if err != nil {
 			testInterface.Errorf(`Failed to hash password %s`, password)
+			continue
 		}
 		if !VerifyPassword(hash, password) {
 			testInterface.Errorf(`Password %s does not verify against itself as it ought to be`, password)
