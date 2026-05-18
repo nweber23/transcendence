@@ -14,7 +14,11 @@ import (
 )
 
 func InitMockDB(testInterface *testing.T) (*gorm.DB) {
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		testInterface.Errorf(`failed to create in memory database: %s`, err.Error())
+		testInterface.FailNow()
+	}
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Account{},
@@ -25,7 +29,7 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 		&models.SlotsGame{},
 		&models.GameStatistics{},
 	); err != nil {
-		fmt.Errorf(`failed to run migrations: %w`, err)
+		testInterface.Errorf(`failed to run migrations: %s`, err.Error())
 		testInterface.FailNow()
 	}
 	return db

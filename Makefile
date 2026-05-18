@@ -46,3 +46,8 @@ dev-up:
 
 dev-down:
 	docker compose down
+
+test:
+	docker exec -it transcendence-backend /app/test.sh
+
+retest: rebuild test
