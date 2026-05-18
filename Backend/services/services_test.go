@@ -109,9 +109,7 @@ func displayTransactions(testInterface *testing.T, expected *models.Transaction,
 	var transactionType reflect.Type  = reflect.TypeFor[models.Transaction]()
 	var expectedValue   reflect.Value = reflect.ValueOf(*expected)
 	var actualValue     reflect.Value = reflect.ValueOf(*actual)
-	var fieldIndex int
 	testInterface.Errorf("| ---------------field | ------------expected | --------------actual |")
-	fieldIndex = 0
 	for fieldIndex := 0; fieldIndex < transactionType.NumField(); {
 		var field         reflect.StructField = transactionType.Field(fieldIndex)
 		var expectedField reflect.Value       = expectedValue.Field(fieldIndex)
@@ -143,7 +141,6 @@ func getTransactionHistoryExpect(
 		testInterface.Errorf("Actual transactions don't match the expected ones in terms of length")
 		return
 	}
-	transactionIndex := 0
 	for transactionIndex := 0; transactionIndex < length; {
 		expected := &expectedTransactions[transactionIndex]
 		actual   := &actualTransactions[transactionIndex]
@@ -183,7 +180,6 @@ func TestAccountService(testInterface *testing.T) {
 
 	// Stress test
 	var stressTest string
-	count := 0
 	for count := 0; count < STRESS_TEST_AMOUNT; {
 		stressTest = strings.Join([]string {stressTest, "a"}, "")
 		count++
@@ -204,7 +200,8 @@ func TestAccountService(testInterface *testing.T) {
 		testInterface.Errorf("withdrawal failed for unexpected reason %s", err)
 	}
 	accountService.Deposit_f(2, 50)
-	for var userID uint = 1; userID < 5; {
+	var userID uint
+	for userID = 1; userID < 5; {
 		if userID != 2 && accountService.Withdraw_f(userID, 10) == nil {
 			testInterface.Errorf("withdrawal from unrelated account %d should not succeed after deposit to account 2", userID)
 		}
