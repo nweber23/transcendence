@@ -50,8 +50,7 @@ type TransactionHistoryResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
 
-type UpdateProfileRequest struct {
-	ID       uint   `json:"user_id" binding:"required"`
+type UserProfileRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -98,34 +97,42 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
-	var username     any
-	var email        any
-	var password     any
+	var req UserProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	var username     string = req.Username
+	var email        string = req.Email
+	var password     string = req.Password
 	var passwordHash string
-	username, exists = c.Get("username")
-	if !exists {
+	if len(username) == 0 {
 		username = user.Username
 	}
-	email, exists = c.Get("email")
-	if !exists {
+	if len(email) == 0 {
 		email = user.Email
 	}
-	password, exists = c.Get("password")
-	if !exists {
+	if len(password) == 0 {
 		passwordHash = user.PasswordHash
 	} else {
-		passwordHash, err = utils.HashPassword(password.(string))
-		if err == nil {
+		passwordHash, err = utils.HashPassword(password)
+		if err != nil {
 			utils.RespondError(c, http.StatusInternalServerError, "hash_password_failed", err.Error())
 			return
 		}
 	}
-	user, err = uh.userService.UpdateUser(userID.(uint), username.(string), email.(string), passwordHash)
+	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
 		return
 	}
-	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", nil)
+	response := UserProfileResponse{
+		ID:       userID.(uint),
+		Username: username,
+		Email:    email,
+		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
 }
 
 // GetAccount retrieves account balance and summary

@@ -49,7 +49,7 @@ func main() {
 	userRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	{
 		userRoutes.GET("/profile", userHandler.GetProfile)
-		userRoutes.PUT("/profile", userHandler.GetProfile)
+		userRoutes.PUT("/profile", userHandler.UpdateProfile)
 		userRoutes.GET("/account", userHandler.GetAccount)
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
 		userRoutes.POST("/account/deposit", userHandler.Deposit)
