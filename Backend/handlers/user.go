@@ -92,14 +92,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
 		return
 	}
-	user, err := uh.userService.GetUserByID(userID.(uint))
-	if err != nil {
-		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
-		return
-	}
 	var req UserProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
 	var username     string = req.Username

@@ -123,7 +123,7 @@ func (s *UserService) UpdateUser(userID uint, username string, email string, pas
 	user.Username     = username
 	user.Email        = email
 	user.PasswordHash = passwordHash
-	if err := s.db.UpdateColumns(user).Where("id = ?", userID).Error; err != nil {
+	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 	return user, nil
