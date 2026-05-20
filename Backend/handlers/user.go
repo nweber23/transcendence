@@ -124,6 +124,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
 	if err != nil {
 		var status int
+		// TODO: Perhaps create a full enum of errors for our API
 		if err.Error() == "invalid username" || err.Error() == "invalid email" {
 			status = http.StatusBadRequest
 		} else if err.Error() == "username or email already exists" {
