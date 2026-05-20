@@ -53,7 +53,7 @@ type TransactionHistoryResponse struct {
 type UserProfileRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
-	Password string `json:"password"`
+	Password string `json:"password" binding:"omitempty,min=8"`
 }
 
 type DepositRequest struct {
@@ -123,7 +123,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	}
 	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
 	if err != nil {
-		var status http.Status
+		var status int
 		if err.Error() == "invalid username" || err.Error() == "invalid email" {
 			status = http.StatusBadRequest
 		} else if err.Error() == "username or email already exists" {
