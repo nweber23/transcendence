@@ -123,7 +123,15 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	}
 	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
+		var status http.Status
+		if err.Error() == "invalid username" || err.Error() == "invalid email" {
+			status = http.StatusBadRequest
+		} else if err.Error() == "username or email already exists" {
+			status = http.StatusConflict
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "update_user_failed", err.Error())
 		return
 	}
 	response := UserProfileResponse{

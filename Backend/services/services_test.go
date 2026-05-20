@@ -121,7 +121,12 @@ func updateUserExpect(
 	password      string,
 	expectSuccess bool,
 ) {
-	_, err := userService.UpdateUser(userID, username, email, password)
+	passwordHash, err := utils.HashPassword(password)
+	if err != nil {
+		testInterface.Errorf(`failed to hash password`)
+		return
+	}
+	_, err = userService.UpdateUser(userID, username, email, passwordHash)
 	if (err != nil) == expectSuccess {
 		testInterface.Errorf(`update user %d with username %s and email %s did not go as expected`, userID, username, email)
 	}
@@ -138,6 +143,7 @@ func updateUserExpect(
 	if !utils.VerifyPassword(user.PasswordHash, password) {
 		testInterface.Errorf(`password %s wasn't successfully updated`, password)
 	}
+	loginExpect(testInterface, userService, username, password, true)
 }
 
 func displayTransactions(testInterface *testing.T, expected *models.Transaction, actual *models.Transaction) {
