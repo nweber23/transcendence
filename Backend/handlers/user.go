@@ -50,6 +50,12 @@ type TransactionHistoryResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
 
+type UserProfileRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password" binding:"omitempty,min=8"`
+}
+
 type DepositRequest struct {
 	Amount string `json:"amount" binding:"required"`
 }
@@ -77,6 +83,65 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
+}
+
+// UpdateProfile updates the user profile
+func (uh *UserHandler) UpdateProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	var req UserProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	var username     string = req.Username
+	var email        string = req.Email
+	var password     string = req.Password
+	var passwordHash string
+	if len(username) == 0 {
+		username = user.Username
+	}
+	if len(email) == 0 {
+		email = user.Email
+	}
+	if len(password) == 0 {
+		passwordHash = user.PasswordHash
+	} else {
+		passwordHash, err = utils.HashPassword(password)
+		if err != nil {
+			utils.RespondError(c, http.StatusInternalServerError, "hash_password_failed", err.Error())
+			return
+		}
+	}
+	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
+	if err != nil {
+		var status int
+		// TODO: Perhaps create a full enum of errors for our API
+		if err.Error() == "invalid username" || err.Error() == "invalid email" {
+			status = http.StatusBadRequest
+		} else if err.Error() == "username or email already exists" {
+			status = http.StatusConflict
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "update_user_failed", err.Error())
+		return
+	}
+	response := UserProfileResponse{
+		ID:       userID.(uint),
+		Username: username,
+		Email:    email,
+		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
 }
 
 // GetAccount retrieves account balance and summary

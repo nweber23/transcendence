@@ -18,17 +18,34 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
+func ValidateUsername(username string) error {
+	if len(username) < 3 || len(username) > 32 {
+		return errors.New("username must be between 3 and 32 characters")
+	}
+	return nil
+}
+
+func reinterpretNotFound(err error) (error) {
+	if err == nil {
+		return errors.New("username or email already exists")
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	} else {
+		return err
+	}
+}
+
 // RegisterUser creates a new user with hashed password and initializes account
 func (s *UserService) RegisterUser(username, email, password string) (*models.User, error) {
-	if len(username) < 3 || len(username) > 32 {
-		return nil, errors.New("username must be between 3 and 32 characters")
+	if err := ValidateUsername(username); err != nil {
+		return nil, err
 	}
 	if !utils.ValidateEmail(email) {
 		return nil, errors.New("invalid email")
 	}
 	var existingUser models.User
-	if err := s.db.Where("username = ? OR email = ?", username, email).First(&existingUser).Error; err == nil {
-		return nil, errors.New("username or email already exists")
+	if err := reinterpretNotFound(s.db.Where("username = ? OR email = ?", username, email).First(&existingUser).Error); err != nil {
+		return nil, err
 	}
 	passwordHash, err := utils.HashPassword(password)
 	if err != nil {
@@ -79,4 +96,35 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return &user, nil
+}
+
+// UpdateUser updates a user by userID
+func (s *UserService) UpdateUser(userID uint, username string, email string, passwordHash string) (*models.User, error) {
+	if err := ValidateUsername(username); err != nil {
+		return nil, errors.New("invalid username")
+	}
+	if !utils.ValidateEmail(email) {
+		return nil, errors.New("invalid email")
+	}
+	var duplicateUser models.User
+	var err error
+	err = reinterpretNotFound(s.db.Where("username = ? AND id <> ?", username, userID).First(&duplicateUser).Error)
+	if err != nil {
+		return nil, err
+	}
+	err = reinterpretNotFound(s.db.Where("email = ?    AND id <> ?", email,    userID).First(&duplicateUser).Error)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	user.Username     = username
+	user.Email        = email
+	user.PasswordHash = passwordHash
+	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+	return user, nil
 }

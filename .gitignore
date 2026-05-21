@@ -35,3 +35,7 @@ go.work.sum
 .claude
 .playwright-mcp
 
+_*
+
+# Incase of local test builds
+Backend/backend

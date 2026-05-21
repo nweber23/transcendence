@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 	"reflect"
+	"transcendence/utils"
 	"time"
 	"github.com/shopspring/decimal"
 
@@ -48,7 +49,7 @@ func createMockUsers(testInterface *testing.T, userService *UserService) {
 		testName := "test" + string(index)
 		_, err := userService.RegisterUser(testName, testName + "@gatherate.net", testName)
 		if err != nil {
-			testInterface.Errorf(`Failed to create user %s`, testName)
+			testInterface.Errorf(`Failed to create user %s: %v`, testName, err)
 		}
 		if index == '3' {
 			_, err := userService.RegisterUser("herold", "herold@yahoo.com", "ILIKECOOKIES")
@@ -103,6 +104,46 @@ func loginExpectPasswordCases(testInterface *testing.T, userService *UserService
 	loginExpect(testInterface, userService, username[len(username) - 1:], password, false) // Remove first character from username
 	loginExpect(testInterface, userService, username + "a",               password, false) // Append character to username
 	loginExpect(testInterface, userService, "a" + username,               password, false) // Preprend character to username
+}
+
+func checkForDifferences(testInterface *testing.T, name string, expected string, actual string) {
+	if expected != actual {
+		testInterface.Errorf(`expected %s %s differs from actual %s %s`, name, expected, name, actual)
+	}
+}
+
+func updateUserExpect(
+	testInterface *testing.T,
+	userService   *UserService,
+	userID        uint,
+	username      string,
+	email         string,
+	password      string,
+	expectSuccess bool,
+) {
+	passwordHash, err := utils.HashPassword(password)
+	if err != nil {
+		testInterface.Errorf(`failed to hash password`)
+		return
+	}
+	_, err = userService.UpdateUser(userID, username, email, passwordHash)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf(`update user %d with username %s and email %s did not go as expected`, userID, username, email)
+	}
+	if err != nil {
+		return
+	}
+	user, err := userService.GetUserByID(userID)
+	if err != nil {
+		testInterface.Errorf(`couldn't find user`)
+		return
+	}
+	checkForDifferences(testInterface, "username", username, user.Username)
+	checkForDifferences(testInterface, "email",    email,    user.Email)
+	if !utils.VerifyPassword(user.PasswordHash, password) {
+		testInterface.Errorf(`password %s wasn't successfully updated`, password)
+	}
+	loginExpect(testInterface, userService, username, password, true)
 }
 
 func displayTransactions(testInterface *testing.T, expected *models.Transaction, actual *models.Transaction) {
@@ -187,6 +228,26 @@ func TestAccountService(testInterface *testing.T) {
 	loginExpect(testInterface, userService, stressTest,        "a", false)
 	loginExpect(testInterface, userService,        "a", stressTest, false)
 	loginExpect(testInterface, userService, stressTest, stressTest, false)
+
+	// Inexistent user
+	updateUserExpect(testInterface, userService, 16, "bubb",   "bubb@gatherate.net",  "blubb", false)
+
+	// Successful tests
+	updateUserExpect(testInterface, userService, 5,  "herold", "arbitrart@gmail.com", "jiji",  true)
+	updateUserExpect(testInterface, userService, 1,  "test0",  "test0@gatherate.net", "test0", true)
+	updateUserExpect(testInterface, userService, 2,  "illix",  "test1@gatherate.net", "test1", true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "illix@yahoo.com",     "test1", true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "illix", true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "test1", true)
+
+	// Failing username and email validation
+	updateUserExpect(testInterface, userService, 3,  "a",      "test2@gatherate.net", "test2", false)
+	updateUserExpect(testInterface, userService, 3,  "test2",  "<<<<<",               "test2", false)
+	updateUserExpect(testInterface, userService, 3,  "",       "",                    "test2", false)
+
+	// Duplicates
+	updateUserExpect(testInterface, userService, 3,  "herold", "test2@gatherate.net", "test2", false)
+	updateUserExpect(testInterface, userService, 3,  "test2",  "test3@gatherate.net", "test2", false)
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
