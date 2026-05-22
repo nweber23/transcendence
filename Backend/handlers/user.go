@@ -121,7 +121,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 			return
 		}
 	}
-	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
+	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash, user.AvatarURL)
 	if err != nil {
 		var status int
 		// TODO: Perhaps create a full enum of errors for our API

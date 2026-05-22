@@ -99,7 +99,13 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 }
 
 // UpdateUser updates a user by userID
-func (s *UserService) UpdateUser(userID uint, username string, email string, passwordHash string) (*models.User, error) {
+func (s *UserService) UpdateUser(
+	userID       uint,
+	username     string,
+	email        string,
+	passwordHash string,
+	avatarURL    string,
+) (*models.User, error) {
 	if err := ValidateUsername(username); err != nil {
 		return nil, errors.New("invalid username")
 	}
@@ -123,6 +129,7 @@ func (s *UserService) UpdateUser(userID uint, username string, email string, pas
 	user.Username     = username
 	user.Email        = email
 	user.PasswordHash = passwordHash
+	user.AvatarURL    = avatarURL
 	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
