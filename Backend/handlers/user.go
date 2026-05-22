@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"os"
 	"net/http"
 	"strconv"
@@ -149,10 +150,10 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
 }
 
-func createRelatedURL(uploadFilePath string) (string, bool) {
+func createRelatedURL(uploadFilePath string) (string, error) {
 	fileName := filepath.Base(uploadFilePath)
 	if fileName == "." || fileName == "/" {
-		return "", false
+		return "", errors.New("invalid file name")
 	}
 	fileDots := strings.Split(fileName, ".")
 	fileExtension := ""
@@ -160,9 +161,13 @@ func createRelatedURL(uploadFilePath string) (string, bool) {
 		fileExtension = "." + fileDots[len(fileDots) - 1]
 	}
 	for {
-		fileURL := utils.getRandomHexString(16) + fileExtension
-		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); os.IsNotExist(err) {
-			return fileURL, true
+		fileURL, err := utils.GetRandomHexString(16)
+		if err != nil {
+			return "", errors.New("failed to generate random string")
+		}
+		fileURL += fileExtension
+		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
+			return fileURL, nil
 		}
 	}
 }
@@ -179,12 +184,12 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H {"error": err.Error()})
 		return
 	}
-	err = os.Mkdir("./uploads/")
+	err = os.Mkdir("./uploads/", os.ModeDir)
 	if err != nil && !os.IsExist(err) {
 		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
 		return
 	}
-	user, err := uh.UserService.GetUserByID(userID.(uint))
+	user, err := uh.userService.GetUserByID(userID.(uint))
 	if err != nil {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
@@ -194,17 +199,24 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusInternalServerError, "delete_old_avatar_failed", err.Error())
 		return
 	}
-	user.AvatarURL, isValid = createRelatedURL(file.Filename)
-	if !isValid {
-		utils.RespondError(c, http.StatusBadRequest, "failed_to_create_url", "Invalid file name")
+	user.AvatarURL, err = createRelatedURL(file.Filename)
+	if err != nil {
+		var status int
+		if err.Error() == "invalid file name" {
+			status = http.StatusBadRequest
+		}
+		if err.Error() == "failed to generate random string" {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "create_url_failed", err.Error())
 		return
 	}
 	c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL))
 	user, err = uh.userService.UpdateUser(
 		userID.(uint),
-		user.username,
-		user.email,
-		user.passwordHash,
+		user.Username,
+		user.Email,
+		user.PasswordHash,
 		user.AvatarURL,
 	)
 	if err != nil {

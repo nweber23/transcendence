@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 )
 
-func getRandomHexString(length int) (string, error) {
+func GetRandomHexString(length int) (string, error) {
 	data := make([]byte, length)
 	if _, err := rand.Read(data); err != nil {
 		return "", err
