@@ -126,7 +126,7 @@ func updateUserExpect(
 		testInterface.Errorf(`failed to hash password`)
 		return
 	}
-	_, err = userService.UpdateUser(userID, username, email, passwordHash)
+	_, err = userService.UpdateUser(userID, username, email, passwordHash, models.DefaultAvatarURL)
 	if (err != nil) == expectSuccess {
 		testInterface.Errorf(`update user %d with username %s and email %s did not go as expected`, userID, username, email)
 	}
