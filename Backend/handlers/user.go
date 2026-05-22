@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"os"
 	"net/http"
 	"strconv"
+	"strings"
+	"path/filepath"
 
 	"transcendence/services"
 	"transcendence/utils"
@@ -24,10 +27,11 @@ func NewUserHandler(userService *services.UserService, accountService *services.
 }
 
 type UserProfileResponse struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	JoinedAt string `json:"joined_at"`
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatarURL"`
+	JoinedAt  string `json:"joined_at"`
 }
 
 type AccountResponse struct {
@@ -136,12 +140,85 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:       userID.(uint),
-		Username: username,
-		Email:    email,
-		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:        userID.(uint),
+		Username:  username,
+		Email:     email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
+}
+
+func createRelatedURL(uploadFilePath string) (string, bool) {
+	fileName := filepath.Base(uploadFilePath)
+	if fileName == "." || fileName == "/" {
+		return "", false
+	}
+	fileDots := strings.Split(fileName, ".")
+	fileExtension := ""
+	if len(fileDots) > 1 {
+		fileExtension = "." + fileDots[len(fileDots) - 1]
+	}
+	for {
+		fileURL := utils.getRandomHexString(16) + fileExtension
+		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); os.IsNotExist(err) {
+			return fileURL, true
+		}
+	}
+}
+
+// UploadAvatar
+func (uh* UserHandler) UploadAvatar(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H {"error": err.Error()})
+		return
+	}
+	err = os.Mkdir("./uploads/")
+	if err != nil && !os.IsExist(err) {
+		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
+		return
+	}
+	user, err := uh.UserService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
+	if err != nil && !os.IsNotExist(err) {
+		utils.RespondError(c, http.StatusInternalServerError, "delete_old_avatar_failed", err.Error())
+		return
+	}
+	user.AvatarURL, isValid = createRelatedURL(file.Filename)
+	if !isValid {
+		utils.RespondError(c, http.StatusBadRequest, "failed_to_create_url", "Invalid file name")
+		return
+	}
+	c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL))
+	user, err = uh.userService.UpdateUser(
+		userID.(uint),
+		user.username,
+		user.email,
+		user.passwordHash,
+		user.AvatarURL,
+	)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
+		return
+	}
+	response := UserProfileResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 }
 
 // GetAccount retrieves account balance and summary

@@ -50,6 +50,7 @@ func main() {
 	{
 		userRoutes.GET("/profile", userHandler.GetProfile)
 		userRoutes.PUT("/profile", userHandler.UpdateProfile)
+		userRoutes.POST("/avatar", userHandler.UploadAvatar)
 		userRoutes.GET("/account", userHandler.GetAccount)
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
 		userRoutes.POST("/account/deposit", userHandler.Deposit)
