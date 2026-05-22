@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
+import Logo from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
@@ -37,13 +38,16 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   return (
     <nav className="fixed inset-0 bottom-auto z-100 bg-[rgba(13,17,23,0.88)] backdrop-blur-3xl border-b border-[rgba(212,175,55,0.08)] shadow-md">
       <div className="flex items-center justify-between h-16 max-w-5xl mx-auto px-8">
-        {/* Wordmark */}
+        {/* Brand mark + wordmark */}
         <Link
           to="/"
-          className="font-serif text-lg font-semibold tracking-widest text-[var(--gold)] hover:text-[var(--text)] transition-colors"
+          className="group flex items-center gap-2.5 text-[var(--gold)] hover:text-[var(--text)] transition-colors"
           aria-label="ft_casino home"
         >
-          FT_CASINO
+          <Logo size={26} className="transition-transform group-hover:scale-105" />
+          <span className="font-serif text-lg font-semibold tracking-widest">
+            FT_CASINO
+          </span>
         </Link>
 
         {/* Nav links - only show on home */}
