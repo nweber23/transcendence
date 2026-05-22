@@ -55,6 +55,7 @@ func (s *UserService) RegisterUser(username, email, password string) (*models.Us
 		Username:     username,
 		Email:        email,
 		PasswordHash: passwordHash,
+		AvatarURL:    models.DefaultAvatarURL,
 	}
 	if err := s.db.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)

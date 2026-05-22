@@ -8,6 +8,7 @@ import (
 	"strings"
 	"path/filepath"
 
+	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
 
@@ -82,10 +83,11 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
@@ -194,10 +196,12 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
-	err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
-	if err != nil && !os.IsNotExist(err) {
-		utils.RespondError(c, http.StatusInternalServerError, "delete_old_avatar_failed", err.Error())
-		return
+	if user.AvatarURL != models.DefaultAvatarURL {
+		err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
+		if err != nil && !os.IsNotExist(err) {
+			utils.RespondError(c, http.StatusInternalServerError, "delete_old_avatar_failed", err.Error())
+			return
+		}
 	}
 	user.AvatarURL, err = createRelatedURL(file.Filename)
 	if err != nil {

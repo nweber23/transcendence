@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+const (
+	DefaultAvatarURL = "default_avatar"
+)
+
 type User struct {
 	ID           uint   `gorm:"primaryKey"`
 	Username     string `gorm:"uniqueIndex,size:50"`
