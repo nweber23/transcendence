@@ -7,11 +7,11 @@ import (
 	"testing"
 	"reflect"
 	"transcendence/utils"
-	"time"
 	"github.com/shopspring/decimal"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"transcendence/config"
 	"transcendence/models"
 )
 
@@ -21,27 +21,19 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 		testInterface.Errorf(`failed to create in memory database: %v`, err)
 		testInterface.FailNow()
 	}
-	if err := db.AutoMigrate(
-		&models.User{},
-		&models.Account{},
-		&models.Transaction{},
-		&models.Game{},
-		&models.BlackjackGame{},
-		&models.PokerGame{},
-		&models.SlotsGame{},
-		&models.GameStatistics{},
-	); err != nil {
+	if err := config.PrepareDB(db); err != nil {
 		testInterface.Errorf(`failed to run migrations: %v`, err)
 		testInterface.FailNow()
 	}
 	return db
 }
 
-func createMockServices(testInterface *testing.T) (*AccountService, *UserService) {
+func createMockServices(testInterface *testing.T) (*AccountService, *UserService, *FriendService) {
 	db := InitMockDB(testInterface)
 	accountService := NewAccountService(db)
 	userService := NewUserService(db)
-	return accountService, userService
+	friendService := NewFriendService(db)
+	return accountService, userService, friendService
 }
 
 func createMockUsers(testInterface *testing.T, userService *UserService) {
@@ -199,11 +191,65 @@ func getTransactionHistoryExpect(
 	}
 }
 
+func addFriendExpect(testInterface *testing.T, friendService *FriendService, userID uint, friendID uint, expectSuccess bool) {
+	if err := friendService.AddFriend(userID, friendID); (err != nil) == expectSuccess {
+		testInterface.Errorf("create friendship between %d and %d did not go as expected: %v", userID, friendID, err)
+	}
+}
+
+func removeFriendExpect(testInterface *testing.T, friendService *FriendService, userID uint, friendID uint, expectSuccess bool) {
+	if err := friendService.RemoveFriend(userID, friendID); (err != nil) == expectSuccess {
+		testInterface.Errorf("remove friendship between %d and %d did not go as expected: %v", userID, friendID, err)
+	}
+}
+
+func ordinaryFriendshipCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
+	addFriendExpect(testInterface, friendService, 1, 2, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 4, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 3, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 5, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 1, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 4, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 3, expectSuccess)
+}
+
+func getFriendsExpect(
+	testInterface       *testing.T,
+	friendService       *FriendService,
+	expectedFriendships []models.Friendship,
+	userID              uint,
+) {
+	var length int = len(expectedFriendships)
+	actualFriendships, err := friendService.GetFriends(userID)
+	if err != nil {
+		testInterface.Errorf("Getting friends should not fail")
+		testInterface.FailNow()
+	}
+	if length != len(actualFriendships) {
+		testInterface.Errorf("Actual friendships don't match the expected ones in terms of length")
+		return
+	}
+	for friendshipIndex := 0; friendshipIndex < length; {
+		expected := &expectedFriendships[friendshipIndex]
+		actual   := &actualFriendships[friendshipIndex]
+
+		// The expected userID is already implied
+		expected.UserID = userID
+
+		if expected.UserID != actual.UserID {
+			testInterface.Errorf("userID at index %d was expected to be %d but was %d instead", friendshipIndex, expected.UserID, actual.UserID)
+		}
+		if expected.FriendID != actual.FriendID {
+			testInterface.Errorf("friendID at index %d was expected to be %d but was %d instead", friendshipIndex, expected.FriendID, actual.FriendID)
+		}
+		friendshipIndex++
+	}
+}
+
 const STRESS_TEST_AMOUNT int = 500
 
 func TestAccountService(testInterface *testing.T) {
-	accountService, userService := createMockServices(testInterface)
-	_ = accountService
+	accountService, userService, friendService := createMockServices(testInterface)
 
 	// Create test users and check if they exist after
 	createMockUsers(testInterface, userService)
@@ -293,8 +339,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(2),
 			BalanceAfter: decimal.NewFromInt(12),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 		models.Transaction {
 			ID:           2,
@@ -303,8 +349,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(40),
 			BalanceAfter: decimal.NewFromInt(10),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 		models.Transaction {
 			ID:           1,
@@ -313,8 +359,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(50),
 			BalanceAfter: decimal.NewFromInt(50),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 	}
 	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:],  2, 50, 0)
@@ -332,4 +378,43 @@ func TestAccountService(testInterface *testing.T) {
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
+
+	// Self love
+	addFriendExpect(testInterface, friendService, 1, 1, false)
+
+	// Test ordinary cases and test duplicate detection
+	ordinaryFriendshipCases(testInterface, friendService, true)
+	ordinaryFriendshipCases(testInterface, friendService, false)
+	ordinaryFriendshipCases(testInterface, friendService, false)
+
+	// Self love shouldn't suddenly work
+	addFriendExpect(testInterface, friendService, 1, 1, false)
+	addFriendExpect(testInterface, friendService, 2, 2, false)
+
+	// Inexistent users
+	addFriendExpect(testInterface, friendService,  1, 90, false)
+	addFriendExpect(testInterface, friendService, 90,  1, false)
+	addFriendExpect(testInterface, friendService, 90, 90, false)
+
+	// Removal
+	removeFriendExpect(testInterface, friendService, 1, 1, true)
+	removeFriendExpect(testInterface, friendService, 1, 3, true)
+	removeFriendExpect(testInterface, friendService, 1, 3, true)
+	removeFriendExpect(testInterface, friendService, 2, 3, true)
+	removeFriendExpect(testInterface, friendService, 2, 3, true)
+
+	// Get friends
+	expectedFriendships := []models.Friendship {
+		models.Friendship {
+			FriendID: 2,
+		},
+		models.Friendship {
+			FriendID: 4,
+		},
+		models.Friendship {
+			FriendID: 5,
+		},
+	}
+	getFriendsExpect(testInterface, friendService, []models.Friendship {}, 3)
+	getFriendsExpect(testInterface, friendService, expectedFriendships,    1)
 }
