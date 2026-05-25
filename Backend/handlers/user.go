@@ -376,3 +376,12 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Withdrawal successful", response)
 }
+
+func (uh *UserHandler) AddFriend(c *gin.Context) {
+}
+
+func (uh *UserHandler) RemoveFriend(c *gin.Context) {
+}
+
+func (uh *UserHandler) GetFriends(c *gin.Context) {
+}

@@ -55,6 +55,9 @@ func main() {
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
 		userRoutes.POST("/account/deposit", userHandler.Deposit)
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
+		userRoutes.POST("/:id/friends", userHandler.AddFriend)
+		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
+		userRoutes.GET("/:id/friends", userHandler.GetFriends)
 	}
 
 	// Game routes (protected)
