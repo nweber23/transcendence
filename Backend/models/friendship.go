@@ -5,7 +5,6 @@ import (
 )
 
 type Friendship struct {
-	ID        uint `gorm:"primaryKey"`
 	UserID    uint
 	FriendID  uint
 	CreatedAt time.Time
