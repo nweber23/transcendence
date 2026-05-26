@@ -14,17 +14,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
 	userService    *services.UserService
 	accountService *services.AccountService
+	friendService  *services.FriendService
 }
 
-func NewUserHandler(userService *services.UserService, accountService *services.AccountService) *UserHandler {
+func NewUserHandler(userService *services.UserService, accountService *services.AccountService, friendService *services.FriendService) *UserHandler {
 	return &UserHandler{
 		userService:    userService,
 		accountService: accountService,
+		friendService:  friendService,
 	}
 }
 
@@ -54,6 +57,18 @@ type TransactionResponse struct {
 
 type TransactionHistoryResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
+}
+
+type ToggleFriendResponse struct {
+	UserID   uint `json:"user_id"`
+	FriendID uint `json:"friend_id"`
+	WasAdded bool `json:"was_added"`
+}
+
+type FriendResponse struct {
+	UserID    uint   `json:"user_id"`
+	FriendID  uint   `json:"friend_id"`
+	CreatedAt string `json:"created_at"`
 }
 
 type UserProfileRequest struct {
@@ -378,10 +393,75 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 }
 
 func (uh *UserHandler) AddFriend(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	friendID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", "Invalid id format")
+		return
+	}
+	if err := uh.friendService.AddFriend(userID.(uint), uint(friendID)); err != nil {
+		if (err.Error() == "self love only works irl" ||
+			errors.Is(err, gorm.ErrRecordNotFound) ||
+			err.Error() == "matching entry already exists") {
+			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", "Invalid ids")
+		} else {
+			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", "Failed to add friend")
+		}
+	} else {
+		response := ToggleFriendResponse{
+			UserID:   userID.(uint),
+			FriendID: uint(friendID),
+			WasAdded: true,
+		}
+		utils.RespondSuccess(c, http.StatusCreated, "Friend added successfully", &response)
+	}
 }
 
 func (uh *UserHandler) RemoveFriend(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	friendID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", "Invalid id format")
+		return
+	}
+	if err := uh.friendService.RemoveFriend(userID.(uint), uint(friendID)); err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", "Failed to remove friend")
+	} else {
+		response := ToggleFriendResponse{
+			UserID:   userID.(uint),
+			FriendID: uint(friendID),
+			WasAdded: false,
+		}
+		utils.RespondError(c, http.StatusCreated, "Friend removed successfully", &response)
+	}
 }
 
 func (uh *UserHandler) GetFriends(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	friendships, err := uh.friendService.GetFriends(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "get_friends_failed", "Failed to get friends")
+		return
+	}
+	friendResponses := make([]FriendResponse, len(friendships))
+	for responseIndex, friendship := range friendships {
+		friendResponses[responseIndex] = FriendResponse{
+			UserID:    friendship.UserID,
+			FriendID:  friendship.FriendID,
+			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Friend list retrieved successfully", friendResponses)
 }

@@ -70,7 +70,7 @@ func (s *UserService) LoginUser(username string, password string) (*models.User,
 	var user models.User
 	if err := s.db.Where("username = ? and deleted_at IS NULL", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("invalid username or password")
+			return nil, err
 		}
 		return nil, fmt.Errorf("failed to login: %w", err)
 	}

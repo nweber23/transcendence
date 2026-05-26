@@ -28,12 +28,13 @@ func main() {
 	// Initialize services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)
+	friendService := services.NewFriendService(db)
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
 
 	// Auth routes
@@ -57,7 +58,7 @@ func main() {
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
 		userRoutes.POST("/:id/friends", userHandler.AddFriend)
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
-		userRoutes.GET("/:id/friends", userHandler.GetFriends)
+		userRoutes.GET("/friends", userHandler.GetFriends)
 	}
 
 	// Game routes (protected)
