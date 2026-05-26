@@ -41,7 +41,7 @@ const Hero: React.FC = () => {
   const gameCount = useCountUp(3, 1200, isVisible);
 
   return (
-    <section className="hero min-h-screen flex flex-col pt-16" aria-labelledby="hero-heading">
+    <section className="hero min-h-screen flex flex-col pt-24" aria-labelledby="hero-heading">
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-8 py-20">
         {/* Balatro background */}
@@ -88,10 +88,17 @@ const Hero: React.FC = () => {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 fade-in-up" style={{ animationDelay: '300ms' }}>
             <Link to="/login">
-              <Button variant="gold" size="md">Play for Free</Button>
+              <Button variant="gold" size="md">
+                Play for Free
+                <span className="w-6 h-6 rounded-full bg-black/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </Button>
             </Link>
             <a href="#games">
-              <Button variant="gold" size="md">Explore Games</Button>
+              <Button variant="ghost" size="md">Explore Games</Button>
             </a>
           </div>
         </div>

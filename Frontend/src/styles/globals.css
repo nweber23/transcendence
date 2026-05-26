@@ -163,15 +163,9 @@
   /* Enhanced card hover with premium feel */
   @media (hover: hover) and (pointer: fine) {
     .card-transition:hover {
-      border-color: rgba(212, 175, 55, 0.6);
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 12px 48px rgba(212, 175, 55, 0.2);
-    }
-
-    /* Badge pops on card hover */
-    .card-transition:hover span[class*="badge"],
-    .card-transition:hover [role="img"] {
-      transform: scale(1.05);
+      border-color: rgba(212, 175, 55, 0.45);
+      transform: translateY(-6px) scale(1.015);
+      box-shadow: 0 16px 48px rgba(212, 175, 55, 0.15);
     }
 
     /* Button becomes prominent on card hover */
@@ -255,11 +249,11 @@
 }
 
 .casino-glow-primary {
-  animation: casino-drift-primary 18s ease-in-out infinite;
+  animation: casino-drift-primary 18s cubic-bezier(0.77, 0, 0.175, 1) infinite;
 }
 
 .casino-glow-secondary {
-  animation: casino-drift-secondary 24s ease-in-out infinite;
+  animation: casino-drift-secondary 24s cubic-bezier(0.77, 0, 0.175, 1) infinite;
 }
 
 /* ─── ENTRANCE ANIMATIONS ─── */
