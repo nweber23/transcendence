@@ -43,10 +43,15 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Prevent scroll when menu is open
+  // Prevent scroll when menu is open, restoring whatever was set before
   React.useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    const previous = document.body.style.overflow;
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = previous;
+    };
   }, [menuOpen]);
 
   return (
@@ -147,6 +152,8 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         }`}
         style={{ backdropFilter: menuOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
         aria-hidden={!menuOpen}
+        // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
+        inert={!menuOpen ? '' : undefined}
       >
         <div className="flex flex-col items-center justify-center h-full gap-2 px-8">
           {/* Nav links */}
