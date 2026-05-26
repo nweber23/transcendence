@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               aria-label="ft_casino home"
             >
               <Logo size={24} className="transition-transform duration-300 group-hover:scale-105" />
-              <span className="font-serif text-base font-semibold tracking-widest">
+              <span className="font-serif text-base font-semibold tracking-widest" style={{ color: 'var(--gold)' }}>
                 FT_CASINO
               </span>
             </Link>

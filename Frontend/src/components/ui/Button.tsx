@@ -16,7 +16,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       gold: 'bg-[var(--gold)] text-[#0a0e12] btn-gold-transition hover:opacity-90 hover:shadow-lg',
       outline:
         'bg-[rgba(212,175,55,0.32)] text-[#0a0e12] border-2 border-[var(--gold)] font-bold btn-outline-transition hover:bg-[rgba(212,175,55,0.42)] hover:shadow-lg',
-      ghost: 'bg-[rgba(212,175,55,0.22)] text-[var(--gold)] border border-[rgba(212,175,55,0.45)] btn-ghost-transition hover:bg-[rgba(212,175,55,0.32)] hover:border-[rgba(212,175,55,0.6)]',
+      ghost: 'bg-[rgba(212,175,55,0.35)] text-[var(--gold)] border border-[rgba(212,175,55,0.65)] btn-ghost-transition hover:bg-[rgba(212,175,55,0.48)] hover:border-[rgba(212,175,55,0.8)]',
       'nav-ghost':
         'bg-none text-[var(--text-2)] px-4 py-2 btn-nav-ghost-transition active:bg-[rgba(255,255,255,0.12)] hover:text-[var(--text)] hover:bg-[rgba(255,255,255,0.06)]',
       'nav-primary': 'bg-[var(--gold)] text-[#0a0e12] px-[1.125rem] py-2 btn-nav-primary-transition hover:opacity-90 hover:shadow-md',
