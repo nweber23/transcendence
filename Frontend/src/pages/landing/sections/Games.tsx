@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -85,16 +85,55 @@ const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge
 };
 
 const Games: React.FC = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [hasEntered, setHasEntered] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEntered(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '-40px' }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section id="games" className="py-24 px-8" aria-labelledby="games-heading">
+    <section ref={sectionRef} id="games" className="py-24 px-8" aria-labelledby="games-heading">
       <div className="max-w-5xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-14">
-          <p className="eyebrow mb-3.5 fade-in-up" style={{ animationDelay: '0ms' }}>Featured Games</p>
-          <h2 id="games-heading" className="font-serif text-4xl md:text-5xl font-semibold leading-tight mb-3.5 fade-in-up" style={{ animationDelay: '100ms' }}>
+          <p
+            className={`eyebrow mb-3.5 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+            style={{ transitionDelay: '0ms' }}
+          >
+            Featured Games
+          </p>
+          <h2
+            id="games-heading"
+            className={`font-serif text-4xl md:text-5xl font-semibold leading-tight mb-3.5 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+            style={{ transitionDelay: '80ms' }}
+          >
             Choose Your Game
           </h2>
-          <p className="text-base text-text max-w-sm mx-auto leading-relaxed fade-in-up" style={{ animationDelay: '200ms' }}>
+          <p
+            className={`text-base text-text max-w-sm mx-auto leading-relaxed transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+            style={{ transitionDelay: '160ms' }}
+          >
             Three classic casino experiences.
           </p>
         </div>
@@ -102,7 +141,14 @@ const Games: React.FC = () => {
         {/* Games grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="list">
           {GAMES.map((game, index) => (
-            <div key={game.id} role="listitem" className="fade-in-up" style={{ animationDelay: `${300 + index * 100}ms` }}>
+            <div
+              key={game.id}
+              role="listitem"
+              className={`transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              }`}
+              style={{ transitionDelay: `${280 + index * 100}ms` }}
+            >
               <GameCard {...game} />
             </div>
           ))}

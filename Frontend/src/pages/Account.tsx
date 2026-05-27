@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/hooks/useAccount';
 import Button from '@/components/ui/Button';
 import CasinoBackground from '@/components/ui/CasinoBackground';
+import Spinner from '@/components/ui/Spinner';
 
 const Account: React.FC = () => {
   const { user } = useAuth();
@@ -70,16 +71,27 @@ const Account: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex items-center justify-center">
-        <div className="text-xl">Loading account...</div>
+      <div className="min-h-screen bg-[var(--base)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-5">
+          <Spinner size="lg" variant="minimal" />
+          <p className="text-sm font-medium text-[var(--text-2)] tracking-wide uppercase">Loading account</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
+      <div className="min-h-screen bg-[var(--base)] flex items-center justify-center px-8">
+        <div className="max-w-sm w-full bg-[var(--surface)] border border-red-500/20 rounded-2xl p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+          <p className="font-serif text-lg font-semibold text-[var(--text)] mb-2">Something went wrong</p>
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
       </div>
     );
   }
@@ -115,7 +127,7 @@ const Account: React.FC = () => {
               {/* Current Balance Card */}
               <div
                 ref={balanceRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(212,175,55,0.4)] relative"
+                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)] relative"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
@@ -130,7 +142,7 @@ const Account: React.FC = () => {
               {/* Total Winnings Card */}
               <div
                 ref={winsRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(45,122,99,0.4)] relative"
+                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(45,122,99,0.4)] relative"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(45,122,99,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 <div className="relative z-10">
@@ -145,7 +157,7 @@ const Account: React.FC = () => {
               {/* Total Losses Card */}
               <div
                 ref={lossesRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(139,38,53,0.4)] relative"
+                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(139,38,53,0.4)] relative"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(139,38,53,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 <div className="relative z-10">
@@ -162,7 +174,7 @@ const Account: React.FC = () => {
           {/* ERROR MESSAGE */}
           {operationError && (
             <div className="max-w-6xl mx-auto mb-8 animate-in fade-in slide-in-from-top-4">
-              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-red-400 backdrop-blur-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-red-400 ">
                 <p className="font-semibold mb-1">Transaction Error</p>
                 <p>{operationError}</p>
               </div>
@@ -172,7 +184,7 @@ const Account: React.FC = () => {
           {/* DEPOSIT/WITHDRAW SECTION */}
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 mb-32 md:mb-40">
             {/* Deposit Form */}
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(212,175,55,0.4)]">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)]">
               <h3 className="text-2xl font-serif font-semibold text-[var(--text)] mb-8">Deposit Funds</h3>
               <form onSubmit={handleDeposit} className="space-y-6">
                 <div>
@@ -200,7 +212,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* Withdraw Form */}
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10 backdrop-blur-sm hover:border-[rgba(212,175,55,0.4)]">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)]">
               <h3 className="text-2xl font-serif font-semibold text-[var(--text)] mb-8">Withdraw Funds</h3>
               <form onSubmit={handleWithdraw} className="space-y-6">
                 <div>
@@ -235,7 +247,7 @@ const Account: React.FC = () => {
             </h2>
 
             {transactions.length === 0 ? (
-              <div className="rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-12 md:p-16 text-center backdrop-blur-sm">
+              <div className="rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-12 md:p-16 text-center ">
                 <p className="text-lg text-[var(--text-2)]">No transactions recorded yet</p>
                 <p className="text-sm text-[var(--text-3)] mt-2">Your activity will appear here</p>
               </div>
@@ -244,7 +256,7 @@ const Account: React.FC = () => {
                 {transactions.map((tx, idx) => (
                   <div
                     key={tx.id}
-                    className="group card-transition overflow-hidden rounded-xl border border-[rgba(212,175,55,0.1)] bg-[var(--surface)] backdrop-blur-sm hover:border-[rgba(212,175,55,0.3)] cursor-pointer transition-all duration-300 fade-in-up"
+                    className="group card-transition overflow-hidden rounded-xl border border-[rgba(212,175,55,0.1)] bg-[var(--surface)]  hover:border-[rgba(212,175,55,0.3)] cursor-pointer transition-all duration-300 fade-in-up"
                     style={{ animationDelay: `${idx * 50}ms` }}
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
                   >
