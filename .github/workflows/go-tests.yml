@@ -1,0 +1,23 @@
+name: Go Tests
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/go-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: Backend/go.mod
+          cache-dependency-path: Backend/go.sum
+
+      - name: Run all tests
+        working-directory: ./Backend
+        run: go test ./...
