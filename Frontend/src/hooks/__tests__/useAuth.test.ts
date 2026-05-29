@@ -61,16 +61,27 @@ describe('useAuth - login', () => {
   });
 
   it('sets isLoading true during login and false after', async () => {
-    let resolveLogin: (v: unknown) => void;
-    const loginPromise = new Promise((res) => { resolveLogin = res; });
-    mockApiCall.mockReturnValueOnce(loginPromise as Promise<never>);
+    let resolveLogin!: (v: { token: string; user_id: number }) => void;
+    const loginPromise = new Promise<{ token: string; user_id: number }>((res) => {
+      resolveLogin = res;
+    });
+    mockApiCall
+      .mockReturnValueOnce(loginPromise as unknown as Promise<{ token: string; user_id: number }>)
+      .mockResolvedValueOnce(mockUser);
 
     const { result } = renderHook(() => useAuth());
 
-    act(() => { result.current.login('testuser', 'password'); });
+    let loginTask!: Promise<void>;
+    act(() => {
+      loginTask = result.current.login('testuser', 'password');
+    });
     expect(result.current.isLoading).toBe(true);
 
-    await act(async () => { resolveLogin!({ token: mockToken, user_id: 1 }); });
+    resolveLogin({ token: mockToken, user_id: 1 });
+    await act(async () => {
+      await loginTask;
+    });
+    expect(result.current.isLoading).toBe(false);
   });
 
   it('sets error and throws when login API call fails', async () => {
