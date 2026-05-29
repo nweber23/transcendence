@@ -36,6 +36,7 @@ go.work.sum
 .playwright-mcp
 
 _*
+!**/__tests__/
 
 # Incase of local test builds
 Backend/backend
