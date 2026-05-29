@@ -149,7 +149,24 @@ CREATE INDEX idx_accounts_balance ON accounts(balance) WHERE balance > 0;
 
 ---
 
-### 5. `transactions`
+### 5. `friendships`
+Stores one-way friendship bindings between two users
+
+```sql
+CREATE TABLE friendships (
+  user_id INT,
+  friend_id INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+**Design rationale:**
+- No unique index for simplicity, only id combinations shall be unique
+- Creation timestamp for convenience
+
+---
+
+### 6. `transactions`
 Immutable financial transaction log.
 
 ```sql
@@ -185,7 +202,7 @@ CREATE INDEX idx_transactions_status ON transactions(status) WHERE status IN ('p
 
 ---
 
-### 6. `games`
+### 7. `games`
 Game session records (parent table for all game types).
 
 ```sql
@@ -220,7 +237,7 @@ CREATE INDEX idx_games_game_type ON games(game_type);
 
 ---
 
-### 7. `blackjack_games`
+### 8. `blackjack_games`
 Game-specific record for Blackjack.
 
 ```sql
@@ -263,7 +280,7 @@ CREATE INDEX idx_blackjack_games_game_id ON blackjack_games(game_id);
 
 ---
 
-### 8. `poker_games`
+### 9. `poker_games`
 Game-specific record for Poker.
 
 ```sql
@@ -293,7 +310,7 @@ CREATE INDEX idx_poker_games_table_id ON poker_games(table_id);
 
 ---
 
-### 9. `slots_games`
+### 10. `slots_games`
 Game-specific record for Slot Machine.
 
 ```sql
@@ -331,7 +348,7 @@ CREATE INDEX idx_slots_games_game_id ON slots_games(game_id);
 
 ## Analytics & Audit Tables
 
-### 10. `game_statistics`
+### 11. `game_statistics`
 Aggregated player statistics for quick queries.
 
 ```sql
@@ -383,6 +400,8 @@ users (1) ──── (1) user_profiles
   │               │
   │               └─ (1) ──── (n) transactions
   │
+  ├─ (1) ──── (1) friendships
+  |
   ├─ (1) ──── (n) sessions
   │
   ├─ (1) ──── (n) games
