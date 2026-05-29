@@ -1,0 +1,36 @@
+name: Frontend Tests
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'Frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: Frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        working-directory: ./Frontend
+        run: pnpm type-check
+
+      - name: Run tests
+        working-directory: ./Frontend
+        run: pnpm test
