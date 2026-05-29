@@ -1,6 +1,7 @@
 {
   "name": "ft_casino-frontend",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.26.0",
   "description": "ft_casino Casino Platform - Frontend",
   "type": "module",
   "scripts": {
