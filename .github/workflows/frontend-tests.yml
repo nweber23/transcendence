@@ -10,6 +10,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v5
 
@@ -25,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./Frontend
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --config.minimum-release-age=0
 
       - name: Type check
         working-directory: ./Frontend
