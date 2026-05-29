@@ -225,7 +225,8 @@ export default function Balatro({
   }, [
     spinRotation,
     spinSpeed,
-    offset,
+    offset[0],
+    offset[1],
     color1,
     color2,
     color3,
