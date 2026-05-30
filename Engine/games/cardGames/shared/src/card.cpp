@@ -2,7 +2,7 @@
 
 namespace cards {
 
-constexpr std::string_view to_string(Rank r) {
+constexpr std::string_view rank_to_string(Rank r) {
     switch (r) {
         case Rank::Two:   return "2";
         case Rank::Three: return "3";
@@ -21,7 +21,7 @@ constexpr std::string_view to_string(Rank r) {
     return "?";
 }
 
-constexpr std::string_view to_string(Suit s) {
+constexpr std::string_view suit_to_string(Suit s) {
     switch (s) {
         case Suit::Clubs:    return "♣";
         case Suit::Diamonds: return "♦";
@@ -32,7 +32,7 @@ constexpr std::string_view to_string(Suit s) {
 }
 
 std::string Card::to_string() const {
-    return std::format("{}{}", to_string(_rank), to_string(_suit));
+    return std::format("{}{}", rank_to_string(_rank), suit_to_string(_suit));
 }
 
 } // namespace cards
