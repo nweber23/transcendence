@@ -91,7 +91,7 @@ const Account: React.FC = () => {
 
           {/* Balance cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(212,175,55,0.4)] relative">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(212,175,55,0.4)] relative fade-in-up" style={{ animationDelay: '80ms' }}>
               <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative z-10">
                 <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Balance</p>
@@ -102,7 +102,7 @@ const Account: React.FC = () => {
               </div>
             </div>
 
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(45,122,99,0.4)] relative">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(45,122,99,0.4)] relative fade-in-up" style={{ animationDelay: '160ms' }}>
               <div className="absolute inset-0 bg-gradient-to-br from-[rgba(45,122,99,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative z-10">
                 <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Winnings</p>
@@ -113,7 +113,7 @@ const Account: React.FC = () => {
               </div>
             </div>
 
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(139,38,53,0.4)] relative">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(139,38,53,0.4)] relative fade-in-up" style={{ animationDelay: '240ms' }}>
               <div className="absolute inset-0 bg-gradient-to-br from-[rgba(139,38,53,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative z-10">
                 <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Losses</p>
@@ -138,7 +138,7 @@ const Account: React.FC = () => {
           {/* Deposit / Withdraw */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
             {/* Deposit */}
-            <div className="overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(45,122,99,0.4)] card-transition">
+            <div className="overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(45,122,99,0.4)] card-transition fade-in-up" style={{ animationDelay: '320ms' }}>
               <div className="flex items-center gap-2.5 mb-5">
                 <div className="w-7 h-7 rounded-full bg-[rgba(45,122,99,0.15)] flex items-center justify-center flex-shrink-0">
                   <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -174,7 +174,7 @@ const Account: React.FC = () => {
             </div>
 
             {/* Withdraw */}
-            <div className="overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(139,38,53,0.4)] card-transition">
+            <div className="overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(139,38,53,0.4)] card-transition fade-in-up" style={{ animationDelay: '380ms' }}>
               <div className="flex items-center gap-2.5 mb-5">
                 <div className="w-7 h-7 rounded-full bg-[rgba(139,38,53,0.15)] flex items-center justify-center flex-shrink-0">
                   <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -220,7 +220,7 @@ const Account: React.FC = () => {
                 { label: 'Slots', path: '/games/slots' },
               ].map((game) => (
                 <Link key={game.path} to={game.path}>
-                  <span className="inline-block px-5 py-2 rounded-full border border-[rgba(212,175,55,0.18)] bg-[var(--surface-2)] text-sm font-medium text-[var(--text-2)] hover:border-[rgba(212,175,55,0.45)] hover:text-[var(--text)] transition-all duration-200 cursor-pointer">
+                  <span className="inline-block px-5 py-2 rounded-full border border-[rgba(212,175,55,0.18)] bg-[var(--surface-2)] text-sm font-medium text-[var(--text-2)] hover:border-[rgba(212,175,55,0.45)] hover:text-[var(--text)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 cursor-pointer">
                     {game.label}
                   </span>
                 </Link>
@@ -253,8 +253,8 @@ const Account: React.FC = () => {
                     style={{ animationDelay: `${idx * 40}ms` }}
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
                   >
-                    <div className="px-5 py-4">
-                      <div className="flex items-center justify-between">
+                    <div className="px-5 pt-4">
+                      <div className="flex items-center justify-between pb-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                             tx.type === 'deposit' ? 'bg-emerald-400/10' : 'bg-red-400/10'
@@ -280,18 +280,24 @@ const Account: React.FC = () => {
                         </span>
                       </div>
 
-                      {expandedTx === tx.id && (
-                        <div className="mt-4 pt-4 border-t border-[rgba(212,175,55,0.08)] grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Transaction ID</p>
-                            <p className="font-mono text-xs text-[var(--text-2)]">#{tx.id}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Balance After</p>
-                            <p className="text-sm font-semibold text-[var(--text)]">${tx.balance_after}</p>
+                      {/* Smooth expand via grid-template-rows */}
+                      <div
+                        className="expand-transition"
+                        style={{ gridTemplateRows: expandedTx === tx.id ? '1fr' : '0fr' }}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="pt-4 pb-4 border-t border-[rgba(212,175,55,0.08)] grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Transaction ID</p>
+                              <p className="font-mono text-xs text-[var(--text-2)]">#{tx.id}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Balance After</p>
+                              <p className="text-sm font-semibold text-[var(--text)]">${tx.balance_after}</p>
+                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))}
