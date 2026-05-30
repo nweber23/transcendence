@@ -8,6 +8,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
+
 add_executable(card_test card_test.cpp)
 target_include_directories(card_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
 
