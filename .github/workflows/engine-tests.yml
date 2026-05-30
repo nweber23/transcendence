@@ -1,0 +1,36 @@
+name: Engine C++ tests
+
+on:
+  push:
+    paths:
+      - 'Engine/**'
+  pull_request:
+    paths:
+      - 'Engine/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git
+
+      - name: Configure CMake
+        working-directory: Engine
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: Engine
+        run: |
+          cmake --build build --config Release -- -j$(nproc)
+
+      - name: Run CTest
+        working-directory: Engine
+        run: |
+          ctest --test-dir build --output-on-failure
