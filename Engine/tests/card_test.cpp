@@ -2,7 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "../games/cardGames/shared/includes/card.hpp"
 
-using namespace cards;
+using namespace card;
 
 TEST_CASE("Card to_string outputs correct symbols", "[card]") {
     Card c{Rank::Ace, Suit::Spades};

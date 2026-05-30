@@ -8,7 +8,7 @@
 #include <ranges>
 #include <string_view>
 
-namespace cards {
+namespace card {
 
 // --------------------------------------------------
 // Suit / Rank
@@ -71,4 +71,4 @@ inline constexpr std::array<std::string_view, 13> rank_names{
     "8", "9", "10", "J", "Q", "K", "A"
 };
 
-} // namespace cards
+} // namespace card
