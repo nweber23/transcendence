@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
+import Logo from '@/components/ui/Logo';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
 
@@ -95,6 +96,14 @@ const Login: React.FC = () => {
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-8 py-8 pt-20">
         <div className="w-full max-w-md">
+          {/* Brand anchor */}
+          <div className="flex justify-center mb-8">
+            <Link to="/" className="flex items-center gap-2.5 opacity-70 hover:opacity-100 transition-opacity duration-200">
+              <Logo size={26} />
+              <span className="font-serif text-sm font-semibold tracking-widest text-[var(--gold)]">FT_CASINO</span>
+            </Link>
+          </div>
+
           {/* Card Container */}
           <div className="border border-[rgba(212,175,55,0.15)] rounded-2xl bg-[var(--surface)] p-8 md:p-10 hover:border-[rgba(212,175,55,0.25)] transition-colors duration-300">
             {/* Heading */}
