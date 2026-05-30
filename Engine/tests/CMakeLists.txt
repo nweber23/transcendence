@@ -20,3 +20,13 @@ target_link_libraries(card_test PRIVATE Catch2::Catch2WithMain cards_impl)
 
 include(CTest)
 add_test(NAME card_test COMMAND card_test)
+
+add_executable(deck_test deck_test.cpp)
+target_include_directories(deck_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+
+# Build deck implementation and link with card impl
+add_library(deck_impl STATIC ${CMAKE_SOURCE_DIR}/games/cardGames/shared/src/deck.cpp)
+target_include_directories(deck_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+
+target_link_libraries(deck_test PRIVATE Catch2::Catch2WithMain deck_impl cards_impl)
+add_test(NAME deck_test COMMAND deck_test)
