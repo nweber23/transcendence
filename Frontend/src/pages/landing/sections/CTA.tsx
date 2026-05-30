@@ -4,20 +4,24 @@ import Button from '@/components/ui/Button';
 
 const CTA: React.FC = () => {
   return (
-    <section className="py-40 px-8 relative">
+    <section className="py-24 px-8 relative" aria-labelledby="cta-heading">
+      {/* Top divider */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-12 bg-gradient-to-b from-[rgba(212,175,55,0.2)] to-transparent pointer-events-none" aria-hidden="true" />
+
       {/* Atmospheric glow */}
       <div className="glow-emerald absolute inset-0 pointer-events-none" aria-hidden="true" />
 
       {/* Content */}
-      <div className="relative z-10 max-w-2xl mx-auto text-center">
+      <div className="relative z-10 max-w-lg mx-auto text-center">
         <p className="eyebrow mb-4">Get Started</p>
 
         <h2 id="cta-heading" className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-5">
           Ready to Play?
         </h2>
 
-        <p className="text-lg text-text leading-relaxed mb-10">
-          Create a free account and start playing in seconds. No deposit, no real money — just the game.
+        <p className="text-lg text-[var(--text-2)] leading-relaxed mb-10">
+          Create a free account and start playing in seconds.
+          No deposit, no real money — just the game.
         </p>
 
         <Link to="/signup">
