@@ -41,33 +41,33 @@ const Hero: React.FC = () => {
   const gameCount = useCountUp(3, 1200, isVisible);
 
   return (
-    <section className="hero min-h-screen flex flex-col pt-24" aria-labelledby="hero-heading">
-      {/* Main content */}
-      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-8 py-20">
-        {/* Balatro background */}
-        <div className="absolute inset-0 pointer-events-none opacity-80" aria-hidden="true">
-          <Balatro
-            isRotate={false}
-            mouseInteraction
-            pixelFilter={2000}
-            color1="#DE443B"
-            color2="#006BB4"
-            color3="#162325"
-          />
-        </div>
-
-        {/* Atmospheric glow */}
-        <div className="glow-gold absolute inset-0 pointer-events-none" aria-hidden="true" />
-
-        {/* Bottom fade */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, transparent, var(--base))' }}
-          aria-hidden="true"
+    <section className="hero min-h-screen flex flex-col relative overflow-hidden" aria-labelledby="hero-heading">
+      {/* Balatro background — covers full section including top padding area */}
+      <div className="absolute inset-0 pointer-events-none opacity-80" aria-hidden="true">
+        <Balatro
+          isRotate={false}
+          mouseInteraction
+          pixelFilter={2000}
+          color1="#DE443B"
+          color2="#006BB4"
+          color3="#162325"
         />
+      </div>
 
+      {/* Atmospheric glow */}
+      <div className="glow-gold absolute inset-0 pointer-events-none" aria-hidden="true" />
+
+      {/* Bottom fade */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none z-[1]"
+        style={{ background: 'linear-gradient(to bottom, transparent, var(--base))' }}
+        aria-hidden="true"
+      />
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-8 pt-24 pb-20">
         {/* Content */}
-        <div className="relative z-10 max-w-2xl mx-auto text-center">
+        <div className="max-w-2xl mx-auto text-center">
           <p className="eyebrow mb-5 fade-in-up" style={{ animationDelay: '0ms' }}>Premium Casino Platform</p>
 
           <h1
@@ -105,10 +105,16 @@ const Hero: React.FC = () => {
       </div>
 
       {/* Stats strip */}
-      <div className="border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)]" ref={statsRef}>
+      <div className="relative z-10 border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)]" ref={statsRef}>
         <div className="grid grid-cols-2 md:grid-cols-4 max-w-5xl mx-auto divide-x divide-[rgba(212,175,55,0.08)]">
           {STATS.map((stat, index) => (
-            <div key={stat.label} className="px-4 py-6 text-center">
+            <div
+              key={stat.label}
+              className={`px-4 py-6 text-center transition-all duration-600 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+              }`}
+              style={{ transitionDelay: `${index * 90}ms` }}
+            >
               <span className="block font-serif text-3xl font-bold text-[var(--gold)] leading-tight">
                 {index === 0 ? `${gameCount}+` : stat.value}
               </span>
