@@ -77,7 +77,7 @@ const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge
             style={{ background: 'linear-gradient(to bottom, transparent, var(--surface))' }}
             aria-hidden="true"
           />
-          <div className="relative z-10">
+          <div className="relative z-10 card-icon">
             <Icon width={150} height={120} />
           </div>
         </div>
