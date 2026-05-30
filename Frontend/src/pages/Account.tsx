@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/hooks/useAccount';
 import Button from '@/components/ui/Button';
@@ -14,30 +15,6 @@ const Account: React.FC = () => {
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
-  const balanceRef = useRef<HTMLDivElement>(null);
-  const winsRef = useRef<HTMLDivElement>(null);
-  const lossesRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const elements = [
-      { ref: balanceRef, delay: 0 },
-      { ref: winsRef, delay: 100 },
-      { ref: lossesRef, delay: 200 },
-    ];
-
-    elements.forEach(({ ref, delay }) => {
-      if (ref.current) {
-        ref.current.style.animation = 'none';
-        setTimeout(() => {
-          if (ref.current) {
-            ref.current.style.animation = 'fadeInUp 600ms var(--ease-out) forwards';
-          }
-        }, delay);
-      }
-    });
-  }, [account]);
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,9 +49,9 @@ const Account: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[var(--base)] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-5">
+        <div className="flex flex-col items-center gap-4">
           <Spinner size="lg" variant="minimal" />
-          <p className="text-sm font-medium text-[var(--text-2)] tracking-wide uppercase">Loading account</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)]">Loading</p>
         </div>
       </div>
     );
@@ -98,213 +75,220 @@ const Account: React.FC = () => {
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
-      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] pt-24 pb-20 px-4">
+      <div className="min-h-screen bg-[var(--base)] text-[var(--text)] pt-24 pb-16 px-6">
         <CasinoBackground />
 
-        <div className="relative z-10">
-          {/* HERO SECTION */}
-          <div className="max-w-6xl mx-auto text-center mb-32 md:mb-40">
-            <h1 className="font-serif text-5xl md:text-6xl font-semibold text-[var(--text)] leading-tight mb-4 tracking-tight">
-              Your Financial Dashboard
+        <div className="relative z-10 max-w-5xl mx-auto">
+
+          {/* Page header */}
+          <div className="mb-10 fade-in-up">
+            <p className="eyebrow mb-2">Account</p>
+            <h1 className="font-serif text-3xl md:text-4xl font-semibold leading-tight tracking-tight">
+              Welcome back,{' '}
+              <span className="text-[var(--gold)] italic">{user?.username}</span>
             </h1>
-            <p className="text-lg md:text-xl text-[var(--text-2)] mb-8">
-              Manage your account and track your casino activity as{' '}
-              <span className="text-[var(--gold)] font-semibold">{user?.username}</span>
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="gold" className="px-8 py-3 text-base btn-gold-transition">
-                View Activity
-              </Button>
-              <Button variant="gold" className="px-8 py-3 text-base btn-gold-transition">
-                Settings
-              </Button>
-            </div>
           </div>
 
-          {/* BALANCE CARDS (BENTO GRID) */}
-          <div className="max-w-6xl mx-auto mb-32 md:mb-40">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 grid-auto-flow-dense">
-              {/* Current Balance Card */}
-              <div
-                ref={balanceRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)] relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <p className="text-xs uppercase tracking-widest text-[var(--text-2)] mb-4 font-semibold">Current Balance</p>
-                  <p className="text-3xl md:text-5xl font-bold text-[var(--gold)] font-serif mb-4 break-words overflow-hidden" style={{ fontSize: 'clamp(1.875rem, 8vw, 3rem)' }}>
-                    ${account?.balance || '0.00'}
-                  </p>
-                  <div className="h-1 w-12 bg-gradient-to-r from-[var(--gold)] to-transparent rounded-full" />
-                </div>
+          {/* Balance cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(212,175,55,0.4)] relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative z-10">
+                <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Balance</p>
+                <p className="font-serif text-3xl md:text-4xl font-bold text-[var(--gold)] leading-none mb-3">
+                  ${account?.balance ?? '0.00'}
+                </p>
+                <div className="h-px w-10 bg-gradient-to-r from-[var(--gold)] to-transparent" />
               </div>
+            </div>
 
-              {/* Total Winnings Card */}
-              <div
-                ref={winsRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(45,122,99,0.4)] relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(45,122,99,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                <div className="relative z-10">
-                  <p className="text-xs uppercase tracking-widest text-[var(--text-2)] mb-4 font-semibold">Total Winnings</p>
-                  <p className="text-3xl md:text-5xl font-bold text-emerald-400 font-serif mb-4 break-words overflow-hidden" style={{ fontSize: 'clamp(1.875rem, 8vw, 3rem)' }}>
-                    ${account?.total_winnings || '0.00'}
-                  </p>
-                  <div className="h-1 w-12 bg-gradient-to-r from-emerald-400 to-transparent rounded-full" />
-                </div>
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(45,122,99,0.4)] relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-[rgba(45,122,99,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative z-10">
+                <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Winnings</p>
+                <p className="font-serif text-3xl md:text-4xl font-bold text-emerald-400 leading-none mb-3">
+                  ${account?.total_winnings ?? '0.00'}
+                </p>
+                <div className="h-px w-10 bg-gradient-to-r from-emerald-400 to-transparent" />
               </div>
+            </div>
 
-              {/* Total Losses Card */}
-              <div
-                ref={lossesRef}
-                className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(139,38,53,0.4)] relative"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-[rgba(139,38,53,0.08)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                <div className="relative z-10">
-                  <p className="text-xs uppercase tracking-widest text-[var(--text-2)] mb-4 font-semibold">Total Losses</p>
-                  <p className="text-3xl md:text-5xl font-bold text-red-400 font-serif mb-4 break-words overflow-hidden" style={{ fontSize: 'clamp(1.875rem, 8vw, 3rem)' }}>
-                    ${account?.total_losses || '0.00'}
-                  </p>
-                  <div className="h-1 w-12 bg-gradient-to-r from-red-400 to-transparent rounded-full" />
-                </div>
+            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.15)] bg-[var(--surface)] p-6 md:p-8 hover:border-[rgba(139,38,53,0.4)] relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-[rgba(139,38,53,0.06)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative z-10">
+                <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Losses</p>
+                <p className="font-serif text-3xl md:text-4xl font-bold text-red-400 leading-none mb-3">
+                  ${account?.total_losses ?? '0.00'}
+                </p>
+                <div className="h-px w-10 bg-gradient-to-r from-red-400 to-transparent" />
               </div>
             </div>
           </div>
 
-          {/* ERROR MESSAGE */}
+          {/* Error */}
           {operationError && (
-            <div className="max-w-6xl mx-auto mb-8 animate-in fade-in slide-in-from-top-4">
-              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-red-400 ">
-                <p className="font-semibold mb-1">Transaction Error</p>
-                <p>{operationError}</p>
+            <div className="mb-6">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400">
+                <p className="font-semibold text-sm mb-0.5">Transaction Error</p>
+                <p className="text-sm opacity-80">{operationError}</p>
               </div>
             </div>
           )}
 
-          {/* DEPOSIT/WITHDRAW SECTION */}
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 mb-32 md:mb-40">
-            {/* Deposit Form */}
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)]">
-              <h3 className="text-2xl font-serif font-semibold text-[var(--text)] mb-8">Deposit Funds</h3>
-              <form onSubmit={handleDeposit} className="space-y-6">
+          {/* Deposit / Withdraw */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+            {/* Deposit */}
+            <div className="overflow-hidden rounded-2xl border border-[rgba(45,122,99,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(45,122,99,0.4)] card-transition">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-7 h-7 rounded-full bg-[rgba(45,122,99,0.15)] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-[var(--text)]">Deposit</h3>
+              </div>
+              <form onSubmit={handleDeposit} className="space-y-4">
                 <div>
-                  <label htmlFor="deposit" className="block text-sm uppercase tracking-wider font-semibold text-[var(--text-2)] mb-3">
+                  <label htmlFor="deposit" className="block text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-2">
                     Amount
                   </label>
                   <input
                     id="deposit"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 focus:scale-105 transition-all duration-300"
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(45,122,99,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(45,122,99,0.5)] focus:ring-2 focus:ring-[rgba(45,122,99,0.15)] input-focus-transition"
                   />
                 </div>
-                <Button
-                  variant="gold"
-                  className="w-full py-4 text-base font-semibold btn-gold-transition disabled:opacity-50 disabled:cursor-not-allowed"
+                <button
+                  type="submit"
                   disabled={depositLoading || !depositAmount}
+                  className="w-full py-3 rounded-lg bg-[rgba(45,122,99,0.12)] border border-[rgba(45,122,99,0.3)] text-emerald-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(45,122,99,0.22)] hover:border-[rgba(45,122,99,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {depositLoading ? 'Processing...' : 'Deposit Now'}
-                </Button>
+                  {depositLoading ? 'Processing…' : 'Add Chips'}
+                </button>
               </form>
             </div>
 
-            {/* Withdraw Form */}
-            <div className="group card-transition overflow-hidden rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-8 md:p-10  hover:border-[rgba(212,175,55,0.4)]">
-              <h3 className="text-2xl font-serif font-semibold text-[var(--text)] mb-8">Withdraw Funds</h3>
-              <form onSubmit={handleWithdraw} className="space-y-6">
+            {/* Withdraw */}
+            <div className="overflow-hidden rounded-2xl border border-[rgba(139,38,53,0.2)] bg-[var(--surface)] p-6 md:p-7 hover:border-[rgba(139,38,53,0.4)] card-transition">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-7 h-7 rounded-full bg-[rgba(139,38,53,0.15)] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                  </svg>
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-[var(--text)]">Withdraw</h3>
+              </div>
+              <form onSubmit={handleWithdraw} className="space-y-4">
                 <div>
-                  <label htmlFor="withdraw" className="block text-sm uppercase tracking-wider font-semibold text-[var(--text-2)] mb-3">
+                  <label htmlFor="withdraw" className="block text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-2">
                     Amount
                   </label>
                   <input
                     id="withdraw"
                     type="number"
                     step="0.01"
+                    min="0"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    className="input-focus-transition w-full px-6 py-4 rounded-xl bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[var(--gold)]/20 focus:scale-105 transition-all duration-300"
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(139,38,53,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(139,38,53,0.5)] focus:ring-2 focus:ring-[rgba(139,38,53,0.15)] input-focus-transition"
                   />
                 </div>
-                <Button
-                  variant="gold"
-                  className="w-full py-4 text-base font-semibold btn-gold-transition disabled:opacity-50 disabled:cursor-not-allowed"
+                <button
+                  type="submit"
                   disabled={withdrawLoading || !withdrawAmount}
+                  className="w-full py-3 rounded-lg bg-[rgba(139,38,53,0.12)] border border-[rgba(139,38,53,0.3)] text-red-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(139,38,53,0.22)] hover:border-[rgba(139,38,53,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {withdrawLoading ? 'Processing...' : 'Withdraw Now'}
-                </Button>
+                  {withdrawLoading ? 'Processing…' : 'Cash Out'}
+                </button>
               </form>
             </div>
           </div>
 
-          {/* TRANSACTION HISTORY SECTION */}
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-serif font-semibold text-[var(--text)] mb-12 tracking-tight">
-              Recent Activity Timeline
-            </h2>
+          {/* Quick play */}
+          <div className="mb-8 p-5 rounded-2xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)]">
+            <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-3">Quick Play</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'Blackjack', path: '/games/blackjack' },
+                { label: 'Texas Hold\'em', path: '/games/poker' },
+                { label: 'Slots', path: '/games/slots' },
+              ].map((game) => (
+                <Link key={game.path} to={game.path}>
+                  <span className="inline-block px-5 py-2 rounded-full border border-[rgba(212,175,55,0.18)] bg-[var(--surface-2)] text-sm font-medium text-[var(--text-2)] hover:border-[rgba(212,175,55,0.45)] hover:text-[var(--text)] transition-all duration-200 cursor-pointer">
+                    {game.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Transaction history */}
+          <div>
+            <div className="flex items-baseline justify-between mb-5">
+              <h2 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight">Activity</h2>
+              {transactions.length > 0 && (
+                <span className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)]">
+                  {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
 
             {transactions.length === 0 ? (
-              <div className="rounded-2xl border border-[rgba(212,175,55,0.15)] bg-[var(--surface)] p-12 md:p-16 text-center ">
-                <p className="text-lg text-[var(--text-2)]">No transactions recorded yet</p>
-                <p className="text-sm text-[var(--text-3)] mt-2">Your activity will appear here</p>
+              <div className="rounded-2xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)] p-10 text-center">
+                <p className="font-medium text-[var(--text-2)] mb-1">No transactions yet</p>
+                <p className="text-sm text-[var(--text-3)]">Your chip activity will appear here</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {transactions.map((tx, idx) => (
                   <div
                     key={tx.id}
-                    className="group card-transition overflow-hidden rounded-xl border border-[rgba(212,175,55,0.1)] bg-[var(--surface)]  hover:border-[rgba(212,175,55,0.3)] cursor-pointer transition-all duration-300 fade-in-up"
-                    style={{ animationDelay: `${idx * 50}ms` }}
+                    className="overflow-hidden rounded-xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)] hover:border-[rgba(212,175,55,0.2)] cursor-pointer transition-all duration-200 fade-in-up"
+                    style={{ animationDelay: `${idx * 40}ms` }}
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
                   >
-                    <div className="p-6 md:p-8">
+                    <div className="px-5 py-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-4 mb-2">
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                              tx.type === 'deposit'
-                                ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
-                                : 'bg-red-400/10 text-red-400 border border-red-400/20'
-                            }`}>
-                              {tx.type}
-                            </div>
-                            <p className="text-sm text-[var(--text-2)]">
-                              {new Date(tx.created_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            tx.type === 'deposit' ? 'bg-emerald-400/10' : 'bg-red-400/10'
+                          }`}>
+                            <svg className={`w-3.5 h-3.5 ${tx.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              {tx.type === 'deposit'
+                                ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                : <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                              }
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[var(--text)] capitalize">{tx.type}</p>
+                            <p className="text-xs text-[var(--text-3)]">
+                              {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {' · '}
+                              {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
-                          <p className="text-[var(--text-3)] text-xs">
-                            {new Date(tx.created_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-2xl font-bold font-serif ${
-                            tx.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'
-                          }`}>
-                            {tx.type === 'deposit' ? '+' : '-'}${tx.amount}
-                          </p>
-                        </div>
+                        <span className={`font-serif text-lg font-bold ${tx.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {tx.type === 'deposit' ? '+' : '−'}${tx.amount}
+                        </span>
                       </div>
 
-                      {/* Expanded Details */}
                       {expandedTx === tx.id && (
-                        <div className="mt-6 pt-6 border-t border-[rgba(212,175,55,0.1)] space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[var(--text-2)]">Transaction ID</span>
-                            <span className="text-[var(--text)] font-mono text-xs">#{tx.id}</span>
+                        <div className="mt-4 pt-4 border-t border-[rgba(212,175,55,0.08)] grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Transaction ID</p>
+                            <p className="font-mono text-xs text-[var(--text-2)]">#{tx.id}</p>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[var(--text-2)]">Balance After</span>
-                            <span className="text-[var(--text)] font-semibold">${tx.balance_after}</span>
+                          <div>
+                            <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-1">Balance After</p>
+                            <p className="text-sm font-semibold text-[var(--text)]">${tx.balance_after}</p>
                           </div>
                         </div>
                       )}
