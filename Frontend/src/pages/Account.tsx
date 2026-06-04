@@ -249,9 +249,18 @@ const Account: React.FC = () => {
                 {transactions.map((tx, idx) => (
                   <div
                     key={tx.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={expandedTx === tx.id}
                     className="overflow-hidden rounded-xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)] hover:border-[rgba(212,175,55,0.2)] cursor-pointer transition-all duration-200 fade-in-up"
                     style={{ animationDelay: `${idx * 40}ms` }}
                     onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setExpandedTx(expandedTx === tx.id ? null : tx.id);
+                      }
+                    }}
                   >
                     <div className="px-5 pt-4">
                       <div className="flex items-center justify-between pb-4">

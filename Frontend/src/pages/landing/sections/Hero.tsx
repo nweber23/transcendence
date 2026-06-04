@@ -110,7 +110,7 @@ const Hero: React.FC = () => {
           {STATS.map((stat, index) => (
             <div
               key={stat.label}
-              className={`px-4 py-6 text-center transition-all duration-600 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              className={`px-4 py-6 text-center transition-all duration-[600ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
               }`}
               style={{ transitionDelay: `${index * 90}ms` }}
