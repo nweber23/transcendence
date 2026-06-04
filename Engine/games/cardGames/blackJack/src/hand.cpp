@@ -8,6 +8,10 @@ void Hand::add_card(card::Card c) {
     _cards.push_back(std::move(c));
 }
 
+constexpr std::uint8_t get_card_value(card c) {
+    return std::min(static_cast<std::uint8_t>(c.rank()), std::uint8_t{10});
+}
+
 std::int8_t Hand::value() const noexcept {
     std::int8_t total = 0;
     std::uint8_t aces = 0;
@@ -17,7 +21,7 @@ std::int8_t Hand::value() const noexcept {
             ++aces;
             total += 11;
         } else {
-            total += std::min(static_cast<std::uint8_t>(c.rank()), std::uint8_t{10});
+            total += get_card_value(c);
         }
     }
 
@@ -38,7 +42,7 @@ bool Hand::is_soft() const noexcept {
             total += 11;
             has_ace_as_eleven = true;
         } else {
-            total += std::min(static_cast<std::uint8_t>(c.rank()), std::uint8_t{10});
+            total += get_card_value(c);
         }
     }
 
