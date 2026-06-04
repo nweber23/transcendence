@@ -1,11 +1,7 @@
 #pragma once
 
-#include <array>
-#include <algorithm>
 #include <format>
 #include <iostream>
-#include <random>
-#include <ranges>
 #include <string_view>
 
 namespace card {
@@ -57,18 +53,4 @@ public:
 
     std::string to_string() const;
 };
-
-// --------------------------------------------------
-// Lookup tables
-// --------------------------------------------------
-
-inline constexpr std::array<std::string_view, 4> suit_symbols{
-    "♣", "♦", "♥", "♠"
-};
-
-inline constexpr std::array<std::string_view, 13> rank_names{
-    "2", "3", "4", "5", "6", "7",
-    "8", "9", "10", "J", "Q", "K", "A"
-};
-
 } // namespace card

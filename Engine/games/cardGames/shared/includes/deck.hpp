@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <stdexcept>
+#include <vector>
 #include "card.hpp"
 
 namespace deck {

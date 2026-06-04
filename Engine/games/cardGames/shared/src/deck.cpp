@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <random>
 #include "../includes/deck.hpp"
 
 namespace deck {

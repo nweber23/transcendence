@@ -33,6 +33,28 @@ TEST_CASE("Deck has correct number of cards for given decks", "[deck]") {
     }
 }
 
+TEST_CASE("Deck reshuffle resets the deck", "[deck]") {
+    Deck d(1);
+    for (std::size_t i = 0; i < 26; ++i) {
+        (void)d.pick();
+    }
+    d.reshuffle();
+    std::size_t count = 0;
+    try {
+        while (true) {
+            (void)d.pick();
+            ++count;
+        }
+    } catch (const std::out_of_range&) {
+    }
+    REQUIRE(count == 52);
+}
+
+TEST_CASE("Deck with zero decks is empty", "[deck]") {
+    Deck d(0);
+    REQUIRE_THROWS_AS(d.pick(), std::out_of_range);
+}
+
 TEST_CASE("Deck draw distribution sanity checks", "[deck]") {
     // Ensure suits and ranks appear expected number of times for multiple decks
     Deck d(2); // 2 decks -> each unique rank/suit should appear exactly twice
