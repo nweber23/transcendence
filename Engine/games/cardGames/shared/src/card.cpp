@@ -35,4 +35,4 @@ std::string Card::to_string() const {
     return std::format("{}{}", rank_to_string(_rank), suit_to_string(_suit));
 }
 
-} // namespace card
+} // namespace card+
