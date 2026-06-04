@@ -10,30 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-/*type Topic int
-
-const (
-	TopicGeneric Topic = iota
-	TopicGame
-	TopicChat
-	TopicMax
-)
-
-var TopicFromString = map[string]Topic{
-	"generic": TopicGeneric,
-	"game":    TopicGame,
-	"chat":    TopicChat,
-}
-
-type TopicSendList struct {
-	connections []*websocket.Conn
-}
-
-type Client struct {
-	UserID uint
-	Topics [TopicMax]TopicSendList
-}*/
-
 func UpgradeConnection(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -52,6 +28,7 @@ func UpgradeConnection(c *gin.Context) {
 		log.Printf("Websocket upgrade error: %v", err)
 		return
 	}
+	//ws.AddConnection(connection, userID, topics)
 	_ = connection
 	_ = userID
 }
