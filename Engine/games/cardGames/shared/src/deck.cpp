@@ -9,8 +9,8 @@ Deck::Deck(std::size_t numDecks) {
 
     for (std::size_t deck = 0; deck < numDecks; ++deck) {
         for (std::uint8_t suit = 0; suit < 4; ++suit) {
-            for (std::uint8_t value = 0; value < 13; ++value) {
-                _cards.push_back({value, suit});
+            for (std::uint8_t rank = 0; rank < 13; ++rank) {
+                _cards.push_back({static_cast<Rank>(rank + 2), static_cast<Suit>(suit)});
             }
         }
     }
