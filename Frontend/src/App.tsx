@@ -23,6 +23,14 @@ const AppLayout: React.FC = () => {
   const showFooter = pathname === '/';
   const hideHeader = pathname === '/login' || pathname === '/signup';
 
+  const token = localStorage.getItem('auth_token')
+  if(token != null) {
+    const socket = new WebSocket("http://localhost:8080/ws?token=" + token);
+    socket.addEventListener("open", (event) => {
+      console.log("Connection established");
+    });
+  }
+
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
       {!hideHeader && <Header />}

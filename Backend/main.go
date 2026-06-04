@@ -73,7 +73,7 @@ func main() {
 
 	// WebSocket route
 	//router.GET("/ws", handlers.HandleWebSocket(gameService, cfg.JWTSecret))
-	router.GET("/ws", middleware.AuthMiddleware(cfg.JWTSecret), gameHandler.UpgradeConnection)
+	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), handlers.UpgradeConnection)
 
 	port := os.Getenv("PORT")
 	if port == "" {
