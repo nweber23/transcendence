@@ -30,3 +30,17 @@ target_include_directories(deck_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames
 
 target_link_libraries(deck_test PRIVATE Catch2::Catch2WithMain deck_impl cards_impl)
 add_test(NAME deck_test COMMAND deck_test)
+
+# Blackjack library
+add_library(blackjack_impl STATIC
+    ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/src/hand.cpp
+    ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/src/game.cpp
+)
+target_include_directories(blackjack_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/includes)
+target_include_directories(blackjack_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+
+add_executable(blackjack_test blackjack_test.cpp)
+target_include_directories(blackjack_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+target_include_directories(blackjack_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/includes)
+target_link_libraries(blackjack_test PRIVATE Catch2::Catch2WithMain blackjack_impl deck_impl cards_impl)
+add_test(NAME blackjack_test COMMAND blackjack_test)
