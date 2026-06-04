@@ -8,8 +8,9 @@ void Hand::add_card(card::Card c) {
     _cards.push_back(std::move(c));
 }
 
-constexpr std::uint8_t get_card_value(card c) {
-    return std::min(static_cast<std::uint8_t>(c.rank()), std::uint8_t{10});
+constexpr std::uint8_t get_card_value(card::Card c) {
+    auto v = static_cast<std::uint8_t>(c.rank());
+    return v > 10 ? 10 : v;
 }
 
 std::int8_t Hand::value() const noexcept {

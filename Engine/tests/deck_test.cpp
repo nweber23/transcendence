@@ -1,5 +1,6 @@
 // Catch2 tests for deck::Deck
 #include <catch2/catch_test_macros.hpp>
+#include <map>
 #include "../games/cardGames/shared/includes/deck.hpp"
 
 using namespace deck;

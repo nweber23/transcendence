@@ -13,13 +13,13 @@ namespace deck {
 
 class Deck {
 private:
-    std::vector<Card> _cards;
+    std::vector<card::Card> _cards;
     std::size_t _nextCard = 0;
 
 public:
     explicit Deck(std::size_t numDecks = 1);
 
-    Card pick();
+    card::Card pick();
     void reshuffle();
 };
 
