@@ -62,23 +62,6 @@ const Poker: React.FC = () => {
     /* mt-16 clears the fixed global Header (h-16 = 4 rem = 64 px) */
     <div className="mt-16 flex flex-col h-[calc(100dvh-4rem)] bg-[var(--base)]">
 
-      {/* ── Game header ─────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-[var(--surface)] border-b border-[rgba(212,175,55,0.1)] px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/')}
-          className="text-[var(--gold)] hover:text-[var(--text)] transition-colors text-sm cursor-pointer"
-          aria-label="Back to home"
-        >
-          ← Back
-        </button>
-        <h1 className="font-serif text-xl font-semibold">Texas Hold'em</h1>
-        <div className="flex items-center gap-3 text-xs text-[var(--text-3)]">
-          <span>Blinds <span className="text-[var(--gold)]">$10/$20</span></span>
-          <span className="w-px h-3 bg-[var(--border)]" />
-          <span>0/6 players</span>
-        </div>
-      </header>
-
       {/* ── Table area ──────────────────────────────────────────────────────── */}
       {/*
         No overflow-hidden — seats sit near the oval edge and need room to breathe.
