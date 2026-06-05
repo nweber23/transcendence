@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 
 const ICONS = [
   'apple', 'apricot', 'banana', 'big_win', 'cherry', 'grapes',
@@ -7,7 +7,6 @@ const ICONS = [
 
 const BASE_SPINNING_DURATION = 2.7;
 const COLUMN_SPINNING_DURATION = 0.3;
-const ITEM_HEIGHT = 100;
 const NUM_REELS = 5;
 
 function getRandomIcon() {
@@ -23,6 +22,9 @@ const SlotMachine: React.FC = () => {
   const [bet, setBet] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
 
+  // itemHeight is derived from the CSS-clamped window height after first layout
+  const [itemHeight, setItemHeight] = useState(100);
+  const windowRef = useRef<HTMLDivElement>(null);
   const colRefs = useRef<(HTMLDivElement | null)[]>(Array(NUM_REELS).fill(null));
   const spinningContainerRef = useRef<HTMLDivElement>(null);
 
@@ -30,9 +32,18 @@ const SlotMachine: React.FC = () => {
   const subBet = (n: number) => setBet((b) => Math.max(b - n, 0));
   const canSpin = bet > 0 && bet <= balance && !isSpinning;
 
+  // Measure actual rendered window height to derive item height
+  useLayoutEffect(() => {
+    if (!windowRef.current) return;
+    const measured = Math.floor(windowRef.current.clientHeight / 3);
+    if (measured > 0) setItemHeight(measured);
+  }, []);
+
+  // Initialize reels once item height is known
   useEffect(() => {
     colRefs.current.forEach((col, i) => {
       if (!col) return;
+      col.innerHTML = '';
       const count = 40 + i * 3;
       const first3: HTMLElement[] = [];
 
@@ -50,7 +61,7 @@ const SlotMachine: React.FC = () => {
 
       first3.forEach((cell) => col.appendChild(cell.cloneNode(true)));
     });
-  }, []);
+  }, [itemHeight]);
 
   const setResult = useCallback(() => {
     colRefs.current.forEach((col) => {
@@ -93,19 +104,21 @@ const SlotMachine: React.FC = () => {
       <style>{`
         .slot-col {
           padding: 0 10px;
-          transform: translateY(calc(-100% + ${ITEM_HEIGHT * 3}px));
+          transform: translateY(calc(-100% + ${itemHeight * 3}px));
           will-change: transform;
         }
         .slot-icon {
-          width: 80px;
-          height: ${ITEM_HEIGHT}px;
-          display: block;
+          width: 100%;
+          height: ${itemHeight}px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           position: relative;
         }
         .slot-icon img {
-          width: 100%;
-          height: auto;
-          margin: 10px 0;
+          width: 80%;
+          height: ${itemHeight * 0.75}px;
+          object-fit: contain;
           position: relative;
           z-index: 3;
         }
@@ -118,7 +131,7 @@ const SlotMachine: React.FC = () => {
           width: 1px;
           height: 1px;
           background-color: white;
-          box-shadow: 0 0 30px 24px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 0 30px 22px rgba(0, 0, 0, 0.45);
           z-index: 2;
           border-radius: 100%;
         }
@@ -132,11 +145,12 @@ const SlotMachine: React.FC = () => {
         }
       `}</style>
 
-      <div className="flex flex-col h-[calc(100dvh-4rem)] overflow-hidden bg-[var(--base)]">
+      {/* mt-14 offsets the fixed header (h-14 = 3.5rem) */}
+      <div className="mt-14 flex flex-col overflow-hidden bg-[var(--base)]" style={{ height: 'calc(100dvh - 3.5rem)' }}>
 
         {/* ── Machine ─────────────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 min-h-0">
-          <div className="relative w-full max-w-2xl">
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 min-h-0 py-4">
+          <div className="relative w-full max-w-3xl">
 
             {/* Top rail */}
             <div className="h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50 mb-1" />
@@ -144,48 +158,43 @@ const SlotMachine: React.FC = () => {
             {/* Cabinet body */}
             <div className="bg-gradient-to-b from-[var(--surface-2)] to-[var(--surface-3)] rounded-2xl border border-[rgba(212,175,55,0.15)] p-5">
 
-              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--gold)] opacity-70 mb-4">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--gold)] opacity-70 mb-3">
                 Lucky Fruits
               </p>
 
-              {/* Window border */}
+              {/* Window border — gold gradient trim */}
               <div
-                className="rounded-xl p-1"
+                className="rounded-xl p-px"
                 style={{
-                  background: 'linear-gradient(to bottom, rgba(212,175,55,0.35), rgba(212,175,55,0.08) 50%, rgba(212,175,55,0.2))',
+                  background: 'linear-gradient(to bottom, rgba(212,175,55,0.4), rgba(212,175,55,0.08) 50%, rgba(212,175,55,0.25))',
                 }}
               >
-                {/* Spinning container — class "spinning" drives CSS animation */}
+                {/* Spinning container — "spinning" class drives CSS animation */}
                 <div ref={spinningContainerRef}>
-                  {/* Window */}
+                  {/* Window — height is CSS-clamped; JS reads it after layout */}
                   <div
-                    className="relative overflow-hidden rounded-lg bg-[var(--base)]"
-                    style={{ height: `${ITEM_HEIGHT * 3}px` }}
+                    ref={windowRef}
+                    className="relative overflow-hidden rounded-[11px] bg-[var(--base)]"
+                    style={{ height: 'clamp(210px, 40dvh, 420px)' }}
                   >
                     {/* Top fade */}
-                    <div
-                      className="absolute top-0 left-0 w-full z-10 pointer-events-none"
-                      style={{ height: 8, background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }}
-                    />
+                    <div className="absolute top-0 left-0 w-full z-10 pointer-events-none"
+                      style={{ height: 10, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)' }} />
                     {/* Bottom fade */}
-                    <div
-                      className="absolute bottom-0 left-0 w-full z-10 pointer-events-none"
-                      style={{ height: 8, background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)' }}
-                    />
+                    <div className="absolute bottom-0 left-0 w-full z-10 pointer-events-none"
+                      style={{ height: 10, background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }} />
                     {/* Centre payline */}
                     <div className="absolute inset-y-0 left-0 right-0 flex items-center pointer-events-none z-10">
-                      <div className="w-full h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.25)] to-transparent" />
+                      <div className="w-full h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.3)] to-transparent" />
                     </div>
 
                     {/* Reels row */}
                     <div className="flex h-full">
                       {Array.from({ length: NUM_REELS }, (_, i) => (
                         <React.Fragment key={i}>
-                          {/* Divider */}
                           {i > 0 && (
                             <div className="w-px flex-shrink-0 bg-[var(--border-2)] self-stretch" />
                           )}
-                          {/* Reel column */}
                           <div
                             className="flex-1 overflow-hidden"
                             style={{ background: 'linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 50%, var(--surface-3) 100%)' }}
@@ -205,7 +214,6 @@ const SlotMachine: React.FC = () => {
 
             {/* Bottom rail */}
             <div className="h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-30 mt-1" />
-
             <div className="glow-gold absolute -inset-8 -z-10 pointer-events-none" />
           </div>
         </div>
@@ -241,7 +249,7 @@ const SlotMachine: React.FC = () => {
             ))}
           </div>
 
-          {/* Bet input row */}
+          {/* Bet input */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-3 bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] rounded-lg px-4 py-3">
               <span className="text-xs text-[var(--text-3)] uppercase tracking-widest shrink-0">Bet</span>
@@ -273,7 +281,7 @@ const SlotMachine: React.FC = () => {
             </button>
           </div>
 
-          {/* Spin button */}
+          {/* Spin */}
           <button
             disabled={!canSpin}
             onClick={spin}
