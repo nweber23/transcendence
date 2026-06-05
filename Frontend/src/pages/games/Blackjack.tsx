@@ -36,19 +36,6 @@ const Blackjack: React.FC = () => {
   return (
     <div className="mt-16 flex flex-col h-[calc(100dvh-4rem)] overflow-hidden bg-[var(--base)]">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-[var(--surface)] border-b border-[rgba(212,175,55,0.1)] px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/')}
-          className="text-[var(--gold)] hover:text-[var(--text)] transition-colors text-sm cursor-pointer"
-          aria-label="Back to home"
-        >
-          ← Back
-        </button>
-        <h1 className="font-serif text-xl font-semibold">Blackjack</h1>
-        <div className="w-16" />
-      </header>
-
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4">
         <div className="relative w-full max-w-lg">
