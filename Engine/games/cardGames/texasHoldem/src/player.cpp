@@ -31,6 +31,13 @@ void Player::place_bet(std::int64_t amount) {
     }
 }
 
+void Player::add_winnings(std::int64_t amount) {
+    if (amount < 0) {
+        throw std::invalid_argument("winnings must be non-negative");
+    }
+    _stack += amount;
+}
+
 void Player::fold() {
     _folded = true;
 }

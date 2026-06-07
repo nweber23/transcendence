@@ -24,6 +24,7 @@ public:
 
     void receive_card(card::Card c, std::size_t idx);
     void place_bet(std::int64_t amount);
+    void add_winnings(std::int64_t amount);
     void fold();
     void reset_hand();
 
