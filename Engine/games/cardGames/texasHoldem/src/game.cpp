@@ -40,4 +40,53 @@ const std::vector<std::int64_t>& Game::pot() const noexcept {
     return _pot;
 }
 
+void Game::deal_hole_cards() {
+    for (std::size_t pass = 0; pass < 2; ++pass) {
+        for (auto& p : _players) {
+            p.receive_card(_deck.pick(), pass);
+        }
+    }
+}
+
+void Game::deal_community(std::size_t count) {
+    _deck.pick();
+    for (std::size_t i = 0; i < count; ++i) {
+        _communityCards.push_back(_deck.pick());
+    }
+}
+
+void Game::advance_phase() {
+    switch (_phase) {
+        case Phase::PreFlop:  
+            _phase = Phase::Flop;
+            break;
+        case Phase::Flop:     
+            _phase = Phase::Turn;
+            break;
+        case Phase::Turn:     
+            _phase = Phase::River;
+            break;
+
+        case Phase::River:    
+            _phase = Phase::Showdown;
+            break;
+        case Phase::Showdown:
+            break;
+    }
+}
+
+void Game::post_blinds(std::int64_t small, std::int64_t big) {
+    std::size_t n = _players.size();
+    _dealerIdx = (_dealerIdx + 1) % n;
+    std::size_t sbIdx = (_dealerIdx + 1) % n;
+    std::size_t bbIdx = (_dealerIdx + 2) % n;
+
+    _players[sbIdx].place_bet(small);
+    _players[bbIdx].place_bet(big);
+
+    _currentPlayerIdx = (_dealerIdx + 3) % n;
+    _minRaise = big;
+    _lastAction = {ActionType::Raise, big};
+}
+
 } // namespace texas
