@@ -89,4 +89,43 @@ void Game::post_blinds(std::int64_t small, std::int64_t big) {
     _lastAction = {ActionType::Raise, big};
 }
 
+void Game::act(std::size_t playerIdx, Action a) {
+    auto& p = _players[playerIdx];
+    switch (a.type) {
+        case ActionType::Fold:
+            p.fold();
+            break;
+        case ActionType::Check:
+            break;
+        case ActionType::Call: {
+            std::int64_t toCall = _lastAction.amount - p.current_bet();
+            if (toCall > 0)
+                p.place_bet(toCall);
+            break;
+        }
+        case ActionType::Raise: {
+            std::int64_t total = a.amount;
+            std::int64_t already = p.current_bet();
+            std::int64_t inc = total - already;
+            if (inc < _minRaise)
+                inc = _minRaise;
+            p.place_bet(inc);
+            _lastAction.amount = already + inc;
+            _lastAction.type = ActionType::Raise;
+            _minRaise = inc;
+            break;
+        }
+        case ActionType::AllIn:
+            p.place_bet(p.stack());
+            break;
+    }
+
+    std::size_t n = _players.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        _currentPlayerIdx = (_currentPlayerIdx + 1) % n;
+        if (!_players[_currentPlayerIdx].is_folded() && !_players[_currentPlayerIdx].is_all_in())
+            return;
+    }
+}
+
 } // namespace texas
