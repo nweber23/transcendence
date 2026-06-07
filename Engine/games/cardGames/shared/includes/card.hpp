@@ -43,6 +43,7 @@ private:
     Rank _rank;
 
 public:
+    constexpr Card() : _suit(Suit::Clubs), _rank(Rank::Two) {}
     constexpr Card(Rank r, Suit s) : _suit(s), _rank(r) {}
 
     [[nodiscard]]
