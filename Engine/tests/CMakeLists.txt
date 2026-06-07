@@ -44,3 +44,17 @@ target_include_directories(blackjack_test PRIVATE ${CMAKE_SOURCE_DIR}/games/card
 target_include_directories(blackjack_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/includes)
 target_link_libraries(blackjack_test PRIVATE Catch2::Catch2WithMain blackjack_impl deck_impl cards_impl)
 add_test(NAME blackjack_test COMMAND blackjack_test)
+
+# Texas Holdem library
+add_library(texasHoldem_impl STATIC
+    ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/src/game.cpp
+    ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/src/player.cpp
+)
+target_include_directories(texasHoldem_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/includes)
+target_include_directories(texasHoldem_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+
+add_executable(texasHoldem_test texasHoldem_test.cpp)
+target_include_directories(texasHoldem_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+target_include_directories(texasHoldem_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/includes)
+target_link_libraries(texasHoldem_test PRIVATE Catch2::Catch2WithMain texasHoldem_impl deck_impl cards_impl)
+add_test(NAME texasHoldem_test COMMAND texasHoldem_test)
