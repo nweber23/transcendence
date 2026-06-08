@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -41,7 +41,7 @@ func UpgradeConnection(c *gin.Context) {
 	}
 	connection, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Websocket upgrade error: %v", err)
+		fmt.Printf("Websocket upgrade error: %v", err)
 		return
 	}
 	ws.AddConnection(userID.(uint), connection, topics)

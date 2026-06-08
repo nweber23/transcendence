@@ -61,8 +61,8 @@ var State SocketState
 
 func appendConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
 	connectionList.Mutex.Lock()
-	defer connectionList.Mutex.Unlock()
 	connectionList.Connections = append(connectionList.Connections, connection)
+	connectionList.Mutex.Unlock()
 }
 
 func popSwapConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
@@ -105,7 +105,7 @@ func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 		appendConnection(&Client.SendLists[topic].ConnectionList, connection)
 	}
 	go pumpFromConnection(userID, &Client.ConnectionList.Mutex, connection)
-	fmt.Printf("Connection added for %d\n", userID)
+	fmt.Printf("Connection added\n")
 }
 
 func RemoveConnection(userID uint, connection *websocket.Conn) {
@@ -125,7 +125,7 @@ func RemoveConnection(userID uint, connection *websocket.Conn) {
 		}
 		delete(State.Clients, userID)
 	}
-	fmt.Printf("Connection removed for %d\n", userID)
+	fmt.Printf("Connection removed\n")
 }
 
 func CloseConnection(userID uint, connection *websocket.Conn) {
@@ -134,7 +134,10 @@ func CloseConnection(userID uint, connection *websocket.Conn) {
 }
 
 func IsOnline(userID uint) (bool) {
-	return State.Clients[userID] == nil
+	State.ClientsMutex.Lock()
+	isOnline := (State.Clients[userID] != nil)
+	State.ClientsMutex.Unlock()
+	return isOnline
 }
 
 // Pumps
@@ -158,13 +161,11 @@ func pumpToTopic(sendList *topicSendList) {
 func pumpFromConnection(userID uint, mutex *sync.RWMutex, connection *websocket.Conn) {
 	for {
 		var packet packet
-		mutex.RLock()
+		// TODO: Does connection need sync
 		if err := connection.ReadJSON(&packet); err != nil {
-			mutex.RUnlock()
 			CloseConnection(userID, connection)
 			return
 		}
-		mutex.RUnlock()
 		packet.UserID = userID
 		// I frickin' hate that you can't use comma ok when writing to channels
 		State.ReadMutex.RLock()

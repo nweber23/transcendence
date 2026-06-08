@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+
+import { createWebSocket } from '@/utils/ws';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/hooks/useAccount';
 import Button from '@/components/ui/Button';
