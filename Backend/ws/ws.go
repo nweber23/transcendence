@@ -1,6 +1,12 @@
 package ws
 
 import (
+	"fmt"
+	"log"
+	"sync"
+
+	"encoding/json"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -19,49 +25,53 @@ var TopicMap = map[string]Topic{
 	"chat":    TopicChat,
 }
 
-type ProtectedSocketList struct {
-	Mutex       sync.RWMutex
-	SocketList []*websocket.Conn
-}
-
-type TopicSendList struct {
-	SendChannel chan interface{}
-	SocketList  ProtectedSocketList
-}
-
-type Client struct {
-	UserID      uint
-	SocketList  ProtectedSocketList
-	SendLists   [TopicMax]TopicSendList
-}
-
-type SocketState struct {
-	Clients     map[uint]*Client
-	ReadChannel chan Packet
-	ReadMutex   sync.RWMutex
-	ReadOk      bool
-}
-
-type Packet struct {
+type packet struct {
 	UserID  uint
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
 
-var State SocketState
-
-func appendSocket(socketList *ProtectedSocketList, connection *websocket.Conn) {
-	socketList.Mutex.Lock()
-	defer socketList.Mutex.Unlock()
-	socketList.SocketList = append(socketList.SocketList, connection)
+type protectedConnectionList struct {
+	Mutex       sync.RWMutex
+	Connections []*websocket.Conn
 }
 
-func popSwapSocket(socketList *ProtectedSocketList, connection *websocket.Conn) {
-	socketList.Mutex.Lock()
-	defer socketList.Mutex.Unlock()
+type topicSendList struct {
+	SendChannel    chan packet
+	ConnectionList protectedConnectionList
+}
+
+type client struct {
+	UserID         uint
+	ConnectionList protectedConnectionList
+	SendLists      [TopicMax]topicSendList
+}
+
+type SocketState struct {
+	Clients      map[uint]*client
+	ClientsMutex sync.Mutex
+	ReadChannel  chan packet
+	ReadMutex    sync.RWMutex
+	ReadOk       bool
+}
+
+var State SocketState
+
+// Internal connection Managers (Only manages protected connection lists directly)
+
+func appendConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
+	connectionList.Mutex.Lock()
+	defer connectionList.Mutex.Unlock()
+	connectionList.Connections = append(connectionList.Connections, connection)
+}
+
+func popSwapConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
+	connectionList.Mutex.Lock()
+	defer connectionList.Mutex.Unlock()
+	connections := &connectionList.Connections
 	for connectionIndex, toDelete := range *connections {
 		if toDelete == connection {
-			newLength := len(connections) - 1
+			newLength := len(*connections) - 1
 			(*connections)[connectionIndex] = (*connections)[newLength]
 			(*connections)[newLength] = nil
 			(*connections) = (*connections)[:newLength]
@@ -70,70 +80,127 @@ func popSwapSocket(socketList *ProtectedSocketList, connection *websocket.Conn) 
 	}
 }
 
-func RemoveConnection(userID uint, connection *websocket.Conn) {
-	client := clients[userID]
-	if client == nil {
-		return
+// External connection Managers (Create and remove clients as needed)
+
+func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
+	State.ClientsMutex.Lock()
+	defer State.ClientsMutex.Unlock()
+	Client := State.Clients[userID]
+	if Client == nil {
+		Client = &client{
+			UserID:     userID,
+			SendLists:  [TopicMax]topicSendList{},
+		}
+		for listIndex := TopicGeneric; listIndex < TopicMax; {
+			Client.SendLists[listIndex] = topicSendList{
+				SendChannel: make(chan packet, 256),
+			}
+			go pumpToTopic(&Client.SendLists[listIndex])
+			listIndex++
+		}
+		State.Clients[userID] = Client
 	}
-	popSwapConnection(&client.SocketList, connection)
-	for sendListIndex, _ := range client.SendLists {
-		popSwapConnection(&client.SendLists[sendListIndex].SocketList, connection)
+	appendConnection(&Client.ConnectionList, connection)
+	for _, topic := range topics {
+		appendConnection(&Client.SendLists[topic].ConnectionList, connection)
 	}
+	go pumpFromConnection(userID, &Client.ConnectionList.Mutex, connection)
+	fmt.Printf("Connection added for %d\n", userID)
 }
 
-func pumpToTopic(sendList *TopicSendList) {
+func RemoveConnection(userID uint, connection *websocket.Conn) {
+	State.ClientsMutex.Lock()
+	defer State.ClientsMutex.Unlock()
+	Client := State.Clients[userID]
+	if Client == nil {
+		return
+	}
+	popSwapConnection(&Client.ConnectionList, connection)
+	for sendListIndex, _ := range Client.SendLists {
+		popSwapConnection(&Client.SendLists[sendListIndex].ConnectionList, connection)
+	}
+	if len(Client.ConnectionList.Connections) == 0 {
+		for _, sendList := range Client.SendLists {
+			close(sendList.SendChannel)
+		}
+		delete(State.Clients, userID)
+	}
+	fmt.Printf("Connection removed for %d\n", userID)
+}
+
+func CloseConnection(userID uint, connection *websocket.Conn) {
+	RemoveConnection(userID, connection)
+	connection.Close()
+}
+
+func IsOnline(userID uint) (bool) {
+	return State.Clients[userID] == nil
+}
+
+// Pumps
+
+func pumpToTopic(sendList *topicSendList) {
 	for {
-		message, ok <- sendList.MessageChannel
+		message, ok := <- sendList.SendChannel
 		if !ok {
 			return
 		}
-		for _, connection := range sendList.Connections {
+		sendList.ConnectionList.Mutex.RLock()
+		for _, connection := range sendList.ConnectionList.Connections {
 			if err := connection.WriteJSON(message); err != nil {
 				log.Printf("Failed to send message: %v", err)
 			}
 		}
+		sendList.ConnectionList.Mutex.RUnlock()
 	}
 }
 
-func pumpFromConnection(userID uint, connection *websocket.Conn) {
+func pumpFromConnection(userID uint, mutex *sync.RWMutex, connection *websocket.Conn) {
 	for {
-		var packet Packet
-		if err := connection.ReadJSON(&packet); err == nil {
-			packet.UserID = userID
-			// I frickin' hate that you can't use comma ok when writing to channels
-			State.ReadMutex.RLock()
-			if !State.ReadOk {
-				State.ReadMutex.RUnlock()
-				return
-			}
-			State.ReadChannel <- packet
-			State.ReadMutex.RUnlock()
-		} else {
-			log.Printf("Failed to receive message: %v", err)
+		var packet packet
+		mutex.RLock()
+		if err := connection.ReadJSON(&packet); err != nil {
+			mutex.RUnlock()
+			CloseConnection(userID, connection)
+			return
 		}
+		mutex.RUnlock()
+		packet.UserID = userID
+		// I frickin' hate that you can't use comma ok when writing to channels
+		State.ReadMutex.RLock()
+		if !State.ReadOk {
+			State.ReadMutex.RUnlock()
+			return
+		}
+		State.ReadChannel <- packet
+		State.ReadMutex.RUnlock()
 	}
 }
+
+// ws.Main thread
 
 func initialize() {
-	State.Clients = make(map[uint]*Client)
-	State.ReadOk  = true
+	State.Clients     = make(map[uint]*client)
+	State.ReadChannel = make(chan packet, 256)
+	State.ReadOk      = true
 }
 
 func handleIncomingPackets() {
 	for {
-		packet, ok <- State.ReadChannel
+		packet, ok := <- State.ReadChannel
 		if !ok {
 			return
 		}
+		log.Printf("Received packet with type %s from %d", packet.Type, packet.UserID)
 		//switch packet.Type {
 		//}
 	}
 }
 
 func terminate() {
-	for client := range State.Clients {
-		for sendList := range client.SendLists {
-			_, ok <- sendList.SendChannel
+	for _, Client := range State.Clients {
+		for _, sendList := range Client.SendLists {
+			_, ok := <- sendList.SendChannel
 			if ok {
 				close(sendList.SendChannel)
 			}
@@ -147,27 +214,11 @@ func Main() {
 	terminate()
 }
 
-func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
-	client := clients[userID]
-	if client == nil {
-		client := &Client{
-			UserID:     userID,
-			SocketList: ProtectedSocketList{
-				
-			},
-			SendLists:  [TopicMax]TopicSendList{},
-		}
-		for listIndex := TopicGeneric; listIndex < TopicMax; {
-			client.SendLists[listIndex] = TopicSendList{
-				SendChannel: make(chan interface{}, 256),
-				SocketList: make([]*websocket.Conn, 0),
-			}
-			listIndex++
-		}
-		clients[userID] = client
-	}
-	client.SocketList = append(client.SocketList, connection)
-	for _, topic := range topics {
-		client.SendLists[topic].SocketList = append(client.SendLists[topic].SocketList, connection)
-	}
+// ws.Stop
+
+func Stop() {
+	State.ReadMutex.Lock()
+	close(State.ReadChannel)
+	State.ReadOk = false
+	State.ReadMutex.Unlock()
 }

@@ -1,4 +1,7 @@
 import React from 'react';
+
+import { createWebSocket } from '@/utils/ws';
+
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -25,8 +28,8 @@ const AppLayout: React.FC = () => {
 
   const token = localStorage.getItem('auth_token')
   if(token != null) {
-    const socket = new WebSocket("http://localhost:8080/ws?token=" + token + "&topics=generic");
-    socket.addEventListener("open", (event) => {
+    const socket = createWebSocket(token, ["generic"])
+    socket.addEventListener("open", (event: Event) => {
       console.log("Connection established");
     });
   }

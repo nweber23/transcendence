@@ -8,6 +8,7 @@ import (
 	"transcendence/handlers"
 	"transcendence/middleware"
 	"transcendence/services"
+	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +20,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Start wsMain
+	go ws.Main()
 
 	router := gin.Default()
 
