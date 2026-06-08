@@ -23,7 +23,7 @@ struct PaytableEntry {
     std::unordered_map<uint8_t, uint32_t> count_to_multiplier;
 };
 
-using Payline = std::vector<std::pair<uint8_t, uint8_t>>;
+using Payline = std::vector<std::pair<std::uint8_t, std::uint8_t>>;
 using ReelStrip = std::vector<std::string>;
 
 struct SlotConfig {
@@ -31,11 +31,11 @@ struct SlotConfig {
     std::string display_name;
     std::string description;
 
-    uint8_t rows;
-    uint8_t cols;
+    std::uint8_t rows;
+    std::uint8_t cols;
 
     std::vector<SymbolInfo> symbols;
-    std::vector<uint8_t> line_options;
+    std::vector<std::uint8_t> line_options;
     std::vector<Payline> paylines;
     std::vector<ReelStrip> reels;
     std::unordered_map<std::string, PaytableEntry> paytable;
