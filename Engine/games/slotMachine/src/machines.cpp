@@ -50,10 +50,6 @@ Machine::Machine() {
     }
 }
 
-Machine::~Machine() {
-    counter_thread.request_stop();
-    counter_thread.join();
-}
 
 std::uint32_t Machine::get_monetary_result(std::string_view game_name, std::uint8_t line_count) const {
     return 0;

@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -102,7 +101,6 @@ struct glz::meta<SlotConfig> {
 class Machine {
     private:
         std::uint64_t nonce;
-        std::jthread counter_thread;
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
 
@@ -110,7 +108,7 @@ class Machine {
 
     public:
         Machine();
-        ~Machine();
+        ~Machine() = default;
 
         [[nodiscard]]
         std::uint32_t get_monetary_result(std::string_view game_name, std::uint8_t line_count) const;
