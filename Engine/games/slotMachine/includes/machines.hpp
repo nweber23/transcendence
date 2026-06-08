@@ -42,7 +42,7 @@ struct SlotConfig {
 
     volatility_t volatility;
     double rtp;
-    uint8_t max_lines;
+    std::uint8_t max_lines;
 };
 
 class Machine {
