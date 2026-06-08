@@ -1,0 +1,94 @@
+{
+  "name": "lucky-sevens",
+  "display_name": "Lucky Sevens",
+  "description": "Classic 7s with a twist — high multiplier on the 7, wilds in the middle.",
+
+  "rows": 3,
+  "cols": 3,
+
+  "symbols": [
+    {
+      "id": "SYM_7",
+      "label": "7",
+      "file": "/assets/slots/lucky-sevens/sym_7.png"
+    },
+    {
+      "id": "SYM_BAR",
+      "label": "BAR",
+      "file": "/assets/slots/lucky-sevens/sym_bar.png"
+    },
+    {
+      "id": "SYM_WILD",
+      "label": "W",
+      "file": "/assets/slots/lucky-sevens/sym_wild.png"
+    },
+    {
+      "id": "SYM_DIAMOND",
+      "label": "◆",
+      "file": "/assets/slots/lucky-sevens/sym_diamond.png"
+    },
+    {
+      "id": "SYM_HEART",
+      "label": "♥",
+      "file": "/assets/slots/lucky-sevens/sym_heart.png"
+    },
+    {
+      "id": "SYM_SPADE",
+      "label": "♠",
+      "file": "/assets/slots/lucky-sevens/sym_spade.png"
+    },
+    {
+      "id": "SYM_CLUB",
+      "label": "♣",
+      "file": "/assets/slots/lucky-sevens/sym_club.png"
+    }
+  ],
+
+  "line_options": [1, 3, 5, 10],
+
+  "paylines": [
+    [[0,1], [1,1], [2,1]],
+    [[0,0], [1,0], [2,0]],
+    [[0,2], [1,2], [2,2]],
+    [[0,0], [1,1], [2,2]],
+    [[0,2], [1,1], [2,0]],
+    [[0,0], [1,0], [2,1]],
+    [[0,2], [1,2], [2,1]],
+    [[0,1], [1,0], [2,0]],
+    [[0,1], [1,2], [2,2]],
+    [[0,0], [1,2], [2,0]]
+  ],
+
+  "reels": [
+    [
+      "SYM_7", "SYM_BAR", "SYM_WILD", "SYM_DIAMOND",
+      "SYM_HEART", "SYM_BAR", "SYM_CLUB", "SYM_SPADE",
+      "SYM_HEART", "SYM_7", "SYM_BAR", "SYM_CLUB"
+    ],
+    [
+      "SYM_BAR", "SYM_DIAMOND", "SYM_7", "SYM_CLUB",
+      "SYM_WILD", "SYM_SPADE", "SYM_HEART", "SYM_BAR",
+      "SYM_DIAMOND", "SYM_7", "SYM_CLUB", "SYM_SPADE"
+    ],
+    [
+      "SYM_CLUB", "SYM_HEART", "SYM_7", "SYM_BAR",
+      "SYM_SPADE", "SYM_DIAMOND", "SYM_WILD", "SYM_HEART",
+      "SYM_BAR", "SYM_CLUB", "SYM_7", "SYM_SPADE"
+    ]
+  ],
+
+  "paytable": {
+    "SYM_7":       { "3": 100, "2": 10 },
+    "SYM_WILD":    { "3": 200, "2": 20 },
+    "SYM_DIAMOND": { "3": 50,  "2": 5  },
+    "SYM_BAR":     { "3": 25,  "2": 3  },
+    "SYM_BELL":    { "3": 40,  "2": 4  },
+    "SYM_HEART":   { "3": 15,  "2": 2  },
+    "SYM_SPADE":   { "3": 10,  "2": 1  },
+    "SYM_CLUB":    { "3": 10,  "2": 1  }
+  },
+
+  "volatility": "medium",
+  "rtp": 96.5,
+  "max_lines": 10
+}
