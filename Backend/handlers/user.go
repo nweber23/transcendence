@@ -440,7 +440,7 @@ func (uh *UserHandler) RemoveFriend(c *gin.Context) {
 			FriendID: uint(friendID),
 			WasAdded: false,
 		}
-		utils.RespondError(c, http.StatusCreated, "Friend removed successfully", &response)
+		utils.RespondSuccess(c, http.StatusOK, "Friend removed successfully", &response)
 	}
 }
 

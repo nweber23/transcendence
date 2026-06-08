@@ -3,8 +3,10 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"transcendence/utils"
+	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -15,6 +17,20 @@ func UpgradeConnection(c *gin.Context) {
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
 		return
+	}
+	topicListString := c.Query("topics")
+	if topicListString == "" {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_topics", "No topics specified")
+		return
+	}
+	topicStrings := strings.Split(topicListString, ",")
+	topics := make([]ws.Topic, len(topicStrings))
+	for topicIndex, topicString := range topicStrings {
+		topics[topicIndex] = ws.TopicMap[topicString]
+		if topics[topicIndex] == ws.TopicGeneric && topicString != "generic" {
+			utils.RespondError(c, http.StatusBadRequest, "invalid_topics", "Unknown topic: " + topicString)
+			return
+		}
 	}
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -28,7 +44,5 @@ func UpgradeConnection(c *gin.Context) {
 		log.Printf("Websocket upgrade error: %v", err)
 		return
 	}
-	//ws.AddConnection(connection, userID, topics)
-	_ = connection
-	_ = userID
+	ws.AddConnection(userID.(uint), connection, topics)
 }
