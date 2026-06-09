@@ -8,6 +8,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
+include(FetchContent)
+FetchContent_Declare(
+  glaze
+  GIT_REPOSITORY https://github.com/stephenberry/glaze.git
+  GIT_TAG v3.6.0
+  SOURCE_SUBDIR ""
+)
+set(glaze_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(glaze_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(glaze)
 
 add_executable(card_test card_test.cpp)
 target_include_directories(card_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
@@ -58,3 +68,15 @@ target_include_directories(texasHoldem_test PRIVATE ${CMAKE_SOURCE_DIR}/games/ca
 target_include_directories(texasHoldem_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/includes)
 target_link_libraries(texasHoldem_test PRIVATE Catch2::Catch2WithMain texasHoldem_impl deck_impl cards_impl)
 add_test(NAME texasHoldem_test COMMAND texasHoldem_test)
+
+# Slot machine library
+add_library(slotmachine_impl STATIC
+    ${CMAKE_SOURCE_DIR}/games/slotMachine/src/machines.cpp
+)
+target_include_directories(slotmachine_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/slotMachine/includes)
+target_link_libraries(slotmachine_impl PUBLIC glaze::glaze)
+
+add_executable(slotmachine_test slotmachine_test.cpp)
+target_include_directories(slotmachine_test PRIVATE ${CMAKE_SOURCE_DIR}/games/slotMachine/includes)
+target_link_libraries(slotmachine_test PRIVATE Catch2::Catch2WithMain slotmachine_impl)
+add_test(NAME slotmachine_test COMMAND slotmachine_test WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
