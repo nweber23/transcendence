@@ -22,8 +22,10 @@ try:
         print("Success! File loaded successfully.")
 except FileNotFoundError:
     print(f"Error: The file '{filename}' was not found.")
+    sys.exit(1)
 except json.JSONDecodeError:
     print(f"Error: '{filename}' contains invalid JSON formatting.")
+    sys.exit(1)
 
 rows = config["rows"]
 cols = config["cols"]
@@ -87,7 +89,7 @@ for active_lines in lineoptions:
     free_spin_triggers = 0
     total_scatters_found = 0
 
-    print_counter = 0
+    sum_squared_wins = 0
 
     for stop_positions in itertools.product(*reel_indices):
         grid = []
@@ -99,6 +101,7 @@ for active_lines in lineoptions:
                 grid_row.append(symbol)
             grid.append(grid_row)
 
+        current_spin_total_win = 0
 
         for line_idx in range(active_lines):
             line_path = paylines[line_idx]
@@ -117,6 +120,7 @@ for active_lines in lineoptions:
             payout = int(symbol_payouts.get(str(match_count), 0))
 
             standard_gain += payout
+            current_spin_total_win += payout
 
         flat_grid = [symbol for row in grid for symbol in row]
         scatter_count = flat_grid.count(scatter_symbol)
@@ -124,11 +128,13 @@ for active_lines in lineoptions:
         if scatter_count > 0:
             scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
             scatter_gain += scatter_payout
+            current_spin_total_win += scatter_payout
 
         total_scatters_found += scatter_count
         if scatter_count >= bonustrigger_count:
             free_spin_triggers += 1
 
+        sum_squared_wins += (current_spin_total_win ** 2)
 
     total_bet_spent = combination_count * active_lines
     avg_win_per_comb = standard_gain / combination_count
@@ -144,6 +150,19 @@ for active_lines in lineoptions:
             current_multiplier = float(free_spin_max_multiplier)
 
     free_spin_gain = free_spin_triggers * avg_win_per_comb * total_multiplier_weight
+
+    mean_base_win = (standard_gain + scatter_gain) / combination_count
+    mean_of_squares = sum_squared_wins / combination_count
+    variance = mean_of_squares - (mean_base_win ** 2)
+    volatility_score = math.sqrt(max(0, variance))
+
+    if volatility_score < 5.0:
+        volatility_word = "LOW"
+    elif volatility_score <= 10.0:
+        volatility_word = "MEDIUM"
+    else:
+        volatility_word = "HIGH"
+
     standard_rtp = (standard_gain / total_bet_spent) * 100
     scatter_rtp = (scatter_gain / total_bet_spent) * 100
     free_spin_rtp = (free_spin_gain / total_bet_spent) * 100
@@ -158,6 +177,7 @@ for active_lines in lineoptions:
     print(f"    -> Scatter Payout RTP: {scatter_rtp:.3f}%")
     print(f"    -> Free Spins RTP    : {free_spin_rtp:.3f}%")
     print(f"    => TOTAL COMBINED RTP: {total_rtp:.3f}%")
+    print(f"    => VOLATILITY RATING : {volatility_score:.3f} ({volatility_word})")
     print("=============================================\n")
 
 if flag:
