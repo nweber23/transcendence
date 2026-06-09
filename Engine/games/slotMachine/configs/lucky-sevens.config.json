@@ -98,5 +98,7 @@
   "free_spin_multiplier": 3,
   "free_spin_retrigger_count": 10,
   "free_spin_multiplier_increment": 1,
-  "free_spin_max_multiplier": 10
+  "free_spin_max_multiplier": 10,
+
+  "max_win_multiplier": 5000
 }

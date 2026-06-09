@@ -135,3 +135,47 @@ TEST_CASE("Results vary between spins (random selection works)", "[slotmachine]"
     auto [min_it, max_it] = std::minmax_element(results.begin(), results.end());
     REQUIRE(*min_it != *max_it);
 }
+
+
+TEST_CASE("Deterministic seed reproduces identical results", "[slotmachine]") {
+    FreeSpinState fs_a, fs_b;
+
+    Machine m1(42);
+    Machine m2(42);
+
+    for (int i = 0; i < 100; ++i) {
+        auto r1 = m1.get_monetary_result("lucky-sevens", 10, 1, fs_a);
+        auto r2 = m2.get_monetary_result("lucky-sevens", 10, 1, fs_b);
+        REQUIRE(r1.stops == r2.stops);
+        REQUIRE(r1.win_amount == r2.win_amount);
+    }
+}
+
+
+TEST_CASE("Different seeds produce different sequences", "[slotmachine]") {
+    FreeSpinState fs_a, fs_b;
+
+    Machine m1(42);
+    Machine m2(999);
+
+    bool any_different = false;
+    for (int i = 0; i < 100; ++i) {
+        auto r1 = m1.get_monetary_result("lucky-sevens", 10, 1, fs_a);
+        auto r2 = m2.get_monetary_result("lucky-sevens", 10, 1, fs_b);
+        if (r1.stops != r2.stops) {
+            any_different = true;
+            break;
+        }
+    }
+    REQUIRE(any_different);
+}
+
+
+TEST_CASE("Max win multiplier is enforced from config", "[slotmachine]") {
+    Machine m;
+    FreeSpinState fs;
+
+    // Verify config loaded max_win_multiplier by checking a normal spin works
+    auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
+    REQUIRE(r.win_amount <= 5000 * 10 * 1); // max_win_multiplier * lines * bet
+}

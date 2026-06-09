@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -48,6 +49,8 @@ struct SlotConfig {
     std::uint8_t free_spin_retrigger_count;
     std::uint8_t free_spin_multiplier_increment;
     std::uint8_t free_spin_max_multiplier;
+
+    std::uint32_t max_win_multiplier;
 };
 
 struct SpinResult {
@@ -112,12 +115,14 @@ struct glz::meta<SlotConfig> {
         "free_spin_multiplier",          &SlotConfig::free_spin_multiplier,
         "free_spin_retrigger_count",     &SlotConfig::free_spin_retrigger_count,
         "free_spin_multiplier_increment",&SlotConfig::free_spin_multiplier_increment,
-        "free_spin_max_multiplier",      &SlotConfig::free_spin_max_multiplier
+        "free_spin_max_multiplier",      &SlotConfig::free_spin_max_multiplier,
+        "max_win_multiplier",            &SlotConfig::max_win_multiplier
     );
 };
 
 class Machine {
     private:
+        std::mt19937_64 rng_;
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
 
@@ -129,6 +134,7 @@ class Machine {
 
     public:
         Machine();
+        explicit Machine(std::uint64_t seed);
 
         [[nodiscard]]
         SpinResult get_monetary_result(std::string_view game_name,

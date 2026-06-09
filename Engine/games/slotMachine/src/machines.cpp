@@ -7,12 +7,6 @@
 
 namespace fs = std::filesystem;
 
-namespace {
-
-thread_local std::mt19937_64 rng(std::random_device{}());
-
-}
-
 fs::path Machine::config_directory() {
     if (auto* env = std::getenv("SLOT_CONFIG_DIR")) {
         return env;
@@ -106,6 +100,44 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
 }
 
 Machine::Machine()
+    : rng_(std::random_device{}())
+{
+    fs::path config_dir = config_directory();
+    if (!fs::is_directory(config_dir)) {
+        return;
+    }
+
+    size_t count = 0;
+    for (auto const& entry : fs::directory_iterator(config_dir)) {
+        if (entry.path().extension() == ".json") {
+            ++count;
+        }
+    }
+
+    game_names.reserve(count);
+    configs.reserve(count);
+
+    for (auto const& entry : fs::directory_iterator(config_dir)) {
+        if (entry.path().extension() != ".json") continue;
+
+        std::ifstream file(entry.path());
+        std::ostringstream buf;
+        buf << file.rdbuf();
+        std::string content = buf.str();
+
+        SlotConfig cfg;
+        auto err = glz::read_json(cfg, content);
+        if (err) {
+            continue;
+        }
+
+        game_names.push_back(cfg.name);
+        configs.emplace(cfg.name, std::move(cfg));
+    }
+}
+
+Machine::Machine(std::uint64_t seed)
+    : rng_(seed)
 {
     fs::path config_dir = config_directory();
     if (!fs::is_directory(config_dir)) {
@@ -164,7 +196,7 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     std::vector<std::uint8_t> stops(cfg.cols);
     for (std::uint8_t c = 0; c < cfg.cols; ++c) {
         std::uniform_int_distribution<std::uint8_t> dist(0, static_cast<std::uint8_t>(cfg.reels[c].size() - 1));
-        stops[c] = dist(rng);
+        stops[c] = dist(rng_);
     }
 
     auto eval = evaluate_spin(cfg, stops, line_count);
@@ -188,6 +220,13 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
             fs_state.free_spins_remaining = cfg.free_spin_count;
             fs_state.current_multiplier = cfg.free_spin_multiplier;
             fs_state.total_free_win = 0;
+        }
+    }
+
+    if (cfg.max_win_multiplier > 0) {
+        std::uint32_t max_win = cfg.max_win_multiplier * line_count * bet_per_line;
+        if (total_win > max_win) {
+            total_win = max_win;
         }
     }
 
