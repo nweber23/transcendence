@@ -25,6 +25,8 @@ except FileNotFoundError:
 except json.JSONDecodeError:
     print(f"Error: '{filename}' contains invalid JSON formatting.")
 
+rows = config["rows"]
+cols = config["cols"]
 reels = config["reels"]
 paytable = config["paytable"]
 lineoptions = config["line_options"]
@@ -73,11 +75,30 @@ print("          STARTING CALCULATIONS              ")
 print("=============================================")
 
 combination_count = math.prod(len(reel) for reel in reels)
+reel_indices = [range(len(reel)) for reel in reels]
 for active_lines in lineoptions:
     print(f"Calculations for {active_lines}")
     standard_gain = 0
     scatter_gain = 0
     free_spin_gain = 0
-    print(f"count{combination_count}")
 
+    print_counter = 0
 
+    for stop_positions in itertools.product(*reel_indices):
+        grid = []
+        for row in range(rows):
+            grid_row = []
+            for reel_idx, stop_pos in enumerate(stop_positions):
+                symbol_index = (stop_pos + row) % len(reels[reel_idx])
+                symbol = reels[reel_idx][symbol_index]
+                grid_row.append(symbol)
+            grid.append(grid_row)
+
+        if print_counter < 3:
+            print(f"  [Combination Preview #{print_counter + 1}]")
+            print(f"  Stop Indices on Reels: {stop_positions}")
+            print("  Generated Screen Matrix:")
+            for row_view in grid:
+                print(f"    {row_view}")
+            print("  " + "-"*30)
+            print_counter += 1
