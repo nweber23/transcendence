@@ -164,3 +164,4 @@ if flag:
     print("---------------------------------------------")
     print(f"  Warning Biggest RTP is: {rtp_max} player has advantage:")
     print("=============================================\n")
+#TODO: the logic for volatility
