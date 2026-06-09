@@ -40,6 +40,8 @@ free_spin_retrigger_count = config["free_spin_retrigger_count"]
 free_spin_multiplier_increment = config["free_spin_multiplier_increment"]
 free_spin_max_multiplier = config["free_spin_max_multiplier"]
 max_win_multiplier = config["max_win_multiplier"]
+flag = 0
+rtp_max = 0
 
 print("=============================================")
 print("         SLOT CONFIGURATION VARIABLES        ")
@@ -146,11 +148,19 @@ for active_lines in lineoptions:
     scatter_rtp = (scatter_gain / total_bet_spent) * 100
     free_spin_rtp = (free_spin_gain / total_bet_spent) * 100
     total_rtp = standard_rtp + scatter_rtp + free_spin_rtp
-
+    if total_rtp > 100:
+        flag = 1
+        if rtp_max < total_rtp:
+            rtp_max = total_rtp
     print("---------------------------------------------")
     print(f"  FINAL METRICS FOR {active_lines} ACTIVE PLAYLINE(S):")
     print(f"    -> Standard Line RTP : {standard_rtp:.3f}%")
     print(f"    -> Scatter Payout RTP: {scatter_rtp:.3f}%")
     print(f"    -> Free Spins RTP    : {free_spin_rtp:.3f}%")
     print(f"    => TOTAL COMBINED RTP: {total_rtp:.3f}%")
+    print("=============================================\n")
+
+if flag:
+    print("---------------------------------------------")
+    print(f"  Warning Biggest RTP is: {rtp_max} player has advantage:")
     print("=============================================\n")
