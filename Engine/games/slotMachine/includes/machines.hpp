@@ -24,11 +24,10 @@ struct SymbolInfo {
     std::string file;
 };
 
-struct PaytableEntry {
-    std::unordered_map<uint8_t, uint32_t> count_to_multiplier;
-};
+using PaytableEntry = std::unordered_map<uint8_t, uint32_t>;
 
-using Payline = std::vector<std::pair<std::uint8_t, std::uint8_t>>;
+using PaylinePos = std::array<std::uint8_t, 2>;
+using Payline = std::vector<PaylinePos>;
 using ReelStrip = std::vector<std::string>;
 
 struct SlotConfig {
@@ -71,14 +70,6 @@ struct glz::meta<SymbolInfo> {
 };
 
 template <>
-struct glz::meta<PaytableEntry> {
-    using type = PaytableEntry;
-    static constexpr auto value = object(
-        "count_to_multiplier", &PaytableEntry::count_to_multiplier
-    );
-};
-
-template <>
 struct glz::meta<SlotConfig> {
     using type = SlotConfig;
     static constexpr auto value = object(
@@ -103,13 +94,25 @@ class Machine {
         std::uint64_t nonce;
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
+        std::vector<std::vector<std::vector<std::uint8_t>>> results;
+
+        static constexpr std::size_t RESULT_TABLE_SIZE = 100000;
 
         static fs::path config_directory();
+
+        [[nodiscard]]
+        static std::uint32_t evaluate_spin(const SlotConfig& config,
+                                           const std::vector<std::uint8_t>& stops,
+                                           std::uint8_t line_count);
+
+        void build_result_tables();
 
     public:
         Machine();
         ~Machine() = default;
 
         [[nodiscard]]
-        std::uint32_t get_monetary_result(std::string_view game_name, std::uint8_t line_count) const;
+        std::uint32_t get_monetary_result(std::string_view game_name,
+                                          std::uint8_t line_count,
+                                          std::uint32_t bet_per_line);
 };
