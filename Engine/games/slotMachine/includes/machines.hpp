@@ -40,6 +40,7 @@ struct SlotConfig {
 
     std::uint8_t max_lines;
 
+    std::string wild_symbol;
     std::string scatter_symbol;
     PaytableEntry scatter_paytable;
     std::uint8_t bonus_trigger_count;
@@ -108,6 +109,7 @@ struct glz::meta<SlotConfig> {
         "reels",               &SlotConfig::reels,
         "paytable",            &SlotConfig::paytable,
         "max_lines",           &SlotConfig::max_lines,
+        "wild_symbol"          &SlotConfig::wild_symbol,
         "scatter_symbol",      &SlotConfig::scatter_symbol,
         "scatter_paytable",    &SlotConfig::scatter_paytable,
         "bonus_trigger_count", &SlotConfig::bonus_trigger_count,

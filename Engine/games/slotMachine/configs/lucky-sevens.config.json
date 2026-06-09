@@ -89,7 +89,7 @@
   },
 
   "max_lines": 10,
-
+  "wild_symbol": "SYM_WILD",
   "scatter_symbol": "SYM_DIAMOND",
   "scatter_paytable": { "3": 20, "4": 50, "5": 200 },
   "bonus_trigger_count": 3,
