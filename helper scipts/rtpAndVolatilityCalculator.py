@@ -32,6 +32,7 @@ cols = config["cols"]
 reels = config["reels"]
 paytable = config["paytable"]
 scatter_symbol = config["scatter_symbol"]
+wild_symbol = config["wild_symbol"]
 lineoptions = config["line_options"]
 paylines = config["paylines"]
 scatterpaytable = config["scatter_paytable"]
@@ -111,12 +112,16 @@ for active_lines in lineoptions:
             match_count = 1
 
             for symbol in line_symbols[1:]:
-                if symbol == first_symbol:
+                if symbol == first_symbol or symbol == wild_symbol or first_symbol == wild_symbol:
                     match_count += 1
                 else:
                     break
 
-            symbol_payouts = paytable.get(first_symbol, {})
+            target_symbol = first_symbol
+            if first_symbol == wild_symbol and match_count < len(line_symbols):
+                target_symbol = line_symbols[match_count - 1]
+
+            symbol_payouts = paytable.get(target_symbol, {})
             payout = int(symbol_payouts.get(str(match_count), 0))
 
             standard_gain += payout
@@ -184,4 +189,3 @@ if flag:
     print("---------------------------------------------")
     print(f"  Warning Biggest RTP is: {rtp_max} player has advantage:")
     print("=============================================\n")
-#TODO: the logic for volatility
