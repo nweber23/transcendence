@@ -131,12 +131,13 @@ void Machine::build_result_tables() {
 
         double scale = 1.0;
         if (n_win > 0) {
-            double numerator = target_rtp * max_bet * static_cast<double>(n_lose);
-            double denominator = sum_weighted_pay - target_rtp * max_bet * sum_win_weight;
-            if (denominator > 0) {
-                scale = numerator / denominator;
+            double max_rtp = sum_weighted_pay / (sum_win_weight * max_bet);
+            if (target_rtp >= max_rtp) {
+                scale = 1e9;
             } else {
-                scale = 10.0;
+                double numerator = target_rtp * max_bet * static_cast<double>(n_lose);
+                double denominator = sum_weighted_pay - target_rtp * max_bet * sum_win_weight;
+                scale = numerator / denominator;
             }
         }
 
