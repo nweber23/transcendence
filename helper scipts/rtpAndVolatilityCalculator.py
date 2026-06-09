@@ -68,6 +68,10 @@ print("Scatter Paytable:")
 print(json.dumps(scatterpaytable, indent=2))
 print("=============================================")
 
+print("\n=============================================")
+print("          STARTING CALCULATIONS              ")
+print("=============================================")
+
 combination_count = math.prod(len(reel) for reel in reels)
 for active_lines in lineoptions:
     print(f"Calculations for {active_lines}")
@@ -75,4 +79,5 @@ for active_lines in lineoptions:
     scatter_gain = 0
     free_spin_gain = 0
     print(f"count{combination_count}")
+
 
