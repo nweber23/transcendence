@@ -91,7 +91,7 @@
   "max_lines": 10,
 
   "scatter_symbol": "SYM_DIAMOND",
-  "scatter_paytable": { "3": 20, "4": 50, "5": 200 },
+  "scatter_paytable": { "1": 20, "2": 50, "3": 200 },
   "bonus_trigger_count": 3,
 
   "free_spin_count": 10,
