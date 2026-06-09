@@ -44,6 +44,59 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
         auto r = m.get_monetary_result("lucky-sevens", 10, 1);
         REQUIRE(r.stops.size() == 3);
     }
+
+    SECTION("free spins are awarded on bonus trigger") {
+        for (int i = 0; i < 10000; ++i) {
+            auto r = m.get_monetary_result("lucky-sevens", 10, 1);
+            if (r.bonus_triggered && r.free_spins_remaining == 10) {
+                REQUIRE(m.free_spins_remaining() == 10);
+                return;
+            }
+        }
+        FAIL("Should have seen a bonus trigger with 10 free spins");
+    }
+
+    SECTION("free spins decrement counter and accumulate total") {
+        for (int i = 0; i < 10000; ++i) {
+            auto r = m.get_monetary_result("lucky-sevens", 10, 1);
+            if (!r.bonus_triggered) continue;
+
+            REQUIRE(r.free_spins_remaining == 10);
+            REQUIRE(m.free_spins_remaining() == 10);
+
+            auto fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
+            REQUIRE(fs.is_free_spin);
+            REQUIRE(fs.free_spins_remaining == 9);
+
+            while (m.free_spins_remaining() > 0) {
+                fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
+            }
+            REQUIRE(fs.total_free_win > 0);
+            return;
+        }
+        FAIL("Should have hit a bonus trigger");
+    }
+
+    SECTION("free spins start with configured multiplier") {
+        for (int i = 0; i < 20000; ++i) {
+            auto base = m.get_monetary_result("lucky-sevens", 10, 1);
+            if (!base.bonus_triggered) continue;
+
+            REQUIRE(base.current_multiplier == 3);
+            REQUIRE(base.current_multiplier >= 3);
+
+            for (int j = 0; j < 10; ++j) {
+                auto fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
+                REQUIRE(fs.current_multiplier >= 3);
+                if (fs.win_amount > 0) {
+                    REQUIRE(fs.win_amount % fs.current_multiplier == 0);
+                }
+            }
+            m.reset_free_spins();
+            return;
+        }
+        FAIL("Should have hit a bonus trigger");
+    }
 }
 
 

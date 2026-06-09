@@ -3,7 +3,6 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
-#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -43,6 +42,12 @@ struct SlotConfig {
     std::string scatter_symbol;
     PaytableEntry scatter_paytable;
     std::uint8_t bonus_trigger_count;
+
+    std::uint8_t free_spin_count;
+    std::uint8_t free_spin_multiplier;
+    std::uint8_t free_spin_retrigger_count;
+    std::uint8_t free_spin_multiplier_increment;
+    std::uint8_t free_spin_max_multiplier;
 };
 
 struct SpinResult {
@@ -50,6 +55,10 @@ struct SpinResult {
     std::uint32_t win_amount;
     bool bonus_triggered;
     std::uint8_t scatter_count;
+    bool is_free_spin;
+    std::uint8_t free_spins_remaining;
+    std::uint8_t current_multiplier;
+    std::uint32_t total_free_win;
 };
 
 struct SpinEvalResult {
@@ -73,20 +82,25 @@ template <>
 struct glz::meta<SlotConfig> {
     using type = SlotConfig;
     static constexpr auto value = object(
-        "name",               &SlotConfig::name,
-        "display_name",       &SlotConfig::display_name,
-        "description",        &SlotConfig::description,
-        "rows",               &SlotConfig::rows,
-        "cols",               &SlotConfig::cols,
-        "symbols",            &SlotConfig::symbols,
-        "line_options",       &SlotConfig::line_options,
-        "paylines",           &SlotConfig::paylines,
-        "reels",              &SlotConfig::reels,
-        "paytable",           &SlotConfig::paytable,
-        "max_lines",          &SlotConfig::max_lines,
-        "scatter_symbol",     &SlotConfig::scatter_symbol,
-        "scatter_paytable",   &SlotConfig::scatter_paytable,
-        "bonus_trigger_count",&SlotConfig::bonus_trigger_count
+        "name",                &SlotConfig::name,
+        "display_name",        &SlotConfig::display_name,
+        "description",         &SlotConfig::description,
+        "rows",                &SlotConfig::rows,
+        "cols",                &SlotConfig::cols,
+        "symbols",             &SlotConfig::symbols,
+        "line_options",        &SlotConfig::line_options,
+        "paylines",            &SlotConfig::paylines,
+        "reels",               &SlotConfig::reels,
+        "paytable",            &SlotConfig::paytable,
+        "max_lines",           &SlotConfig::max_lines,
+        "scatter_symbol",      &SlotConfig::scatter_symbol,
+        "scatter_paytable",    &SlotConfig::scatter_paytable,
+        "bonus_trigger_count", &SlotConfig::bonus_trigger_count,
+        "free_spin_count",               &SlotConfig::free_spin_count,
+        "free_spin_multiplier",          &SlotConfig::free_spin_multiplier,
+        "free_spin_retrigger_count",     &SlotConfig::free_spin_retrigger_count,
+        "free_spin_multiplier_increment",&SlotConfig::free_spin_multiplier_increment,
+        "free_spin_max_multiplier",      &SlotConfig::free_spin_max_multiplier
     );
 };
 
@@ -94,6 +108,10 @@ class Machine {
     private:
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
+
+        std::uint8_t free_spins_remaining_;
+        std::uint8_t current_multiplier_;
+        std::uint32_t total_free_win_;
 
         static fs::path config_directory();
 
@@ -103,10 +121,15 @@ class Machine {
 
     public:
         Machine();
-        ~Machine() = default;
 
         [[nodiscard]]
         SpinResult get_monetary_result(std::string_view game_name,
                                        std::uint8_t line_count,
-                                       std::uint32_t bet_per_line);
+                                       std::uint32_t bet_per_line,
+                                       bool is_free_spin = false);
+
+        [[nodiscard]]
+        std::uint8_t free_spins_remaining() const { return free_spins_remaining_; }
+
+        void reset_free_spins();
 };

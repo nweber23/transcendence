@@ -92,5 +92,11 @@
 
   "scatter_symbol": "SYM_DIAMOND",
   "scatter_paytable": { "3": 20, "4": 50, "5": 200 },
-  "bonus_trigger_count": 3
+  "bonus_trigger_count": 3,
+
+  "free_spin_count": 10,
+  "free_spin_multiplier": 3,
+  "free_spin_retrigger_count": 10,
+  "free_spin_multiplier_increment": 1,
+  "free_spin_max_multiplier": 10
 }

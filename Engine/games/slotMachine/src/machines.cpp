@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <random>
 #include <sstream>
 
 namespace fs = std::filesystem;
@@ -104,7 +105,9 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
     return {payline_total, scatter_win, scatter_count, bonus_triggered};
 }
 
-Machine::Machine() {
+Machine::Machine()
+    : free_spins_remaining_(0), current_multiplier_(0), total_free_win_(0)
+{
     fs::path config_dir = config_directory();
     if (!fs::is_directory(config_dir)) {
         return;
@@ -139,20 +142,33 @@ Machine::Machine() {
     }
 }
 
+void Machine::reset_free_spins()
+{
+    free_spins_remaining_ = 0;
+    current_multiplier_ = 0;
+    total_free_win_ = 0;
+}
+
 SpinResult Machine::get_monetary_result(std::string_view game_name,
                                         std::uint8_t line_count,
-                                        std::uint32_t bet_per_line)
+                                        std::uint32_t bet_per_line,
+                                        bool is_free_spin)
 {
     auto cfg_it = configs.find(std::string(game_name));
     if (cfg_it == configs.end()) {
         return {};
     }
 
-    if (line_count == 0 || bet_per_line == 0) {
-        return {};
-    }
-
     const auto& cfg = cfg_it->second;
+
+    if (!is_free_spin) {
+        free_spins_remaining_ = 0;
+        total_free_win_ = 0;
+
+        if (line_count == 0 || bet_per_line == 0) {
+            return {};
+        }
+    }
 
     std::vector<std::uint8_t> stops(cfg.cols);
     for (std::uint8_t c = 0; c < cfg.cols; ++c) {
@@ -162,5 +178,27 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     auto eval = evaluate_spin(cfg, stops, line_count);
     std::uint32_t total_win = (eval.payline_win + eval.scatter_win) * bet_per_line;
 
-    return {std::move(stops), total_win, eval.bonus_triggered, eval.scatter_count};
+    if (is_free_spin) {
+        total_win *= current_multiplier_;
+        if (free_spins_remaining_ > 0) {
+            --free_spins_remaining_;
+        }
+        total_free_win_ += total_win;
+
+        if (eval.bonus_triggered && cfg.free_spin_retrigger_count > 0) {
+            free_spins_remaining_ += cfg.free_spin_retrigger_count;
+            current_multiplier_ = static_cast<std::uint8_t>(
+                std::min<int>(current_multiplier_ + cfg.free_spin_multiplier_increment,
+                              cfg.free_spin_max_multiplier));
+        }
+    } else {
+        if (eval.bonus_triggered && cfg.free_spin_count > 0) {
+            free_spins_remaining_ = cfg.free_spin_count;
+            current_multiplier_ = cfg.free_spin_multiplier;
+            total_free_win_ = 0;
+        }
+    }
+
+    return {std::move(stops), total_win, eval.bonus_triggered, eval.scatter_count,
+            is_free_spin, free_spins_remaining_, current_multiplier_, total_free_win_};
 }
