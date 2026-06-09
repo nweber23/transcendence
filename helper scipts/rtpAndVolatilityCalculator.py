@@ -82,6 +82,8 @@ for active_lines in lineoptions:
     standard_gain = 0
     scatter_gain = 0
     free_spin_gain = 0
+    free_spin_triggers = 0
+    total_scatters_found = 0
 
     print_counter = 0
 
@@ -95,19 +97,10 @@ for active_lines in lineoptions:
                 grid_row.append(symbol)
             grid.append(grid_row)
 
-        if print_counter < 3:
-            print(f"  [Combination Preview #{print_counter + 1}]")
-            print(f"  Stop Indices on Reels: {stop_positions}")
-            print("  Generated Screen Matrix:")
-            for row_view in grid:
-                print(f"    {row_view}")
-            print("  " + "-"*30)
-            print_counter += 1
-
 
         for line_idx in range(active_lines):
             line_path = paylines[line_idx]
-            line_symbols = [grid[coord[0]][coord[1]] for coord in line_path]
+            line_symbols = [grid[coord[1]][coord[0]] for coord in line_path]
 
             first_symbol = line_symbols[0]
             match_count = 1
@@ -126,5 +119,38 @@ for active_lines in lineoptions:
         flat_grid = [symbol for row in grid for symbol in row]
         scatter_count = flat_grid.count(scatter_symbol)
 
-        scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
-        scatter_gain += scatter_payout
+        if scatter_count > 0:
+            scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
+            scatter_gain += scatter_payout
+
+        total_scatters_found += scatter_count
+        if scatter_count >= bonustrigger_count:
+            free_spin_triggers += 1
+
+
+    total_bet_spent = combination_count * active_lines
+    avg_win_per_comb = standard_gain / combination_count
+    avg_scatters_per_spin = total_scatters_found / combination_count
+    total_multiplier_weight = 0
+    current_multiplier = float(free_spin_multiplier)
+    expected_growth_per_spin = avg_scatters_per_spin * free_spin_multiplier_increment
+
+    for spin in range(free_spin_count):
+        total_multiplier_weight += current_multiplier
+        current_multiplier += expected_growth_per_spin
+        if current_multiplier > free_spin_max_multiplier:
+            current_multiplier = float(free_spin_max_multiplier)
+
+    free_spin_gain = free_spin_triggers * avg_win_per_comb * total_multiplier_weight
+    standard_rtp = (standard_gain / total_bet_spent) * 100
+    scatter_rtp = (scatter_gain / total_bet_spent) * 100
+    free_spin_rtp = (free_spin_gain / total_bet_spent) * 100
+    total_rtp = standard_rtp + scatter_rtp + free_spin_rtp
+
+    print("---------------------------------------------")
+    print(f"  FINAL METRICS FOR {active_lines} ACTIVE PLAYLINE(S):")
+    print(f"    -> Standard Line RTP : {standard_rtp:.3f}%")
+    print(f"    -> Scatter Payout RTP: {scatter_rtp:.3f}%")
+    print(f"    -> Free Spins RTP    : {free_spin_rtp:.3f}%")
+    print(f"    => TOTAL COMBINED RTP: {total_rtp:.3f}%")
+    print("=============================================\n")
