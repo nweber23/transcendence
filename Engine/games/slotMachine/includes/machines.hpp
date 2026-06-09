@@ -61,6 +61,18 @@ struct SpinResult {
     std::uint32_t total_free_win;
 };
 
+struct FreeSpinState {
+    std::uint8_t free_spins_remaining = 0;
+    std::uint8_t current_multiplier = 0;
+    std::uint32_t total_free_win = 0;
+
+    void reset() {
+        free_spins_remaining = 0;
+        current_multiplier = 0;
+        total_free_win = 0;
+    }
+};
+
 struct SpinEvalResult {
     std::uint32_t payline_win;
     std::uint32_t scatter_win;
@@ -109,10 +121,6 @@ class Machine {
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
 
-        std::uint8_t free_spins_remaining_;
-        std::uint8_t current_multiplier_;
-        std::uint32_t total_free_win_;
-
         static fs::path config_directory();
 
         static SpinEvalResult evaluate_spin(const SlotConfig& config,
@@ -126,10 +134,6 @@ class Machine {
         SpinResult get_monetary_result(std::string_view game_name,
                                        std::uint8_t line_count,
                                        std::uint32_t bet_per_line,
+                                       FreeSpinState& fs_state,
                                        bool is_free_spin = false);
-
-        [[nodiscard]]
-        std::uint8_t free_spins_remaining() const { return free_spins_remaining_; }
-
-        void reset_free_spins();
 };

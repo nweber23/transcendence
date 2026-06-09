@@ -9,9 +9,10 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     Machine m;
 
     SECTION("get_monetary_result eventually returns non-zero for valid game") {
+        FreeSpinState fs;
         bool seen_win = false;
         for (int i = 0; i < 1000; ++i) {
-            if (m.get_monetary_result("lucky-sevens", 10, 1).win_amount > 0) {
+            if (m.get_monetary_result("lucky-sevens", 10, 1, fs).win_amount > 0) {
                 seen_win = true;
                 break;
             }
@@ -20,19 +21,22 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     }
 
     SECTION("get_monetary_result returns zero for unknown game") {
-        auto r = m.get_monetary_result("nonexistent", 10, 100);
+        FreeSpinState fs;
+        auto r = m.get_monetary_result("nonexistent", 10, 100, fs);
         REQUIRE(r.win_amount == 0);
     }
 
     SECTION("get_monetary_result returns zero when 0 lines played") {
-        auto r = m.get_monetary_result("lucky-sevens", 0, 100);
+        FreeSpinState fs;
+        auto r = m.get_monetary_result("lucky-sevens", 0, 100, fs);
         REQUIRE(r.win_amount == 0);
     }
 
     SECTION("scatter can trigger bonus") {
+        FreeSpinState fs;
         bool seen_bonus = false;
         for (int i = 0; i < 5000; ++i) {
-            if (m.get_monetary_result("lucky-sevens", 10, 1).bonus_triggered) {
+            if (m.get_monetary_result("lucky-sevens", 10, 1, fs).bonus_triggered) {
                 seen_bonus = true;
                 break;
             }
@@ -41,15 +45,18 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     }
 
     SECTION("SpinResult contains stops with correct size") {
-        auto r = m.get_monetary_result("lucky-sevens", 10, 1);
+        FreeSpinState fs;
+        auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
         REQUIRE(r.stops.size() == 3);
     }
 
     SECTION("free spins are awarded on bonus trigger") {
+        FreeSpinState fs;
         for (int i = 0; i < 10000; ++i) {
-            auto r = m.get_monetary_result("lucky-sevens", 10, 1);
-            if (r.bonus_triggered && r.free_spins_remaining == 10) {
-                REQUIRE(m.free_spins_remaining() == 10);
+            auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
+            if (r.bonus_triggered) {
+                REQUIRE(r.free_spins_remaining == 10);
+                REQUIRE(fs.free_spins_remaining == 10);
                 return;
             }
         }
@@ -57,19 +64,19 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     }
 
     SECTION("free spins decrement counter and accumulate total") {
+        FreeSpinState fs;
         for (int i = 0; i < 10000; ++i) {
-            auto r = m.get_monetary_result("lucky-sevens", 10, 1);
+            auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
             if (!r.bonus_triggered) continue;
 
-            REQUIRE(r.free_spins_remaining == 10);
-            REQUIRE(m.free_spins_remaining() == 10);
+            REQUIRE(fs.free_spins_remaining == 10);
 
-            auto fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
-            REQUIRE(fs.is_free_spin);
+            auto fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
+            REQUIRE(fs_result.is_free_spin);
             REQUIRE(fs.free_spins_remaining == 9);
 
-            while (m.free_spins_remaining() > 0) {
-                fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
+            while (fs.free_spins_remaining > 0) {
+                fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
             }
             REQUIRE(fs.total_free_win > 0);
             return;
@@ -78,21 +85,21 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     }
 
     SECTION("free spins start with configured multiplier") {
+        FreeSpinState fs;
         for (int i = 0; i < 20000; ++i) {
-            auto base = m.get_monetary_result("lucky-sevens", 10, 1);
+            auto base = m.get_monetary_result("lucky-sevens", 10, 1, fs);
             if (!base.bonus_triggered) continue;
 
-            REQUIRE(base.current_multiplier == 3);
-            REQUIRE(base.current_multiplier >= 3);
+            REQUIRE(fs.current_multiplier == 3);
 
             for (int j = 0; j < 10; ++j) {
-                auto fs = m.get_monetary_result("lucky-sevens", 10, 1, true);
+                auto fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
                 REQUIRE(fs.current_multiplier >= 3);
-                if (fs.win_amount > 0) {
-                    REQUIRE(fs.win_amount % fs.current_multiplier == 0);
+                if (fs_result.win_amount > 0) {
+                    REQUIRE(fs_result.win_amount % fs_result.current_multiplier == 0);
                 }
             }
-            m.reset_free_spins();
+            fs.reset();
             return;
         }
         FAIL("Should have hit a bonus trigger");
@@ -106,8 +113,9 @@ TEST_CASE("Empirical RTP from independent reel spins is non-zero",
 
     constexpr int SPINS = 10000;
     std::uint64_t total_payout = 0;
+    FreeSpinState fs;
     for (int i = 0; i < SPINS; ++i) {
-        total_payout += m.get_monetary_result("lucky-sevens", 10, 1).win_amount;
+        total_payout += m.get_monetary_result("lucky-sevens", 10, 1, fs).win_amount;
     }
 
     double avg_return = static_cast<double>(total_payout) / SPINS;
@@ -119,8 +127,9 @@ TEST_CASE("Results vary between spins (random selection works)", "[slotmachine]"
     Machine m;
 
     std::vector<std::uint32_t> results;
+    FreeSpinState fs;
     for (int i = 0; i < 200; ++i) {
-        results.push_back(m.get_monetary_result("lucky-sevens", 10, 1).win_amount);
+        results.push_back(m.get_monetary_result("lucky-sevens", 10, 1, fs).win_amount);
     }
 
     auto [min_it, max_it] = std::minmax_element(results.begin(), results.end());
