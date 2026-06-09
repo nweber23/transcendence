@@ -123,7 +123,6 @@ for active_lines in lineoptions:
 
             standard_gain += payout
 
-
         flat_grid = [symbol for row in grid for symbol in row]
         scatter_count = flat_grid.count(scatter_symbol)
 
