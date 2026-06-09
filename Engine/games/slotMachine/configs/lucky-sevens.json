@@ -88,8 +88,6 @@
     "SYM_CLUB":    { "3": 10,  "2": 1  }
   },
 
-  "volatility": "medium",
-  "rtp": 96.5,
   "max_lines": 10,
 
   "scatter_symbol": "SYM_DIAMOND",

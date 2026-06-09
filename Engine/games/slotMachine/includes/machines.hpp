@@ -12,12 +12,6 @@
 
 namespace fs = std::filesystem;
 
-enum class volatility_t : uint8_t {
-    low,
-    medium,
-    high
-};
-
 struct SymbolInfo {
     std::string id;
     std::string label;
@@ -63,16 +57,6 @@ struct SpinEvalResult {
     std::uint32_t scatter_win;
     std::uint8_t scatter_count;
     bool bonus_triggered;
-};
-
-template <>
-struct glz::meta<volatility_t> {
-    using type = volatility_t;
-    static constexpr auto value = enumerate(
-        "low",   volatility_t::low,
-        "medium", volatility_t::medium,
-        "high",  volatility_t::high
-    );
 };
 
 template <>
