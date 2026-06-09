@@ -105,7 +105,7 @@ func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 		appendConnection(&Client.SendLists[topic].ConnectionList, connection)
 	}
 	go pumpFromConnection(userID, &Client.ConnectionList.Mutex, connection)
-	fmt.Printf("Connection added\n")
+	fmt.Printf("Connection added for user %d\n", userID)
 }
 
 func RemoveConnection(userID uint, connection *websocket.Conn) {
@@ -125,7 +125,7 @@ func RemoveConnection(userID uint, connection *websocket.Conn) {
 		}
 		delete(State.Clients, userID)
 	}
-	fmt.Printf("Connection removed\n")
+	fmt.Printf("Connection removed for user %d\n", userID)
 }
 
 func CloseConnection(userID uint, connection *websocket.Conn) {
@@ -149,12 +149,14 @@ func pumpToTopic(sendList *topicSendList) {
 			return
 		}
 		sendList.ConnectionList.Mutex.RLock()
-		for _, connection := range sendList.ConnectionList.Connections {
+		connections := make([]*websocket.Conn, len(sendList.ConnectionList.Connections))
+		copy(connections, sendList.ConnectionList.Connections)
+		sendList.ConnectionList.Mutex.RUnlock()
+		for _, connection := range connections {
 			if err := connection.WriteJSON(message); err != nil {
 				log.Printf("Failed to send message: %v", err)
 			}
 		}
-		sendList.ConnectionList.Mutex.RUnlock()
 	}
 }
 
