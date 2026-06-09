@@ -75,3 +75,4 @@ for active_lines in lineoptions:
     scatter_gain = 0
     free_spin_gain = 0
     print(f"count{combination_count}")
+
