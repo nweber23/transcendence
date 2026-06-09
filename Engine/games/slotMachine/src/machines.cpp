@@ -114,7 +114,7 @@ Machine::Machine()
 
     size_t count = 0;
     for (auto const& entry : fs::directory_iterator(config_dir)) {
-        if (entry.path().extension() == ".config.json") {
+        if (entry.path().extension() == ".json") {
             ++count;
         }
     }
@@ -123,7 +123,7 @@ Machine::Machine()
     configs.reserve(count);
 
     for (auto const& entry : fs::directory_iterator(config_dir)) {
-        if (entry.path().extension() != ".config.json") continue;
+        if (entry.path().extension() != ".json") continue;
 
         std::ifstream file(entry.path());
         std::ostringstream buf;
@@ -168,7 +168,7 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     }
 
     auto eval = evaluate_spin(cfg, stops, line_count);
-    std::uint32_t total_win = (eval.payline_win + eval.scatter_win) * bet_per_line;
+    std::uint32_t total_win = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
 
     if (is_free_spin) {
         total_win *= fs_state.current_multiplier;

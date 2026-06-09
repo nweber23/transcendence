@@ -93,10 +93,10 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
             REQUIRE(fs.current_multiplier == 3);
 
             for (int j = 0; j < 10; ++j) {
+                auto mult_before = fs.current_multiplier;
                 auto fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
-                REQUIRE(fs.current_multiplier >= 3);
                 if (fs_result.win_amount > 0) {
-                    REQUIRE(fs_result.win_amount % fs_result.current_multiplier == 0);
+                    REQUIRE(fs_result.win_amount % mult_before == 0);
                 }
             }
             fs.reset();

@@ -63,12 +63,12 @@ struct SpinResult {
 
 struct FreeSpinState {
     std::uint8_t free_spins_remaining = 0;
-    std::uint8_t current_multiplier = 0;
+    std::uint8_t current_multiplier = 1;
     std::uint32_t total_free_win = 0;
 
     void reset() {
         free_spins_remaining = 0;
-        current_multiplier = 0;
+        current_multiplier = 1;
         total_free_win = 0;
     }
 };
