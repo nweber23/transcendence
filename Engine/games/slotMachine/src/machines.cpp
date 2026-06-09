@@ -114,7 +114,7 @@ Machine::Machine()
 
     size_t count = 0;
     for (auto const& entry : fs::directory_iterator(config_dir)) {
-        if (entry.path().extension() == ".json") {
+        if (entry.path().extension() == ".config.json") {
             ++count;
         }
     }
@@ -123,7 +123,7 @@ Machine::Machine()
     configs.reserve(count);
 
     for (auto const& entry : fs::directory_iterator(config_dir)) {
-        if (entry.path().extension() != ".json") continue;
+        if (entry.path().extension() != ".config.json") continue;
 
         std::ifstream file(entry.path());
         std::ostringstream buf;
