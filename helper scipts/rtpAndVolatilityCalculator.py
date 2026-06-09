@@ -29,6 +29,7 @@ rows = config["rows"]
 cols = config["cols"]
 reels = config["reels"]
 paytable = config["paytable"]
+scatter_symbol = config["scatter_symbol"]
 lineoptions = config["line_options"]
 paylines = config["paylines"]
 scatterpaytable = config["scatter_paytable"]
@@ -102,3 +103,29 @@ for active_lines in lineoptions:
                 print(f"    {row_view}")
             print("  " + "-"*30)
             print_counter += 1
+
+
+        for line_idx in range(active_lines):
+            line_path = paylines[line_idx]
+            line_symbols = [grid[coord[0]][coord[1]] for coord in line_path]
+
+            first_symbol = line_symbols[0]
+            match_count = 1
+
+            for symbol in line_symbols[1:]:
+                if symbol == first_symbol:
+                    match_count += 1
+                else:
+                    break
+
+            symbol_payouts = paytable.get(first_symbol, {})
+            payout = int(symbol_payouts.get(str(match_count), 0))
+
+            standard_gain += payout
+
+
+        flat_grid = [symbol for row in grid for symbol in row]
+        scatter_count = flat_grid.count(scatter_symbol)
+
+        scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
+        scatter_gain += scatter_payout
