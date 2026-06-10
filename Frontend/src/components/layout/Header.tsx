@@ -57,7 +57,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   return (
     <>
       {/* Floating pill wrapper */}
-      <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-4 px-4 pointer-events-none">
+      <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-4 px-4 pointer-events-none nav-entrance">
         <nav
           className="pointer-events-auto w-full max-w-5xl bg-[rgba(13,17,23,0.88)] backdrop-blur-3xl border border-[rgba(212,175,55,0.12)] rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
           aria-label="Main navigation"

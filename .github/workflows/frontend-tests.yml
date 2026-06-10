@@ -1,0 +1,36 @@
+name: Frontend Tests
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'Frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: pnpm install
+
+      - name: Type check
+        working-directory: ./Frontend
+        run: pnpm type-check
+
+      - name: Run tests
+        working-directory: ./Frontend
+        run: pnpm test
