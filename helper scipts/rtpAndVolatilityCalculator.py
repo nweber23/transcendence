@@ -6,7 +6,7 @@ import math
 
 if len(sys.argv) < 2:
     print("Error: Missing file argument.")
-    print("Usage: ./script_name.py <filename.json>")
+    print("Usage: ./rtpAndVolatilityCalculator.py <filename.json>")
     sys.exit(1)
 
 filename = sys.argv[1]
@@ -43,8 +43,6 @@ free_spin_retrigger_count = config["free_spin_retrigger_count"]
 free_spin_multiplier_increment = config["free_spin_multiplier_increment"]
 free_spin_max_multiplier = config["free_spin_max_multiplier"]
 max_win_multiplier = config["max_win_multiplier"]
-flag = 0
-rtp_max = 0
 
 print("=============================================")
 print("         SLOT CONFIGURATION VARIABLES        ")
@@ -80,8 +78,13 @@ print("\n=============================================")
 print("          STARTING CALCULATIONS              ")
 print("=============================================")
 
+flag = 0
+rtp_max = 0
+
+# Total unique math outcomes
 combination_count = math.prod(len(reel) for reel in reels)
 reel_indices = [range(len(reel)) for reel in reels]
+
 for active_lines in lineoptions:
     print(f"Calculations for {active_lines}")
     standard_gain = 0
@@ -91,8 +94,9 @@ for active_lines in lineoptions:
     total_scatters_found = 0
 
     sum_squared_wins = 0
-
+    # Main cycle loop
     for stop_positions in itertools.product(*reel_indices):
+        # Build screen grid
         grid = []
         for row in range(rows):
             grid_row = []
@@ -104,6 +108,7 @@ for active_lines in lineoptions:
 
         current_spin_total_win = 0
 
+        # Payline logic
         for line_idx in range(active_lines):
             line_path = paylines[line_idx]
             line_symbols = [grid[coord[1]][coord[0]] for coord in line_path]
@@ -126,7 +131,7 @@ for active_lines in lineoptions:
 
             standard_gain += payout
             current_spin_total_win += payout
-
+        # Scatter logic
         flat_grid = [symbol for row in grid for symbol in row]
         scatter_count = flat_grid.count(scatter_symbol)
 
@@ -140,14 +145,14 @@ for active_lines in lineoptions:
             free_spin_triggers += 1
 
         sum_squared_wins += (current_spin_total_win ** 2)
-
+    # Base expectations
     total_bet_spent = combination_count * active_lines
     avg_win_per_comb = standard_gain / combination_count
     avg_scatters_per_spin = total_scatters_found / combination_count
     total_multiplier_weight = 0
     current_multiplier = float(free_spin_multiplier)
     expected_growth_per_spin = avg_scatters_per_spin * free_spin_multiplier_increment
-
+    # Free spins progressive multiplier
     for spin in range(free_spin_count):
         total_multiplier_weight += current_multiplier
         current_multiplier += expected_growth_per_spin
@@ -155,7 +160,7 @@ for active_lines in lineoptions:
             current_multiplier = float(free_spin_max_multiplier)
 
     free_spin_gain = free_spin_triggers * avg_win_per_comb * total_multiplier_weight
-
+    # Statistical variance & volatility standard deviation
     mean_base_win = (standard_gain + scatter_gain) / combination_count
     mean_of_squares = sum_squared_wins / combination_count
     variance = mean_of_squares - (mean_base_win ** 2)
@@ -167,7 +172,7 @@ for active_lines in lineoptions:
         volatility_word = "MEDIUM"
     else:
         volatility_word = "HIGH"
-
+    # RTP tracking
     standard_rtp = (standard_gain / total_bet_spent) * 100
     scatter_rtp = (scatter_gain / total_bet_spent) * 100
     free_spin_rtp = (free_spin_gain / total_bet_spent) * 100
