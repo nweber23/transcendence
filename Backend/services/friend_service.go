@@ -9,12 +9,6 @@ import (
 	"transcendence/models"
 )
 
-const (
-	StatusDormant     = "dormant"
-	StatusPendingLow  = "pending_low"
-	StatusPendingHigh = "pending_high"
-)
-
 type FriendService struct {
 	db *gorm.DB
 }
@@ -30,17 +24,17 @@ func swapIDs(firstID uint, secondID uint) (uint, uint) {
 func isFriendAdded(userID uint, friendID uint, status string) (bool) {
 	lowID, highID := swapIDs(userID, friendID)
 	return status == models.FriendshipStatusActive ||
-		status == models.FriendshipStatusPendingLow  && userID == lowID ||
-		status == models.FriendshipStatusPendingHigh && userID == highID;
+		status == models.FriendshipStatusPendingIDLow  && userID == lowID ||
+		status == models.FriendshipStatusPendingIDHigh && userID == highID;
 }
 
 func getNextStatus(userID uint, friendID uint, status string) (string) {
 	lowID := min(userID, friendID)
 	if status == models.FriendshipStatusDormant {
 		if userID == lowID {
-			return models.FriendshipStatusPendingLow
+			return models.FriendshipStatusPendingIDLow
 		} else {
-			return models.FriendshipStatusPendingHigh
+			return models.FriendshipStatusPendingIDHigh
 		}
 	} else {
 		return models.FriendshipStatusActive

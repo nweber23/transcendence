@@ -11,6 +11,7 @@ import (
 	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
+	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -66,6 +67,7 @@ type UpdateFriendResponse struct {
 
 type FriendResponse struct {
 	FriendID  uint   `json:"friend_id"`
+	IsOnline  bool   `json:"is_online"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -464,6 +466,7 @@ func (uh *UserHandler) GetFriends(c *gin.Context) {
 		}
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
+			IsOnline:  ws.IsOnline(friendID),
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}

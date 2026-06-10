@@ -17,8 +17,8 @@ func (Friendship) TableName() string {
 }
 
 const (
-	FriendshipStatusDormant     = "dormant"
-	FriendshipStatusPendingLow  = "pending_low"
-	FriendshipStatusPendingHigh = "pending_high"
-	FriendshipStatusActive      = "active"
+	FriendshipStatusDormant       = "dormant"
+	FriendshipStatusPendingIDLow  = "pending_id_low"
+	FriendshipStatusPendingIDHigh = "pending_id_high"
+	FriendshipStatusActive        = "active"
 )
