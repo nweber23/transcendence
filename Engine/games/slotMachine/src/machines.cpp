@@ -144,7 +144,7 @@ Machine::Machine(std::uint64_t seed)
         return;
     }
 
-    size_t count = 0;
+    std::size_t count = 0;
     for (auto const& entry : fs::directory_iterator(config_dir)) {
         if (entry.path().extension() == ".json") {
             ++count;
