@@ -147,9 +147,10 @@ for active_lines in lineoptions:
 
         scatter_payout = 0.0
         if scatter_count > 0:
-            scatter_payout = float(scatterpaytable.get(str(scatter_count), 0))
-            scatter_gain += scatter_payout
-            current_spin_total_win += scatter_payout
+            raw_scatter_val = float(scatterpaytable.get(str(scatter_count), 0))
+            scatter_payout_line_units = raw_scatter_val * active_lines
+            scatter_gain += scatter_payout_line_units
+            current_spin_total_win += scatter_payout_line_units
 
         total_scatters_found += scatter_count
 

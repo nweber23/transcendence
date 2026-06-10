@@ -47,7 +47,6 @@ struct SlotConfig {
 
     std::uint8_t free_spin_count;
     std::uint8_t free_spin_multiplier;
-    std::uint8_t free_spin_retrigger_count;
     std::uint8_t free_spin_multiplier_increment;
     std::uint8_t free_spin_max_multiplier;
 
@@ -115,7 +114,6 @@ struct glz::meta<SlotConfig> {
         "bonus_trigger_count", &SlotConfig::bonus_trigger_count,
         "free_spin_count",               &SlotConfig::free_spin_count,
         "free_spin_multiplier",          &SlotConfig::free_spin_multiplier,
-        "free_spin_retrigger_count",     &SlotConfig::free_spin_retrigger_count,
         "free_spin_multiplier_increment",&SlotConfig::free_spin_multiplier_increment,
         "free_spin_max_multiplier",      &SlotConfig::free_spin_max_multiplier,
         "max_win_multiplier",            &SlotConfig::max_win_multiplier

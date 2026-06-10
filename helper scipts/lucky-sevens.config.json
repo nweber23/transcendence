@@ -81,26 +81,26 @@
   ],
 
   "paytable": {
-    "SYM_7":       { "3": 7, "2": 1 },
-    "SYM_WILD":    { "3": 20, "2": 2 },
-    "SYM_DIAMOND": { "3": 4,  "2": 0.5  },
-    "SYM_BAR":     { "3": 2,  "2": 0.3  },
-    "SYM_BELL":    { "3": 2,  "2": 0.5  },
-    "SYM_HEART":   { "3": 1,  "2": 0.2  },
-    "SYM_SPADE":   { "3": 0.8,  "2": 0.1  },
-    "SYM_CLUB":    { "3": 0.5,  "2": 0.1  }
+    "SYM_7":       { "3": 100, "2": 10 },
+    "SYM_WILD":    { "3": 250, "2": 2.5 },
+    "SYM_DIAMOND": { "3": 15,  "2": 1 },
+    "SYM_BAR":     { "3": 2.5,  "2": 1  },
+    "SYM_BELL":    { "3": 2.5,  "2": 1  },
+    "SYM_HEART":   { "3": 1.5,  "2": 0.3  },
+    "SYM_SPADE":   { "3": 1,  "2": 0.3  },
+    "SYM_CLUB":    { "3": 1,  "2": 0.3  }
   },
 
   "max_lines": 10,
   "wild_symbol": "SYM_WILD",
   "scatter_symbol": "SYM_DIAMOND",
-  "scatter_paytable": { "2": 1, "3": 5 },
+  "scatter_paytable": { "2": 1, "3": 15 },
   "bonus_trigger_count": 3,
 
-  "free_spin_count": 10,
-  "free_spin_multiplier": 2,
-  "free_spin_multiplier_increment": 0.3,
-  "free_spin_max_multiplier": 5,
+  "free_spin_count": 15,
+  "free_spin_multiplier": 1,
+  "free_spin_multiplier_increment": 1,
+  "free_spin_max_multiplier": 10,
 
   "max_win_multiplier": 5000
 }
