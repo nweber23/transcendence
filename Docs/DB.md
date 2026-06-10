@@ -154,14 +154,16 @@ Stores one-way friendship bindings between two users
 
 ```sql
 CREATE TABLE friendships (
-  user_id INT,
-  friend_id INT,
+  user_id    INT SERIAL PRIMARY KEY,
+  friend_id  INT SERIAL PRIMARY KEY,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  deleted_at TIMESTAMP DEFAULT NULL
 )
 ```
 
 **Design rationale:**
 - No unique index for simplicity, only id combinations shall be unique
+- Friendships use composite primary keys because there is no sensible way to access a friendship by a single ID
 - Creation timestamp for convenience
 
 ---
