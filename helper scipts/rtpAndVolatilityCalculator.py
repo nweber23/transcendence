@@ -113,18 +113,21 @@ for active_lines in lineoptions:
             line_path = paylines[line_idx]
             line_symbols = [grid[coord[1]][coord[0]] for coord in line_path]
 
-            first_symbol = line_symbols[0]
-            match_count = 1
+            target_symbol = None
+            for sym in line_symbols:
+                if sym != wild_symbol:
+                    target_symbol = sym
+                    break
 
-            for symbol in line_symbols[1:]:
-                if symbol == first_symbol or symbol == wild_symbol or first_symbol == wild_symbol:
+            if target_symbol is None:
+                target_symbol = wild_symbol
+
+            match_count = 0
+            for sym in line_symbols:
+                if sym == target_symbol or sym == wild_symbol:
                     match_count += 1
                 else:
                     break
-
-            target_symbol = first_symbol
-            if first_symbol == wild_symbol and match_count < len(line_symbols):
-                target_symbol = line_symbols[match_count - 1]
 
             symbol_payouts = paytable.get(target_symbol, {})
             payout = int(symbol_payouts.get(str(match_count), 0))
@@ -132,8 +135,13 @@ for active_lines in lineoptions:
             standard_gain += payout
             current_spin_total_win += payout
         # Scatter logic
-        flat_grid = [symbol for row in grid for symbol in row]
-        scatter_count = flat_grid.count(scatter_symbol)
+        scatter_count = 0
+        for reel_idx in range(cols):
+            for row in range(rows):
+                symbol_index = (stop_positions[reel_idx] + row) % len(reels[reel_idx])
+                if reels[reel_idx][symbol_index] == scatter_symbol:
+                    scatter_count += 1
+                    break
 
         if scatter_count > 0:
             scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
@@ -144,7 +152,8 @@ for active_lines in lineoptions:
         if scatter_count >= bonustrigger_count:
             free_spin_triggers += 1
 
-        sum_squared_wins += (current_spin_total_win ** 2)
+        win_per_unit_bet = current_spin_total_win / active_lines
+        sum_squared_wins += (win_per_unit_bet ** 2)
     # Base expectations
     total_bet_spent = combination_count * active_lines
     avg_win_per_comb = standard_gain / combination_count
@@ -161,9 +170,9 @@ for active_lines in lineoptions:
 
     free_spin_gain = free_spin_triggers * avg_win_per_comb * total_multiplier_weight
     # Statistical variance & volatility standard deviation
-    mean_base_win = (standard_gain + scatter_gain) / combination_count
+    mean_base_win_per_bet = (standard_gain + scatter_gain) / total_bet_spent
     mean_of_squares = sum_squared_wins / combination_count
-    variance = mean_of_squares - (mean_base_win ** 2)
+    variance = mean_of_squares - (mean_base_win_per_bet ** 2)
     volatility_score = math.sqrt(max(0, variance))
 
     if volatility_score < 5.0:
