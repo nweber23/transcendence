@@ -6,7 +6,7 @@ import math
 
 if len(sys.argv) < 2:
     print("Error: Missing file argument.")
-    print("Usage: ./rtpAndVolatilityCalculator.py <filename.json>")
+    print("Usage: ./rtpAndVolatilityCalculator.py <filename.config.json>")
     sys.exit(1)
 
 filename = sys.argv[1]
@@ -81,19 +81,19 @@ print("=============================================")
 flag = 0
 rtp_max = 0
 
-# Total unique math outcomes
 combination_count = math.prod(len(reel) for reel in reels)
 reel_indices = [range(len(reel)) for reel in reels]
 
 for active_lines in lineoptions:
-    print(f"Calculations for {active_lines}")
+    print(f"Calculations for {active_lines} active line(s)...")
     standard_gain = 0
     scatter_gain = 0
-    free_spin_gain = 0
     free_spin_triggers = 0
     total_scatters_found = 0
-
     sum_squared_wins = 0
+
+    scatter_outcomes = {}
+
     # Main cycle loop
     for stop_positions in itertools.product(*reel_indices):
         # Build screen grid
@@ -134,6 +134,7 @@ for active_lines in lineoptions:
 
             standard_gain += payout
             current_spin_total_win += payout
+
         # Scatter logic
         scatter_count = 0
         for reel_idx in range(cols):
@@ -149,27 +150,21 @@ for active_lines in lineoptions:
             current_spin_total_win += scatter_payout
 
         total_scatters_found += scatter_count
+
         if scatter_count >= bonustrigger_count:
             free_spin_triggers += 1
 
         win_per_unit_bet = current_spin_total_win / active_lines
         sum_squared_wins += (win_per_unit_bet ** 2)
-    # Base expectations
-    total_bet_spent = combination_count * active_lines
-    avg_win_per_comb = standard_gain / combination_count
-    avg_scatters_per_spin = total_scatters_found / combination_count
-    total_multiplier_weight = 0
-    current_multiplier = float(free_spin_multiplier)
-    expected_growth_per_spin = avg_scatters_per_spin * free_spin_multiplier_increment
-    # Free spins progressive multiplier
-    for spin in range(free_spin_count):
-        total_multiplier_weight += current_multiplier
-        current_multiplier += expected_growth_per_spin
-        if current_multiplier > free_spin_max_multiplier:
-            current_multiplier = float(free_spin_max_multiplier)
 
-    free_spin_gain = free_spin_triggers * avg_win_per_comb * total_multiplier_weight
-    # Statistical variance & volatility standard deviation
+        if scatter_count not in scatter_outcomes:
+            scatter_outcomes[scatter_count] = {'freq': 0, 'total_win': 0.0}
+        scatter_outcomes[scatter_count]['freq'] += 1
+        scatter_outcomes[scatter_count]['total_win'] += current_spin_total_win
+
+    # --- BASE EXPECTATIONS ---
+    total_bet_spent = combination_count * active_lines
+
     mean_base_win_per_bet = (standard_gain + scatter_gain) / total_bet_spent
     mean_of_squares = sum_squared_wins / combination_count
     variance = mean_of_squares - (mean_base_win_per_bet ** 2)
@@ -181,15 +176,68 @@ for active_lines in lineoptions:
         volatility_word = "MEDIUM"
     else:
         volatility_word = "HIGH"
+
+    paths = [[free_spin_count, float(free_spin_multiplier), 1.0, 0.0]]
+    expected_fs_win_per_trigger = 0.0
+
+    fs_outcomes = []
+    for sc, data in scatter_outcomes.items():
+        prob = data['freq'] / combination_count
+        avg_win = data['total_win'] / data['freq']
+        fs_outcomes.append((sc, prob, avg_win))
+
+    # Calculate the absolute max win in credits for this bet size
+    max_win_credits = float(max_win_multiplier) * active_lines
+
+    # Expand every path step-by-step
+    while paths:
+        new_paths = []
+        for p in paths:
+            spins_left = p[0]
+            mult = p[1]
+            path_prob = p[2]
+            path_acc_win = p[3]
+
+            if spins_left > 0:
+                for sc, outcome_prob, avg_win in fs_outcomes:
+                    potential_spin_win = avg_win * mult
+
+                    # CHECK MAX WIN CAP
+                    if path_acc_win + potential_spin_win >= max_win_credits:
+                        actual_spin_win = max(0.0, max_win_credits - path_acc_win)
+                        expected_fs_win_per_trigger += path_prob * outcome_prob * actual_spin_win
+                    else:
+                        actual_spin_win = potential_spin_win
+                        expected_fs_win_per_trigger += path_prob * outcome_prob * actual_spin_win
+                        next_mult = mult + (sc * free_spin_multiplier_increment)
+                        if next_mult > free_spin_max_multiplier:
+                            next_mult = float(free_spin_max_multiplier)
+                        next_spins = spins_left - 1
+                        if sc >= free_spin_retrigger_count:
+                            next_spins += free_spin_count
+                        if next_spins > 0:
+                            new_paths.append([
+                                next_spins,
+                                next_mult,
+                                path_prob * outcome_prob,
+                                path_acc_win + actual_spin_win
+                            ])
+
+        paths = new_paths
+
+    free_spin_gain = free_spin_triggers * expected_fs_win_per_trigger
+
     # RTP tracking
     standard_rtp = (standard_gain / total_bet_spent) * 100
     scatter_rtp = (scatter_gain / total_bet_spent) * 100
     free_spin_rtp = (free_spin_gain / total_bet_spent) * 100
     total_rtp = standard_rtp + scatter_rtp + free_spin_rtp
+
     if total_rtp > 100:
         flag = 1
         if rtp_max < total_rtp:
             rtp_max = total_rtp
+
     print("---------------------------------------------")
     print(f"  FINAL METRICS FOR {active_lines} ACTIVE PLAYLINE(S):")
     print(f"    -> Standard Line RTP : {standard_rtp:.3f}%")
@@ -201,5 +249,5 @@ for active_lines in lineoptions:
 
 if flag:
     print("---------------------------------------------")
-    print(f"  Warning Biggest RTP is: {rtp_max} player has advantage:")
+    print(f"  Warning Biggest RTP is: {rtp_max:.3f}% player has advantage:")
     print("=============================================\n")
