@@ -20,5 +20,7 @@ const (
 	FriendshipStatusDormant       = "dormant"
 	FriendshipStatusPendingIDLow  = "pending_id_low"
 	FriendshipStatusPendingIDHigh = "pending_id_high"
+	FriendshipStatusPendingSelf   = "pending_self"
+	FriendshipStatusPendingOther  = "pending_other"
 	FriendshipStatusActive        = "active"
 )

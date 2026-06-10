@@ -67,6 +67,7 @@ type UpdateFriendResponse struct {
 
 type FriendResponse struct {
 	FriendID  uint   `json:"friend_id"`
+	Status    string `json:"status"`
 	IsOnline  bool   `json:"is_online"`
 	CreatedAt string `json:"created_at"`
 }
@@ -413,9 +414,9 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", "Failed to add friend")
 		}
 	} else {
-		status := "active"
+		status := models.FriendshipStatusActive
 		if isPending {
-			status = "pending"
+			status = models.FriendshipStatusPendingSelf
 		}
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
@@ -441,9 +442,32 @@ func (uh *UserHandler) RemoveFriend(c *gin.Context) {
 	} else {
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
-			Status:   "dormant",
+			Status:   models.FriendshipStatusDormant,
 		}
 		utils.RespondSuccess(c, http.StatusOK, "Friend removed successfully", &response)
+	}
+}
+
+func absoluteToRelativePending(userID uint, requiredSelfID uint) (string) {
+	if userID == requiredSelfID {
+		return models.FriendshipStatusPendingSelf
+	} else {
+		return models.FriendshipStatusPendingOther
+	}
+}
+
+func determineStatus(userID uint, friendID uint, friendship *models.Friendship) (string, bool) {
+	switch friendship.Status {
+		case models.FriendshipStatusDormant:
+			fallthrough
+		case models.FriendshipStatusActive:
+			return friendship.Status, true
+		case models.FriendshipStatusPendingIDLow:
+			return absoluteToRelativePending(userID, friendship.LowID), true
+		case models.FriendshipStatusPendingIDHigh:
+			return absoluteToRelativePending(userID, friendship.HighID), true
+		default:
+			return "", false
 	}
 }
 
@@ -464,8 +488,14 @@ func (uh *UserHandler) GetFriends(c *gin.Context) {
 		if friendID == userID {
 			friendID = friendship.HighID
 		}
+		status, isValid := determineStatus(userID.(uint), friendID, &friendship)
+		if !isValid {
+			utils.RespondError(c, http.StatusInternalServerError, "determine_status_failed", "Invalid friendship status")
+			return
+		}
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
+			Status:    status,
 			IsOnline:  ws.IsOnline(friendID),
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
