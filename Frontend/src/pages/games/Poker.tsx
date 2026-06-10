@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 interface Player {
   id: number;
@@ -40,8 +39,6 @@ const SEAT_POSITIONS: React.CSSProperties[] = [
 const TABLE_MAX_WIDTH = 'calc((100dvh - 390px) * 2.2)';
 
 const Poker: React.FC = () => {
-  const navigate = useNavigate();
-
   const [players] = useState<Player[]>(
     Array(6).fill(null).map((_, i) => ({
       id: i, name: '', stack: 0, currentBet: 0,
@@ -61,23 +58,6 @@ const Poker: React.FC = () => {
   return (
     /* mt-16 clears the fixed global Header (h-16 = 4 rem = 64 px) */
     <div className="mt-16 flex flex-col h-[calc(100dvh-4rem)] bg-[var(--base)]">
-
-      {/* ── Game header ─────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-[var(--surface)] border-b border-[rgba(212,175,55,0.1)] px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/')}
-          className="text-[var(--gold)] hover:text-[var(--text)] transition-colors text-sm cursor-pointer"
-          aria-label="Back to home"
-        >
-          ← Back
-        </button>
-        <h1 className="font-serif text-xl font-semibold">Texas Hold'em</h1>
-        <div className="flex items-center gap-3 text-xs text-[var(--text-3)]">
-          <span>Blinds <span className="text-[var(--gold)]">$10/$20</span></span>
-          <span className="w-px h-3 bg-[var(--border)]" />
-          <span>0/6 players</span>
-        </div>
-      </header>
 
       {/* ── Table area ──────────────────────────────────────────────────────── */}
       {/*
