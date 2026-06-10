@@ -39,7 +39,6 @@ scatterpaytable = config["scatter_paytable"]
 bonustrigger_count = config["bonus_trigger_count"]
 free_spin_count = config["free_spin_count"]
 free_spin_multiplier = config["free_spin_multiplier"]
-free_spin_retrigger_count = config["free_spin_retrigger_count"]
 free_spin_multiplier_increment = config["free_spin_multiplier_increment"]
 free_spin_max_multiplier = config["free_spin_max_multiplier"]
 max_win_multiplier = config["max_win_multiplier"]
@@ -53,7 +52,6 @@ print(f"Paylines Defined               : {len(paylines)}")
 print("---------------------------------------------")
 print(f"Bonus/Scatter Trigger Count    : {bonustrigger_count}")
 print(f"Free Spin Count Granted        : {free_spin_count}")
-print(f"Free Spin Retrigger Count      : {free_spin_retrigger_count}")
 print(f"Free Spin Base Multiplier      : {free_spin_multiplier}x")
 print(f"Free Spin Multiplier Increment : +{free_spin_multiplier_increment}x")
 print(f"Free Spin Max multiplier       : {free_spin_max_multiplier}x")
@@ -106,6 +104,7 @@ for active_lines in lineoptions:
                 grid_row.append(symbol)
             grid.append(grid_row)
 
+        current_spin_line_win = 0
         current_spin_total_win = 0
 
         # Payline logic
@@ -130,10 +129,12 @@ for active_lines in lineoptions:
                     break
 
             symbol_payouts = paytable.get(target_symbol, {})
-            payout = int(symbol_payouts.get(str(match_count), 0))
+            payout = float(symbol_payouts.get(str(match_count), 0))
 
             standard_gain += payout
-            current_spin_total_win += payout
+            current_spin_line_win += payout
+
+        current_spin_total_win += current_spin_line_win
 
         # Scatter logic
         scatter_count = 0
@@ -144,8 +145,9 @@ for active_lines in lineoptions:
                     scatter_count += 1
                     break
 
+        scatter_payout = 0.0
         if scatter_count > 0:
-            scatter_payout = int(scatterpaytable.get(str(scatter_count), 0))
+            scatter_payout = float(scatterpaytable.get(str(scatter_count), 0))
             scatter_gain += scatter_payout
             current_spin_total_win += scatter_payout
 
@@ -158,9 +160,10 @@ for active_lines in lineoptions:
         sum_squared_wins += (win_per_unit_bet ** 2)
 
         if scatter_count not in scatter_outcomes:
-            scatter_outcomes[scatter_count] = {'freq': 0, 'total_win': 0.0}
+            scatter_outcomes[scatter_count] = {'freq': 0, 'total_line_win': 0.0, 'total_scatter_win': 0.0}
         scatter_outcomes[scatter_count]['freq'] += 1
-        scatter_outcomes[scatter_count]['total_win'] += current_spin_total_win
+        scatter_outcomes[scatter_count]['total_line_win'] += current_spin_line_win
+        scatter_outcomes[scatter_count]['total_scatter_win'] += scatter_payout
 
     # --- BASE EXPECTATIONS ---
     total_bet_spent = combination_count * active_lines
@@ -177,51 +180,44 @@ for active_lines in lineoptions:
     else:
         volatility_word = "HIGH"
 
-    paths = [[free_spin_count, float(free_spin_multiplier), 1.0, 0.0]]
+    paths = {(free_spin_count, float(free_spin_multiplier), 0.0): 1.0}
     expected_fs_win_per_trigger = 0.0
 
     fs_outcomes = []
     for sc, data in scatter_outcomes.items():
         prob = data['freq'] / combination_count
-        avg_win = data['total_win'] / data['freq']
-        fs_outcomes.append((sc, prob, avg_win))
+        avg_line_win = data['total_line_win'] / data['freq']
+        avg_scatter_win = data['total_scatter_win'] / data['freq']
+        fs_outcomes.append((sc, prob, avg_line_win, avg_scatter_win))
 
     # Calculate the absolute max win in credits for this bet size
     max_win_credits = float(max_win_multiplier) * active_lines
 
     # Expand every path step-by-step
     while paths:
-        new_paths = []
-        for p in paths:
-            spins_left = p[0]
-            mult = p[1]
-            path_prob = p[2]
-            path_acc_win = p[3]
-
-            if spins_left > 0:
-                for sc, outcome_prob, avg_win in fs_outcomes:
-                    potential_spin_win = avg_win * mult
+        new_paths = {}
+        for (spins_left, mult, path_acc_win), path_prob in paths.items():
+            if spins_left > 0 and path_acc_win < max_win_credits:
+                for sc, outcome_prob, avg_line_win, avg_scatter_win in fs_outcomes:
+                    # Multiplier only affects regular paylines; scatter wins added flat
+                    potential_spin_win = (avg_line_win * mult) + avg_scatter_win
+                    branch_prob = path_prob * outcome_prob
 
                     # CHECK MAX WIN CAP
                     if path_acc_win + potential_spin_win >= max_win_credits:
                         actual_spin_win = max(0.0, max_win_credits - path_acc_win)
-                        expected_fs_win_per_trigger += path_prob * outcome_prob * actual_spin_win
+                        expected_fs_win_per_trigger += branch_prob * actual_spin_win
                     else:
                         actual_spin_win = potential_spin_win
-                        expected_fs_win_per_trigger += path_prob * outcome_prob * actual_spin_win
+                        expected_fs_win_per_trigger += branch_prob * actual_spin_win
                         next_mult = mult + (sc * free_spin_multiplier_increment)
                         if next_mult > free_spin_max_multiplier:
                             next_mult = float(free_spin_max_multiplier)
                         next_spins = spins_left - 1
-                        if sc >= free_spin_retrigger_count:
-                            next_spins += free_spin_count
+
                         if next_spins > 0:
-                            new_paths.append([
-                                next_spins,
-                                next_mult,
-                                path_prob * outcome_prob,
-                                path_acc_win + actual_spin_win
-                            ])
+                            state_key = (next_spins, next_mult, path_acc_win + actual_spin_win)
+                            new_paths[state_key] = new_paths.get(state_key, 0.0) + branch_prob
 
         paths = new_paths
 
