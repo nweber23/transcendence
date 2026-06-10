@@ -68,6 +68,7 @@ const SlotMachine: React.FC = () => {
       if (!col) return;
       const results = [getRandomIcon(), getRandomIcon(), getRandomIcon()];
       const imgs = col.querySelectorAll<HTMLImageElement>('.slot-icon img');
+      if (imgs.length < 6) return;
       for (let x = 0; x < 3; x++) {
         const icon = results[x];
         imgs[x].src = `/${icon}.png`;

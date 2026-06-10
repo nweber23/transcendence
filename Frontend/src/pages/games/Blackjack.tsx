@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 
 interface Card {
@@ -8,8 +7,6 @@ interface Card {
 }
 
 const Blackjack: React.FC = () => {
-  const navigate = useNavigate();
-
   const balance     = 10_000; // TODO: connect to account/wallet
   const [bet, setBet]               = useState(0);
   const [playerHand]                = useState<Card[]>([]);

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 interface Player {
   id: number;
@@ -40,8 +39,6 @@ const SEAT_POSITIONS: React.CSSProperties[] = [
 const TABLE_MAX_WIDTH = 'calc((100dvh - 390px) * 2.2)';
 
 const Poker: React.FC = () => {
-  const navigate = useNavigate();
-
   const [players] = useState<Player[]>(
     Array(6).fill(null).map((_, i) => ({
       id: i, name: '', stack: 0, currentBet: 0,
