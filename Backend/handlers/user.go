@@ -59,14 +59,12 @@ type TransactionHistoryResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
 }
 
-type ToggleFriendResponse struct {
-	UserID   uint `json:"user_id"`
-	FriendID uint `json:"friend_id"`
-	WasAdded bool `json:"was_added"`
+type UpdateFriendResponse struct {
+	FriendID uint   `json:"friend_id"`
+	Status   string `json:"status"`
 }
 
 type FriendResponse struct {
-	UserID    uint   `json:"user_id"`
 	FriendID  uint   `json:"friend_id"`
 	CreatedAt string `json:"created_at"`
 }
@@ -403,21 +401,25 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", "Invalid id format")
 		return
 	}
-	if err := uh.friendService.AddFriend(userID.(uint), uint(friendID)); err != nil {
+	isPending, err := uh.friendService.AddFriend(userID.(uint), uint(friendID))
+	if err != nil {
 		if (err.Error() == "self love only works irl" ||
 			errors.Is(err, gorm.ErrRecordNotFound) ||
-			err.Error() == "matching entry already exists") {
+			err.Error() == "friend already added") {
 			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", "Invalid ids")
 		} else {
 			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", "Failed to add friend")
 		}
 	} else {
-		response := ToggleFriendResponse{
-			UserID:   userID.(uint),
-			FriendID: uint(friendID),
-			WasAdded: true,
+		status := "active"
+		if isPending {
+			status = "pending"
 		}
-		utils.RespondSuccess(c, http.StatusCreated, "Friend added successfully", &response)
+		response := UpdateFriendResponse{
+			FriendID: uint(friendID),
+			Status:   status,
+		}
+		utils.RespondSuccess(c, http.StatusOK, "Friend added successfully", &response)
 	}
 }
 
@@ -435,10 +437,9 @@ func (uh *UserHandler) RemoveFriend(c *gin.Context) {
 	if err := uh.friendService.RemoveFriend(userID.(uint), uint(friendID)); err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", "Failed to remove friend")
 	} else {
-		response := ToggleFriendResponse{
-			UserID:   userID.(uint),
+		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
-			WasAdded: false,
+			Status:   "dormant",
 		}
 		utils.RespondSuccess(c, http.StatusOK, "Friend removed successfully", &response)
 	}
@@ -457,9 +458,12 @@ func (uh *UserHandler) GetFriends(c *gin.Context) {
 	}
 	friendResponses := make([]FriendResponse, len(friendships))
 	for responseIndex, friendship := range friendships {
+		friendID := friendship.LowID
+		if friendID == userID {
+			friendID = friendship.HighID
+		}
 		friendResponses[responseIndex] = FriendResponse{
-			UserID:    friendship.UserID,
-			FriendID:  friendship.FriendID,
+			FriendID:  friendID,
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}

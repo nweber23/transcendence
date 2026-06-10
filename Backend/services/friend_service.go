@@ -55,7 +55,7 @@ func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 	if _, err := userService.GetUserByID(userID); err != nil {
 		return false, err
 	}
-	if _, err := userService.GetUserByID(userID); err != nil {
+	if _, err := userService.GetUserByID(friendID); err != nil {
 		return false, err
 	}
 	lowID, highID := swapIDs(userID, friendID)
