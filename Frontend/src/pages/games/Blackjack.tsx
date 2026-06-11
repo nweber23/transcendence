@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PlayingCard, { CardData, CardSlot } from '@/components/games/PlayingCard';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import GameTopBar from '@/components/games/GameTopBar';

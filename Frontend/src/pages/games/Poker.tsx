@@ -33,7 +33,11 @@ const SEAT_POSITIONS: React.CSSProperties[] = [
 ];
 
 const Poker: React.FC = () => {
-  const { account } = useAccount();
+  /* autoFetch=false: only the account is needed here, not the transaction history */
+  const { account, getAccount } = useAccount(false);
+  useEffect(() => {
+    getAccount().catch(() => {});
+  }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
   /* TODO: all game state below comes from the game engine */
