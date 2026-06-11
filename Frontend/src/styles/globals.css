@@ -61,7 +61,7 @@
   }
 
   /* Enhanced input focus feedback with glow effect */
-  input:focus {
+  input:not([type="range"]):focus {
     background-image: linear-gradient(
       to bottom,
       rgba(212, 175, 55, 0.02),
