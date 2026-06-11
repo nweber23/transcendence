@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const CHIP_VALUES = [10, 25, 100, 500] as const;
+export const CHIP_VALUES = [10, 25, 100, 500, 1000] as const;
 
 /* Denomination colors drawn from the design-system palette */
 const CHIP_COLORS: Record<number, { face: string; edge: string }> = {
@@ -8,6 +8,7 @@ const CHIP_COLORS: Record<number, { face: string; edge: string }> = {
   25: { face: '#2d7a63', edge: '#1b5042' },
   100: { face: '#8b2635', edge: '#5a1722' },
   500: { face: '#b08d28', edge: '#7d641b' },
+  1000: { face: '#000000', edge: '#1a1a1a'},
 };
 
 interface ChipProps {
