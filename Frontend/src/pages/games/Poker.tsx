@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PlayingCard, { CardData, CardSlot } from '@/components/games/PlayingCard';
 import GameTopBar from '@/components/games/GameTopBar';
+import { useAccount } from '@/hooks/useAccount';
 
 interface Player {
   id: number;
@@ -56,9 +57,10 @@ const Poker: React.FC = () => {
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [buyIn, setBuyIn] = useState(MIN_BUYIN * 2);
 
-  const maxBuyIn = Math.min(MAX_BUYIN, balance);
-  const canJoin = selectedSeat !== null && buyIn >= MIN_BUYIN && buyIn <= maxBuyIn;
-  const fillPct = ((buyIn - MIN_BUYIN) / (maxBuyIn - MIN_BUYIN)) * 100;
+  /* Clamp to MIN_BUYIN so the slider stays valid while the account loads */
+  const maxBuyIn = Math.max(MIN_BUYIN, Math.min(MAX_BUYIN, balance));
+  const canJoin = selectedSeat !== null && buyIn >= MIN_BUYIN && buyIn <= Math.min(maxBuyIn, balance);
+  const fillPct = maxBuyIn > MIN_BUYIN ? ((buyIn - MIN_BUYIN) / (maxBuyIn - MIN_BUYIN)) * 100 : 0;
   const midBuyIn = Math.round((MIN_BUYIN + maxBuyIn) / 2 / BIG_BLIND) * BIG_BLIND;
 
   const clampBuyIn = (value: number) => Math.max(MIN_BUYIN, Math.min(value, maxBuyIn));
