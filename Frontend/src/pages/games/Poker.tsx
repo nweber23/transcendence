@@ -24,12 +24,12 @@ const MAX_BUYIN = BIG_BLIND * 100;
   Symmetric: top/bottom pairs sum to 100%, left/right pairs are mirrored at 50%.
 */
 const SEAT_POSITIONS: React.CSSProperties[] = [
-  { top: '91%', left: '50%', transform: 'translate(-50%, -50%)' }, // 0 – bottom center
-  { top: '74%', left: '90%', transform: 'translate(-50%, -50%)' }, // 1 – lower right
-  { top: '26%', left: '90%', transform: 'translate(-50%, -50%)' }, // 2 – upper right
-  { top: '9%', left: '50%', transform: 'translate(-50%, -50%)' }, // 3 – top center
-  { top: '26%', left: '10%', transform: 'translate(-50%, -50%)' }, // 4 – upper left
-  { top: '74%', left: '10%', transform: 'translate(-50%, -50%)' }, // 5 – lower left
+  { top: '92%', left: '50%', transform: 'translate(-50%, -50%)' }, // 0 – bottom center
+  { top: '74%', left: '89%', transform: 'translate(-50%, -50%)' }, // 1 – lower right
+  { top: '26%', left: '89%', transform: 'translate(-50%, -50%)' }, // 2 – upper right
+  { top: '8%', left: '50%', transform: 'translate(-50%, -50%)' }, // 3 – top center
+  { top: '26%', left: '11%', transform: 'translate(-50%, -50%)' }, // 4 – upper left
+  { top: '74%', left: '11%', transform: 'translate(-50%, -50%)' }, // 5 – lower left
 ];
 
 const Poker: React.FC = () => {
@@ -60,6 +60,7 @@ const Poker: React.FC = () => {
   /* Pre-join UI state — seat choice and buy-in are sent to the engine on join */
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [buyIn, setBuyIn] = useState(MIN_BUYIN * 2);
+  const [inputValue, setInputValue] = useState(String(MIN_BUYIN * 2));
 
   /* Clamp to MIN_BUYIN so the slider stays valid while the account loads */
   const maxBuyIn = Math.max(MIN_BUYIN, Math.min(MAX_BUYIN, balance));
@@ -225,7 +226,11 @@ const Poker: React.FC = () => {
               max={maxBuyIn}
               step={BIG_BLIND}
               value={buyIn}
-              onChange={(e) => setBuyIn(Number(e.target.value))}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setBuyIn(val);
+                setInputValue(String(val));
+              }}
               className="range-gold w-full"
               style={{ '--fill': `${fillPct}%` } as React.CSSProperties}
               aria-label="Buy-in amount"
@@ -241,19 +246,31 @@ const Poker: React.FC = () => {
                 min={MIN_BUYIN}
                 max={maxBuyIn}
                 step={BIG_BLIND}
-                value={buyIn}
-                onChange={(e) => setBuyIn(clampBuyIn(parseInt(e.target.value) || MIN_BUYIN))}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onBlur={(e) => {
+                  const val = e.target.value.trim();
+                  if (val === '' || isNaN(parseInt(val))) {
+                    setBuyIn(MIN_BUYIN);
+                    setInputValue(String(MIN_BUYIN));
+                  } else {
+                    const num = parseInt(val);
+                    const clamped = clampBuyIn(num);
+                    setBuyIn(clamped);
+                    setInputValue(String(clamped));
+                  }
+                }}
                 className="w-20 bg-transparent font-serif text-lg text-[var(--gold)] text-right focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 aria-label="Buy-in amount input"
               />
             </div>
-            <button onClick={() => setBuyIn(MIN_BUYIN)} className={presetButton}>
+            <button onClick={() => { setBuyIn(MIN_BUYIN); setInputValue(String(MIN_BUYIN)); }} className={presetButton}>
               Min
             </button>
-            <button onClick={() => setBuyIn(midBuyIn)} className={presetButton}>
+            <button onClick={() => { setBuyIn(midBuyIn); setInputValue(String(midBuyIn)); }} className={presetButton}>
               ½
             </button>
-            <button onClick={() => setBuyIn(maxBuyIn)} className={presetButton}>
+            <button onClick={() => { setBuyIn(maxBuyIn); setInputValue(String(maxBuyIn)); }} className={presetButton}>
               Max
             </button>
           </div>
