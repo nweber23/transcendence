@@ -20,3 +20,4 @@
 | 16 | Multiplayer Game (Poker) | Major | 2 | Pending | |
 | 17 | Monitoring system with Prometheus and Grafana | Major | 2 | Pending | |
 | 18 | Implement spectator mode for games | Minor | 1 | Pending | |
+| 19 | Game Customization (Themes, RTP, Volatility)| Minor | 1 | Pending | |
