@@ -7,7 +7,11 @@ import { useAccount } from '@/hooks/useAccount';
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
 const Blackjack: React.FC = () => {
-  const { account } = useAccount();
+  /* autoFetch=false: only the account is needed here, not the transaction history */
+  const { account, getAccount } = useAccount(false);
+  useEffect(() => {
+    getAccount().catch(() => {});
+  }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
   /* Bet is staged as a stack of chips so the engine receives a single amount on deal */
