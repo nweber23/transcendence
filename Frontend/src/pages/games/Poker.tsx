@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PlayingCard, { CardData, CardSlot } from '@/components/games/PlayingCard';
 import GameTopBar from '@/components/games/GameTopBar';
 import { useAccount } from '@/hooks/useAccount';
