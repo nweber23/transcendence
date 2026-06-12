@@ -25,11 +25,11 @@ const MAX_BUYIN = BIG_BLIND * 100;
 */
 const SEAT_POSITIONS: React.CSSProperties[] = [
   { top: '92%', left: '50%', transform: 'translate(-50%, -50%)' }, // 0 – bottom center
-  { top: '74%', left: '89%', transform: 'translate(-50%, -50%)' }, // 1 – lower right
-  { top: '26%', left: '89%', transform: 'translate(-50%, -50%)' }, // 2 – upper right
+  { top: '74%', left: '87%', transform: 'translate(-50%, -50%)' }, // 1 – lower right
+  { top: '26%', left: '87%', transform: 'translate(-50%, -50%)' }, // 2 – upper right
   { top: '8%', left: '50%', transform: 'translate(-50%, -50%)' }, // 3 – top center
-  { top: '26%', left: '11%', transform: 'translate(-50%, -50%)' }, // 4 – upper left
-  { top: '74%', left: '11%', transform: 'translate(-50%, -50%)' }, // 5 – lower left
+  { top: '26%', left: '13%', transform: 'translate(-50%, -50%)' }, // 4 – upper left
+  { top: '74%', left: '13%', transform: 'translate(-50%, -50%)' }, // 5 – lower left
 ];
 
 const Poker: React.FC = () => {
