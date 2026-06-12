@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import GameTopBar from '@/components/games/GameTopBar';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
+import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import { useAccount } from '@/hooks/useAccount';
 
 const ICONS = [
@@ -27,10 +28,18 @@ const SlotMachine: React.FC = () => {
   useEffect(() => { getAccount().catch(() => {}); }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
+  const [isSmallScreen, setIsSmallScreen] = useState(true);
   const [stagedChips, setStagedChips] = useState<number[]>([]);
   const [lines, setLines] = useState(9);
   const [isSpinning, setIsSpinning] = useState(false);
   const [itemHeight, setItemHeight] = useState(100);
+
+  useEffect(() => {
+    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const windowRef = useRef<HTMLDivElement>(null);
   const colRefs = useRef<(HTMLDivElement | null)[]>(Array(NUM_REELS).fill(null));
@@ -178,6 +187,13 @@ const SlotMachine: React.FC = () => {
         className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
         style={{ height: 'calc(100dvh - 4.75rem)' }}
       >
+        {isSmallScreen ? (
+          <UnsupportedScreenSize
+            title="Screen Too Small"
+            subtitle="This game is best enjoyed on a larger display. Please use a tablet or desktop to play."
+          />
+        ) : (
+        <>
         <GameTopBar title="Lucky Fruits" subtitle={`5-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
@@ -360,6 +376,8 @@ const SlotMachine: React.FC = () => {
           </button>
 
         </div>
+        </>
+        )}
       </div>
     </>
   );
