@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import GameTopBar from '@/components/games/GameTopBar';
+import Chip, { CHIP_VALUES } from '@/components/games/Chip';
+import { useAccount } from '@/hooks/useAccount';
 
 const ICONS = [
   'apple', 'apricot', 'banana', 'big_win', 'cherry', 'grapes',
@@ -9,6 +12,8 @@ const BASE_SPINNING_DURATION = 2.7;
 const COLUMN_SPINNING_DURATION = 0.3;
 const NUM_REELS = 5;
 
+const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
 function getRandomIcon() {
   return ICONS[Math.floor(Math.random() * ICONS.length)];
 }
@@ -18,19 +23,40 @@ function randomDuration() {
 }
 
 const SlotMachine: React.FC = () => {
-  const balance = 10_000;
-  const [bet, setBet] = useState(0);
-  const [isSpinning, setIsSpinning] = useState(false);
+  const { account, getAccount } = useAccount(false);
+  useEffect(() => { getAccount().catch(() => {}); }, [getAccount]);
+  const balance = account ? Math.floor(Number(account.balance)) : 0;
 
-  // itemHeight is derived from the CSS-clamped window height after first layout
+  const [stagedChips, setStagedChips] = useState<number[]>([]);
+  const [lines, setLines] = useState(9);
+  const [isSpinning, setIsSpinning] = useState(false);
   const [itemHeight, setItemHeight] = useState(100);
+
   const windowRef = useRef<HTMLDivElement>(null);
   const colRefs = useRef<(HTMLDivElement | null)[]>(Array(NUM_REELS).fill(null));
   const spinningContainerRef = useRef<HTMLDivElement>(null);
 
-  const addBet = (n: number) => setBet((b) => Math.min(b + n, balance));
-  const subBet = (n: number) => setBet((b) => Math.max(b - n, 0));
+  const bet = sum(stagedChips);
   const canSpin = bet > 0 && bet <= balance && !isSpinning;
+
+  const addChip = (value: number) => {
+    if (bet + value <= balance) setStagedChips((c) => [...c, value]);
+  };
+  const undoChip = () => setStagedChips((c) => c.slice(0, -1));
+  const clearChips = () => setStagedChips([]);
+  const maxBet = () => {
+    const denoms = [...CHIP_VALUES].slice().sort((a, b) => b - a);
+    const chips: number[] = [];
+    let remaining = balance;
+    for (const d of denoms) {
+      while (remaining >= d && chips.length < 30) {
+        chips.push(d);
+        remaining -= d;
+      }
+    }
+    if (remaining > 0) chips.push(remaining);
+    setStagedChips(chips);
+  };
 
   // Measure actual rendered window height to derive item height
   useLayoutEffect(() => {
@@ -146,157 +172,234 @@ const SlotMachine: React.FC = () => {
         }
       `}</style>
 
-      {/* mt-14 offsets the fixed header (h-14 = 3.5rem) */}
-      <div className="mt-14 flex flex-col overflow-hidden bg-[var(--base)]" style={{ height: 'calc(100dvh - 3.5rem)' }}>
+      {/* mt-[4.75rem] clears the floating global Header pill */}
+      <div
+        className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
+        style={{ height: 'calc(100dvh - 4.75rem)' }}
+      >
+        <GameTopBar title="Lucky Fruits" subtitle="5-Reel · 9 Lines" balance={balance} />
 
-        {/* ── Machine ─────────────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 min-h-0 py-4">
-          <div className="relative w-full max-w-3xl">
+        {/* ── Main area ── */}
+        <div className="flex-1 flex min-h-0">
 
-            {/* Top rail */}
-            <div className="h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50 mb-1" />
+          {/* ── Left: Felt stage ── */}
+          <div
+            className="flex-1 relative flex flex-col justify-center gap-3 p-4 overflow-hidden"
+            style={{
+              background:
+                'radial-gradient(ellipse 140% 110% at 50% -8%, #1b4535 0%, #102a1f 42%, #081a12 72%, #040e09 100%)',
+            }}
+          >
+            {/* Pinstripe inset border */}
+            <div className="absolute inset-3 rounded-xl border border-[rgba(212,175,55,0.1)] pointer-events-none" />
 
-            {/* Cabinet body */}
-            <div className="bg-gradient-to-b from-[var(--surface-2)] to-[var(--surface-3)] rounded-2xl border border-[rgba(212,175,55,0.15)] p-5">
-
-              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--gold)] opacity-70 mb-3">
-                Lucky Fruits
-              </p>
-
-              {/* Window border — gold gradient trim */}
-              <div
-                className="rounded-xl p-px"
-                style={{
-                  background: 'linear-gradient(to bottom, rgba(212,175,55,0.4), rgba(212,175,55,0.08) 50%, rgba(212,175,55,0.25))',
-                }}
+            {/* Machine title */}
+            <div className="relative z-10 text-center">
+              <p
+                className="uppercase tracking-[0.35em] text-[rgba(212,175,55,0.75)]"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 13 }}
               >
-                {/* Spinning container — "spinning" class drives CSS animation */}
-                <div ref={spinningContainerRef}>
-                  {/* Window — height is CSS-clamped; JS reads it after layout */}
-                  <div
-                    ref={windowRef}
-                    className="relative overflow-hidden rounded-[11px] bg-[var(--base)]"
-                    style={{ height: 'clamp(210px, 40dvh, 420px)' }}
-                  >
-                    {/* Top fade */}
-                    <div className="absolute top-0 left-0 w-full z-10 pointer-events-none"
-                      style={{ height: 10, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)' }} />
-                    {/* Bottom fade */}
-                    <div className="absolute bottom-0 left-0 w-full z-10 pointer-events-none"
-                      style={{ height: 10, background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }} />
-                    {/* Centre payline */}
-                    <div className="absolute inset-y-0 left-0 right-0 flex items-center pointer-events-none z-10">
-                      <div className="w-full h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.3)] to-transparent" />
-                    </div>
+                ◆ Lucky Fruits ◆
+              </p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-[rgba(212,175,55,0.35)] mt-0.5">
+                5 Reels · 9 Lines
+              </p>
+            </div>
 
-                    {/* Reels row */}
-                    <div className="flex h-full">
-                      {Array.from({ length: NUM_REELS }, (_, i) => (
-                        <React.Fragment key={i}>
-                          {i > 0 && (
-                            <div className="w-px flex-shrink-0 bg-[var(--border-2)] self-stretch" />
-                          )}
+            {/* Reel window — gold-gradient border frame */}
+            <div
+              className="relative z-10 rounded-[10px] p-px"
+              style={{
+                background:
+                  'linear-gradient(to bottom, rgba(212,175,55,0.22), rgba(212,175,55,0.05) 50%, rgba(212,175,55,0.15))',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div ref={spinningContainerRef}>
+                <div
+                  ref={windowRef}
+                  className="relative overflow-hidden rounded-[9px]"
+                  style={{
+                    background: 'rgba(0,0,0,0.55)',
+                    height: 'clamp(180px, 38dvh, 360px)',
+                    boxShadow: 'inset 0 0 60px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  {/* Top-third dim — fades from black at edge to 35% opacity at the payline bracket */}
+                  <div
+                    className="absolute top-0 left-0 w-full z-10 pointer-events-none"
+                    style={{
+                      height: '33.33%',
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.72), rgba(0,0,0,0.35))',
+                    }}
+                  />
+                  {/* Bottom-third dim — mirror of top */}
+                  <div
+                    className="absolute bottom-0 left-0 w-full z-10 pointer-events-none"
+                    style={{
+                      height: '33.33%',
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.35))',
+                    }}
+                  />
+                  {/* Payline bracket — brackets the middle third */}
+                  <div
+                    className="absolute left-0 right-0 z-10 pointer-events-none"
+                    style={{
+                      top: '33.33%',
+                      height: '33.33%',
+                      borderTop: '1px solid rgba(212,175,55,0.2)',
+                      borderBottom: '1px solid rgba(212,175,55,0.2)',
+                    }}
+                  />
+
+                  {/* Reels */}
+                  <div className="flex h-full">
+                    {Array.from({ length: NUM_REELS }, (_, i) => (
+                      <React.Fragment key={i}>
+                        {i > 0 && (
+                          <div className="w-px flex-shrink-0 self-stretch bg-[rgba(255,255,255,0.04)]" />
+                        )}
+                        <div
+                          className="flex-1 overflow-hidden"
+                          style={{
+                            background:
+                              'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 50%, rgba(0,0,0,0.18) 100%)',
+                          }}
+                        >
                           <div
-                            className="flex-1 overflow-hidden"
-                            style={{ background: 'linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 50%, var(--surface-3) 100%)' }}
-                          >
-                            <div
-                              ref={(el) => { colRefs.current[i] = el; }}
-                              className="slot-col"
-                            />
-                          </div>
-                        </React.Fragment>
-                      ))}
-                    </div>
+                            ref={(el) => { colRefs.current[i] = el; }}
+                            className="slot-col"
+                          />
+                        </div>
+                      </React.Fragment>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bottom rail */}
-            <div className="h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-30 mt-1" />
-            <div className="glow-gold absolute -inset-8 -z-10 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* ── Controls panel ──────────────────────────────────────────────── */}
-        <div className="shrink-0 border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)] px-5 pt-4 pb-5 space-y-3">
-
-          {/* Quick add */}
-          <div className="flex gap-2">
-            {[10, 50, 100, 500].map((n) => (
-              <button
-                key={n}
-                onClick={() => addBet(n)}
-                disabled={isSpinning}
-                className="flex-1 py-3.5 rounded-lg border border-[rgba(212,175,55,0.12)] text-[var(--text-2)] text-sm font-semibold hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                +{n}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick subtract */}
-          <div className="flex gap-2">
-            {[10, 50, 100, 500].map((n) => (
-              <button
-                key={n}
-                onClick={() => subBet(n)}
-                disabled={isSpinning}
-                className="flex-1 py-3.5 rounded-lg border border-[rgba(212,175,55,0.08)] text-[var(--text-3)] text-sm font-semibold hover:border-red-500/40 hover:text-red-400 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                -{n}
-              </button>
-            ))}
-          </div>
-
-          {/* Bet input */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-3 bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] rounded-lg px-4 py-3">
-              <span className="text-xs text-[var(--text-3)] uppercase tracking-widest shrink-0">Bet</span>
-              <input
-                type="number"
-                min="0"
-                max={balance}
-                value={bet}
-                disabled={isSpinning}
-                onChange={(e) => setBet(Math.max(0, Math.min(parseInt(e.target.value) || 0, balance)))}
-                className="flex-1 bg-transparent text-[var(--gold)] font-serif text-xl text-right focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-40"
-                aria-label="Bet amount"
-              />
-              <span className="text-[var(--text-3)] text-sm">$</span>
+            {/* Payline pips (9 lines) */}
+            <div className="relative z-10 flex gap-1.5 justify-center">
+              {Array.from({ length: 9 }, (_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 max-w-[28px] h-1 rounded-full transition-colors duration-150"
+                  style={{
+                    background: i < lines ? 'rgba(212,175,55,0.5)' : 'rgba(212,175,55,0.14)',
+                    border: `1px solid ${i < lines ? 'rgba(212,175,55,0.3)' : 'rgba(212,175,55,0.08)'}`,
+                  }}
+                />
+              ))}
             </div>
-            <button
-              onClick={() => setBet(0)}
-              disabled={isSpinning}
-              className="px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.1)] text-[var(--text-3)] text-sm hover:border-[rgba(212,175,55,0.25)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Clear
-            </button>
-            <button
-              onClick={() => setBet(balance)}
-              disabled={isSpinning}
-              className="px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.1)] text-[var(--text-3)] text-sm hover:border-[rgba(212,175,55,0.25)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Max
-            </button>
           </div>
 
-          {/* Spin */}
-          <button
-            disabled={!canSpin}
-            onClick={spin}
-            className={`
-              w-full py-5 rounded-xl font-semibold text-lg tracking-widest uppercase transition-all duration-150 cursor-pointer
-              ${canSpin
-                ? 'bg-[var(--gold)] text-[#0a0e12] hover:opacity-90 active:scale-[0.98] shadow-[0_2px_24px_rgba(212,175,55,0.25)]'
-                : 'bg-[var(--surface-2)] text-[var(--text-3)] cursor-not-allowed border border-[rgba(212,175,55,0.08)]'
-              }
-            `}
-            aria-label="Spin the reels"
-          >
-            {isSpinning ? 'Spinning…' : 'Spin'}
-          </button>
+          {/* ── Right: Control sidebar ── */}
+          <div className="w-[176px] flex-shrink-0 border-l border-[rgba(212,175,55,0.1)] bg-[var(--surface)] flex flex-col gap-4 p-3">
+
+            {/* Chip grid */}
+            <div>
+              <p className="text-[7px] uppercase tracking-[0.2em] text-[var(--text-3)] mb-2">Chips</p>
+              <div className="flex gap-1.5 justify-between">
+                {CHIP_VALUES.map((value) => (
+                  <Chip
+                    key={value}
+                    value={value}
+                    size={28}
+                    onClick={() => addChip(value)}
+                    disabled={isSpinning || bet + value > balance}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bet circle */}
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className="relative w-16 h-16 rounded-full border-2 border-dashed border-[rgba(212,175,55,0.3)]"
+                style={{ background: 'rgba(0,0,0,0.25)' }}
+              >
+                {stagedChips.length === 0 ? (
+                  <span className="absolute inset-0 flex items-center justify-center text-[8px] tracking-[0.15em] text-[rgba(212,175,55,0.4)] uppercase">
+                    Bet
+                  </span>
+                ) : (
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2"
+                    style={{ width: 38, height: 38, bottom: 12 }}
+                  >
+                    {stagedChips.slice(-6).map((value, i) => (
+                      <div key={i} className="absolute left-0 chip-pop" style={{ bottom: i * 5 }}>
+                        <Chip value={value} size={38} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {bet > 0 && (
+                <span className="font-serif text-base text-[var(--gold)]">${bet.toLocaleString()}</span>
+              )}
+            </div>
+
+            {/* Undo / Clear / Max */}
+            <div className="flex gap-1">
+              {[
+                { label: 'Undo', action: undoChip, disabled: stagedChips.length === 0 },
+                { label: 'Clear', action: clearChips, disabled: stagedChips.length === 0 },
+                { label: 'Max', action: maxBet, disabled: balance === 0 },
+              ].map(({ label, action, disabled }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  disabled={disabled || isSpinning}
+                  className="flex-1 py-1.5 rounded-md border border-[rgba(212,175,55,0.12)] text-[var(--text-3)] text-[7px] font-semibold uppercase tracking-[0.1em] hover:border-[rgba(212,175,55,0.3)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lines selector */}
+            <div>
+              <p className="text-[7px] uppercase tracking-[0.2em] text-[var(--text-3)] mb-1.5">Lines</p>
+              <div className="flex items-center bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] rounded-lg px-3 py-2 gap-2">
+                <span className="flex-1 font-serif text-base text-[var(--gold)]">{lines}</span>
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => setLines((l) => Math.min(l + 1, 9))}
+                    disabled={lines === 9 || isSpinning}
+                    className="w-4 h-4 flex items-center justify-center text-[rgba(212,175,55,0.5)] hover:text-[var(--gold)] text-[9px] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Increase lines"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => setLines((l) => Math.max(l - 1, 1))}
+                    disabled={lines === 1 || isSpinning}
+                    className="w-4 h-4 flex items-center justify-center text-[rgba(212,175,55,0.5)] hover:text-[var(--gold)] text-[9px] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Decrease lines"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Spin */}
+            <button
+              disabled={!canSpin}
+              onClick={spin}
+              className={`mt-auto w-full py-3 rounded-xl font-semibold text-sm tracking-[0.22em] uppercase transition-all duration-150 cursor-pointer ${
+                canSpin
+                  ? 'bg-[var(--gold)] text-[#0a0e12] hover:opacity-90 active:scale-[0.98] shadow-[0_2px_16px_rgba(212,175,55,0.25)]'
+                  : 'bg-[var(--surface-2)] text-[var(--text-3)] border border-[rgba(212,175,55,0.08)] cursor-not-allowed'
+              }`}
+              aria-label="Spin the reels"
+            >
+              {isSpinning ? 'Spinning…' : 'Spin'}
+            </button>
+
+          </div>
+
         </div>
       </div>
     </>
