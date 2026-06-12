@@ -1,7 +1,7 @@
 name: Engine C++ tests
 
 on:
-  push:
+  pull_request:
     paths:
       - 'Engine/**'
 
