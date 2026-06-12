@@ -102,6 +102,32 @@ struct CompleteGameCycle {
 };
 
 template <>
+struct glz::meta<SpinStep> {
+    using type = SpinStep;
+    static constexpr auto value = object(
+        "step",                 &SpinStep::step,
+        "is_free_spin",         &SpinStep::is_free_spin,
+        "free_spins_remaining", &SpinStep::free_spins_remaining,
+        "multiplier",           &SpinStep::multiplier,
+        "stops",                &SpinStep::stops,
+        "step_win",             &SpinStep::step_win,
+        "accumulated_free_win", &SpinStep::accumulated_free_win
+    );
+};
+
+template <>
+struct glz::meta<CompleteGameCycle> {
+    using type = CompleteGameCycle;
+    static constexpr auto value = object(
+        "game_name",         &CompleteGameCycle::game_name,
+        "total_initial_bet", &CompleteGameCycle::total_initial_bet,
+        "total_overall_win", &CompleteGameCycle::total_overall_win,
+        "bonus_triggered",   &CompleteGameCycle::bonus_triggered,
+        "timeline",          &CompleteGameCycle::timeline
+    );
+};
+
+template <>
 struct glz::meta<SymbolInfo> {
     using type = SymbolInfo;
     static constexpr auto value = object(

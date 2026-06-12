@@ -99,8 +99,10 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
     return {payline_total, scatter_win, scatter_count, bonus_triggered};
 }
 
-std::string Machine::play_full_iteration(std::string_view game_name, std::uint8_t line_count, std::uint32_t bet_per_line) {
-    
+std::string Machine::play_full_iteration(std::string_view game_name,
+                                         std::uint8_t line_count,
+                                         std::uint32_t bet_per_line) {
+
 }
 
 Machine::Machine()
