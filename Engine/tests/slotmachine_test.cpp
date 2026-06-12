@@ -4,6 +4,8 @@
 #include <cmath>
 #include <numeric>
 #include <vector>
+#include <glaze/glaze.hpp>
+#include <cstdlib>
 
 TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     Machine m;
@@ -175,7 +177,92 @@ TEST_CASE("Max win multiplier is enforced from config", "[slotmachine]") {
     Machine m;
     FreeSpinState fs;
 
-    // Verify config loaded max_win_multiplier by checking a normal spin works
     auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
-    REQUIRE(r.win_amount <= 5000 * 10 * 1); // max_win_multiplier * lines * bet
+    REQUIRE(r.win_amount <= 5000 * 10 * 1);
+}
+
+
+TEST_CASE("play_full_iteration returns valid JSON with correct initial bet", "[slotmachine][full_iteration]") {
+    Machine m;
+    std::string json = m.play_full_iteration("lucky-sevens", 5, 2);
+
+    REQUIRE(!json.empty());
+
+    CompleteGameCycle cycle;
+    auto err = glz::read_json(cycle, json);
+    REQUIRE(!err);
+
+    REQUIRE(cycle.game_name == "lucky-sevens");
+    REQUIRE(cycle.total_initial_bet == 10);
+}
+
+TEST_CASE("play_full_iteration timeline size matches bonus trigger status", "[slotmachine][full_iteration]") {
+    Machine m;
+    bool saw_bonus = false;
+    bool saw_no_bonus = false;
+
+    for (int i = 0; i < 500; ++i) {
+        std::string json = m.play_full_iteration("lucky-sevens", 10, 1);
+        CompleteGameCycle cycle;
+        auto err = glz::read_json(cycle, json);
+        REQUIRE(!err);
+
+        if (cycle.bonus_triggered) {
+            // Base spin + free spins
+            REQUIRE(cycle.timeline.size() > 1);
+            saw_bonus = true;
+        } else {
+            // Only the base spin
+            REQUIRE(cycle.timeline.size() == 1);
+            saw_no_bonus = true;
+        }
+
+        if (saw_bonus && saw_no_bonus) break;
+    }
+
+    REQUIRE(saw_no_bonus);
+}
+
+TEST_CASE("play_full_iteration handles unknown game gracefully", "[slotmachine][full_iteration]") {
+    Machine m;
+    std::string json = m.play_full_iteration("nonexistent-game", 10, 1);
+
+    REQUIRE(!json.empty());
+    CompleteGameCycle cycle;
+    auto err = glz::read_json(cycle, json);
+    REQUIRE(!err);
+
+    REQUIRE(cycle.total_initial_bet == 10);
+    REQUIRE(cycle.total_overall_win == 0);
+    REQUIRE(cycle.timeline.size() == 1);
+}
+
+TEST_CASE("play_full_iteration handles zero bet/lines gracefully", "[slotmachine][full_iteration]") {
+    Machine m;
+    std::string json = m.play_full_iteration("lucky-sevens", 0, 10);
+
+    REQUIRE(!json.empty());
+    CompleteGameCycle cycle;
+    auto err = glz::read_json(cycle, json);
+    REQUIRE(!err);
+
+    REQUIRE(cycle.total_initial_bet == 0);
+    REQUIRE(cycle.total_overall_win == 0);
+}
+
+TEST_CASE("Machine handles missing config directory without crashing", "[slotmachine][config]") {
+    setenv("SLOT_CONFIG_DIR", "/tmp/definitely_does_not_exist_12345", 1);
+
+    REQUIRE_NOTHROW(Machine m);
+    unsetenv("SLOT_CONFIG_DIR");
+}
+
+TEST_CASE("Machine skips invalid JSON configs without crashing", "[slotmachine][config]") {
+    system("mkdir -p /tmp/bad_slot_configs && echo '{ broken json' > /tmp/bad_slot_configs/bad.json");
+    setenv("SLOT_CONFIG_DIR", "/tmp/bad_slot_configs", 1);
+
+    REQUIRE_NOTHROW(Machine m);
+
+    system("rm -rf /tmp/bad_slot_configs");
+    unsetenv("SLOT_CONFIG_DIR");
 }
