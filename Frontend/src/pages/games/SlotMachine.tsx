@@ -179,7 +179,7 @@ const SlotMachine: React.FC = () => {
         <GameTopBar title="Lucky Fruits" subtitle="5-Reel · 9 Lines" balance={balance} />
 
         {/* ── Main area ── */}
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col sm:flex-row min-h-0">
 
           {/* ── Left: Felt stage ── */}
           <div
@@ -293,7 +293,7 @@ const SlotMachine: React.FC = () => {
           </div>
 
           {/* ── Right: Control sidebar ── */}
-          <div className="w-[176px] flex-shrink-0 border-l border-[rgba(212,175,55,0.1)] bg-[var(--surface)] flex flex-col gap-4 p-3">
+          <div className="w-full sm:w-[176px] flex-shrink-0 border-t sm:border-t-0 border-l-0 sm:border-l border-[rgba(212,175,55,0.1)] bg-[var(--surface)] flex flex-col gap-4 p-3">
 
             {/* Chip grid */}
             <div>
