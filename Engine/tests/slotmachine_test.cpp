@@ -4,8 +4,12 @@
 #include <cmath>
 #include <numeric>
 #include <vector>
-#include <glaze/glaze.hpp>
+#include <filesystem>
+#include <fstream>
 #include <cstdlib>
+#include <glaze/glaze.hpp>
+
+namespace fs = std::filesystem;
 
 TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
     Machine m;
@@ -181,11 +185,9 @@ TEST_CASE("Max win multiplier is enforced from config", "[slotmachine]") {
     REQUIRE(r.win_amount <= 5000 * 10 * 1);
 }
 
-
 TEST_CASE("play_full_iteration returns valid JSON with correct initial bet", "[slotmachine][full_iteration]") {
     Machine m;
     std::string json = m.play_full_iteration("lucky-sevens", 5, 2);
-
     REQUIRE(!json.empty());
 
     CompleteGameCycle cycle;
@@ -206,20 +208,15 @@ TEST_CASE("play_full_iteration timeline size matches bonus trigger status", "[sl
         CompleteGameCycle cycle;
         auto err = glz::read_json(cycle, json);
         REQUIRE(!err);
-
         if (cycle.bonus_triggered) {
-            // Base spin + free spins
             REQUIRE(cycle.timeline.size() > 1);
             saw_bonus = true;
         } else {
-            // Only the base spin
             REQUIRE(cycle.timeline.size() == 1);
             saw_no_bonus = true;
         }
-
         if (saw_bonus && saw_no_bonus) break;
     }
-
     REQUIRE(saw_no_bonus);
 }
 
@@ -240,7 +237,6 @@ TEST_CASE("play_full_iteration handles unknown game gracefully", "[slotmachine][
 TEST_CASE("play_full_iteration handles zero bet/lines gracefully", "[slotmachine][full_iteration]") {
     Machine m;
     std::string json = m.play_full_iteration("lucky-sevens", 0, 10);
-
     REQUIRE(!json.empty());
     CompleteGameCycle cycle;
     auto err = glz::read_json(cycle, json);
@@ -253,16 +249,21 @@ TEST_CASE("play_full_iteration handles zero bet/lines gracefully", "[slotmachine
 TEST_CASE("Machine handles missing config directory without crashing", "[slotmachine][config]") {
     setenv("SLOT_CONFIG_DIR", "/tmp/definitely_does_not_exist_12345", 1);
 
-    REQUIRE_NOTHROW(Machine m);
+    REQUIRE_NOTHROW(Machine{});
+
     unsetenv("SLOT_CONFIG_DIR");
 }
 
 TEST_CASE("Machine skips invalid JSON configs without crashing", "[slotmachine][config]") {
-    system("mkdir -p /tmp/bad_slot_configs && echo '{ broken json' > /tmp/bad_slot_configs/bad.json");
+    fs::create_directories("/tmp/bad_slot_configs");
+    {
+        std::ofstream out("/tmp/bad_slot_configs/bad.json");
+        out << "{ broken json";
+    }
+
     setenv("SLOT_CONFIG_DIR", "/tmp/bad_slot_configs", 1);
 
-    REQUIRE_NOTHROW(Machine m);
-
-    system("rm -rf /tmp/bad_slot_configs");
+    REQUIRE_NOTHROW(Machine{});
+    fs::remove_all("/tmp/bad_slot_configs");
     unsetenv("SLOT_CONFIG_DIR");
 }
