@@ -1,14 +1,14 @@
 import React from 'react';
 
-export const CHIP_VALUES = [10, 25, 100, 500, 1000] as const;
+export const CHIP_VALUES = [10, 25, 100, 500, 1000, 2000] as const;
 
-/* Denomination colors drawn from the design-system palette */
-const CHIP_COLORS: Record<number, { face: string; edge: string }> = {
-  10: { face: '#3a5872', edge: '#22384a' },
-  25: { face: '#2d7a63', edge: '#1b5042' },
-  100: { face: '#8b2635', edge: '#5a1722' },
-  500: { face: '#b08d28', edge: '#7d641b' },
-  1000: { face: '#000000', edge: '#1a1a1a'},
+const CHIP_COLORS: Record<number, { face: string; edge: string; text: string }> = {
+  10: { face: '#2f6fa4', edge: '#1f4f79', text: '#f4f0e4' },
+  25: { face: '#2d7a63', edge: '#1b5042', text: '#f4f0e4' },
+  100: { face: '#111111', edge: '#000000', text: '#f4f0e4' },
+  500: { face: '#8d5bd3', edge: '#5f3d97', text: '#f4f0e4' },
+  1000: { face: '#d8b11e', edge: '#8f7210', text: '#241b0b' },
+  2000: { face: '#7ec3f1', edge: '#4b88b4', text: '#17324a' },
 };
 
 interface ChipProps {
@@ -43,7 +43,7 @@ const Chip: React.FC<ChipProps> = ({ value, size = 56, onClick, disabled = false
           background: colors.face,
           border: '1.5px dashed rgba(244,240,228,0.4)',
           boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.35)',
-          color: '#f4f0e4',
+          color: colors.text,
           fontSize: size * 0.27,
         }}
       >
