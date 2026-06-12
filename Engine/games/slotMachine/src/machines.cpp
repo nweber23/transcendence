@@ -53,7 +53,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         for (auto& s : syms) {
             if (s == config.scatter_symbol) {
                 break;
-            }
+            }kmuhlbau: Developer
             if (s == base || s == config.wild_symbol) {
                 ++match;
             } else {
@@ -208,13 +208,6 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
             --fs_state.free_spins_remaining;
         }
         fs_state.total_free_win += total_win;
-
-        if (eval.bonus_triggered && cfg.free_spin_retrigger_count > 0) {
-            fs_state.free_spins_remaining += cfg.free_spin_retrigger_count;
-            fs_state.current_multiplier = static_cast<std::uint8_t>(
-                std::min<int>(fs_state.current_multiplier + cfg.free_spin_multiplier_increment,
-                              cfg.free_spin_max_multiplier));
-        }
     } else {
         if (eval.bonus_triggered && cfg.free_spin_count > 0) {
             fs_state.free_spins_remaining = cfg.free_spin_count;
