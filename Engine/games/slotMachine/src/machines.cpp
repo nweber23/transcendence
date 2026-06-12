@@ -101,8 +101,19 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
 
 std::string Machine::play_full_iteration(std::string_view game_name,
                                          std::uint8_t line_count,
-                                         std::uint32_t bet_per_line) {
+                                         std::uint32_t bet_per_line)
+{
+    CompleteGameCycle cycle{};
+    cycle.game_name = game_name;
+    cycle.total = bet_per_line * line_count;
 
+    FreeSpinState fs_state;
+    std::uint32_t cur_step_idx = 1;
+
+
+    std::string json_out;
+    glz::write_json(cycle, json_out);
+    return json_out;
 }
 
 Machine::Machine()
