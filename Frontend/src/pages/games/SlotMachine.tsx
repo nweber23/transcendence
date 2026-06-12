@@ -45,7 +45,7 @@ const SlotMachine: React.FC = () => {
   const undoChip = () => setStagedChips((c) => c.slice(0, -1));
   const clearChips = () => setStagedChips([]);
   const maxBet = () => {
-    const denoms = [...CHIP_VALUES].slice().sort((a, b) => b - a);
+    const denoms = [...CHIP_VALUES].sort((a, b) => b - a);
     const chips: number[] = [];
     let remaining = balance;
     for (const d of denoms) {
@@ -54,7 +54,6 @@ const SlotMachine: React.FC = () => {
         remaining -= d;
       }
     }
-    if (remaining > 0) chips.push(remaining);
     setStagedChips(chips);
   };
 
