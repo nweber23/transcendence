@@ -97,12 +97,40 @@ func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 	return nil
 }
 
-func (s *FriendService) GetFriends(userID uint) ([]models.Friendship, error) {
+func queryRelativePending(tx *gorm.DB, userID uint, operation string) (*gorm.DB) {
+	return tx.
+		Or("status = 'pending_id_low'  AND low_id  ? ?", operation, userID).
+		Or("status = 'pending_id_high' AND high_id ? ?", operation, userID)
+}
+
+func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit int) ([]models.Friendship, error) {
+	tx := s.db.Where("low_id = ? OR high_id = ?", userID, userID).
+	Where(func(tx *gorm.DB) (*gorm.DB) {
+		tx = tx.Where("TRUE")
+		for _, status := range statuses {
+			switch status {
+				case models.FriendshipStatusDormant:
+					fallthrough
+				case models.FriendshipStatusActive:
+					fallthrough
+				case models.FriendshipStatusPendingIDLow:
+					fallthrough
+				case models.FriendshipStatusPendingIDHigh:
+					tx = tx.Or("status = ?", status)
+				case models.FriendshipStatusPendingSelf:
+					tx = queryRelativePending(tx, userID, "=")
+				case models.FriendshipStatusPendingOther:
+					tx = queryRelativePending(tx, userID, "!=")
+				default:
+					tx.AddError(errors.New("invalid status"))
+					return tx
+			}
+		}
+		return tx
+	})
 	var friends []models.Friendship
-	if err := s.db.Where("(low_id = ? OR high_id = ?) AND status = 'dormant'", userID, userID).
-	Find(&friends).
-	Error; err != nil {
-		return nil, fmt.Errorf("failed to get friends: %w", err)
+	if err := tx.Order("status ASC").Order("created_at DESC").Limit(limit).Find(&friends).Error; err != nil {
+		return nil, err
 	}
 	return friends, nil
 }

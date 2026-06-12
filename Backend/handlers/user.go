@@ -471,15 +471,27 @@ func determineStatus(userID uint, friendID uint, friendship *models.Friendship) 
 	}
 }
 
-func (uh *UserHandler) GetFriends(c *gin.Context) {
+func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
 		return
 	}
-	friendships, err := uh.friendService.GetFriends(userID.(uint))
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil || limit < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err)
+		return
+	}
+	statuses := strings.Split(c.Query("statuses"), ",")
+	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "get_friends_failed", "Failed to get friends")
+		var status int
+		if err.Error() == "invalid status" {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "enumerate_friends_failed", err)
 		return
 	}
 	friendResponses := make([]FriendResponse, len(friendships))
@@ -496,7 +508,8 @@ func (uh *UserHandler) GetFriends(c *gin.Context) {
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
 			Status:    status,
-			IsOnline:  ws.IsOnline(friendID),
+			IsOnline:  status == models.FriendshipStatusActive && ws.IsOnline(friendID),
+			// TODO: Reconsider in the future if we want online status to only be advertised to friends
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}

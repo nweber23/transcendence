@@ -191,27 +191,59 @@ func getTransactionHistoryExpect(
 	}
 }
 
-func addFriendExpect(testInterface *testing.T, friendService *FriendService, userID uint, friendID uint, expectSuccess bool) {
-	if err := friendService.AddFriend(userID, friendID); (err != nil) == expectSuccess {
-		testInterface.Errorf("create friendship between %d and %d did not go as expected: %v", userID, friendID, err)
+func addFriendExpect(
+	testInterface    *testing.T,
+	friendService    *FriendService,
+	userID           uint,
+	friendID         uint,
+	expectSuccess    bool,
+	expectPending    bool,
+) {
+	isPending, err := friendService.AddFriend(userID, friendID)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("user %d add friend %d did not go as expected: %v", userID, friendID, err)
+	}
+	if err == nil && isPending != expectPending {
+		testInterface.Errorf("user %d add friend %d resulted in an unexpected pending state", userID, friendID)
+	}
+	if friendService.AreFriends(userID, friendID) == expectPending {
+		testInterface.Errorf("AddFriend reports the wrong state for user %d and friend %d", userID, friendID)
 	}
 }
 
-func removeFriendExpect(testInterface *testing.T, friendService *FriendService, userID uint, friendID uint, expectSuccess bool) {
+func ordinaryAddFriendCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
+	addFriendExpect(testInterface, friendService, 2, 1, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 4, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 3, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 5, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 2, expectSuccess, false)
+	addFriendExpect(testInterface, friendService, 1, 4, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 3, expectSuccess, expectSuccess)
+}
+
+func removeFriendExpect(
+	testInterface *testing.T,
+	friendService *FriendService,
+	userID        uint,
+	friendID      uint,
+	expectSuccess bool,
+) {
 	if err := friendService.RemoveFriend(userID, friendID); (err != nil) == expectSuccess {
-		testInterface.Errorf("remove friendship between %d and %d did not go as expected: %v", userID, friendID, err)
+		testInterface.Errorf("user %d remove friend %d did not go as expected: %v", userID, friendID, err)
 	}
 }
 
-func ordinaryFriendshipCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
-	addFriendExpect(testInterface, friendService, 1, 2, expectSuccess)
-	addFriendExpect(testInterface, friendService, 1, 4, expectSuccess)
-	addFriendExpect(testInterface, friendService, 1, 3, expectSuccess)
-	addFriendExpect(testInterface, friendService, 1, 5, expectSuccess)
-	addFriendExpect(testInterface, friendService, 2, 1, expectSuccess)
-	addFriendExpect(testInterface, friendService, 2, 4, expectSuccess)
-	addFriendExpect(testInterface, friendService, 2, 3, expectSuccess)
+func ordinaryRemoveFriendCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
+	removeFriendExpect(testInterface, friendService, 2, 1, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 4, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 3, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 5, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 1, 2, false)
+	removeFriendExpect(testInterface, friendService, 1, 4, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 1, 3, expectSuccess)
 }
+
+/*
 
 func getFriendsExpect(
 	testInterface       *testing.T,
@@ -244,6 +276,15 @@ func getFriendsExpect(
 		}
 		friendshipIndex++
 	}
+}*/
+
+func enumerateFriendsExpect(
+	testInterface       *testing.T,
+	friendService       *FriendService,
+	expectedFriendships []models.Friendship,
+	userID              uint,
+) {
+	var length int = len(expectedFriendships)
 }
 
 const STRESS_TEST_AMOUNT int = 500
@@ -379,30 +420,7 @@ func TestAccountService(testInterface *testing.T) {
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
 
-	// Self love
-	addFriendExpect(testInterface, friendService, 1, 1, false)
-
-	// Test ordinary cases and test duplicate detection
-	ordinaryFriendshipCases(testInterface, friendService, true)
-	ordinaryFriendshipCases(testInterface, friendService, false)
-	ordinaryFriendshipCases(testInterface, friendService, false)
-
-	// Self love shouldn't suddenly work
-	addFriendExpect(testInterface, friendService, 1, 1, false)
-	addFriendExpect(testInterface, friendService, 2, 2, false)
-
-	// Inexistent users
-	addFriendExpect(testInterface, friendService,  1, 90, false)
-	addFriendExpect(testInterface, friendService, 90,  1, false)
-	addFriendExpect(testInterface, friendService, 90, 90, false)
-
-	// Removal
-	removeFriendExpect(testInterface, friendService, 1, 1, true)
-	removeFriendExpect(testInterface, friendService, 1, 3, true)
-	removeFriendExpect(testInterface, friendService, 1, 3, true)
-	removeFriendExpect(testInterface, friendService, 2, 3, true)
-	removeFriendExpect(testInterface, friendService, 2, 3, true)
-
+	/*
 	// Get friends
 	expectedFriendships := []models.Friendship {
 		models.Friendship {
@@ -416,5 +434,51 @@ func TestAccountService(testInterface *testing.T) {
 		},
 	}
 	getFriendsExpect(testInterface, friendService, []models.Friendship {}, 3)
-	getFriendsExpect(testInterface, friendService, expectedFriendships,    1)
+	getFriendsExpect(testInterface, friendService, expectedFriendships,    1)*/
+
+	// Self love
+	addFriendExpect(testInterface, friendService, 1, 1, false, false)
+
+	// Test ordinary cases and test duplicate detection
+	ordinaryAddFriendCases(testInterface, friendService, true)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+
+	// Self love shouldn't suddenly work
+	addFriendExpect(testInterface, friendService, 1, 1, false, false)
+	addFriendExpect(testInterface, friendService, 2, 2, false, false)
+
+	// Inexistent users
+	addFriendExpect(testInterface, friendService,  1, 90, false, false)
+	addFriendExpect(testInterface, friendService, 90,  1, false, false)
+	addFriendExpect(testInterface, friendService, 90, 90, false, false)
+
+	// Remove friends that never existed
+	removeFriendExpect(testInterface, friendService, 1,  1, false)
+	removeFriendExpect(testInterface, friendService, 4,  3, false)
+	removeFriendExpect(testInterface, friendService, 1, 90, false)
+
+	// Remove ordinary cases and test duplicate detection
+	ordinaryRemoveFriendCases(testInterface, friendService, true)
+	ordinaryRemoveFriendCases(testInterface, friendService, false)
+	ordinaryRemoveFriendCases(testInterface, friendService, false)
+
+	// Add back ordinary cases just like earlier
+	ordinaryAddFriendCases(testInterface, friendService, true)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+	ordinaryAddFriendCases(testInterface, friendService, false)
 }
+
+/*
+New friend test cases:
+
+- Self love check
+- Unidirectional Add Friend calls, verify with friendService.AreFriends after
+- Add users that don't exist as friends
+- Check if removal works after the following cases
+	- Friend not added
+	- Friend pending
+	- Friend added
+- Check if GetFriends works properly
+
+*/

@@ -62,7 +62,7 @@ func main() {
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
 		userRoutes.POST("/:id/friends", userHandler.AddFriend)
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
-		userRoutes.GET("/friends", userHandler.GetFriends)
+		userRoutes.GET("/friends", userHandler.EnumerateFriends) // ?limit=NUMBER,statuses=RELATIVE_STATUS{,RELATIVE_STATUS}
 	}
 
 	// Game routes (protected)
