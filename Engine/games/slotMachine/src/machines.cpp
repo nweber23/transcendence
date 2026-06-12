@@ -41,9 +41,9 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
             syms.push_back(grid[row][col]);
         }
 
-        std::string base = "SYM_WILD";
+        std::string base = config.wild_symbol;
         for (auto& s : syms) {
-            if (s != config.scatter_symbol && s != "SYM_WILD") {
+            if (s != config.scatter_symbol && s != config.wild_symbol) {
                 base = s;
                 break;
             }
@@ -54,7 +54,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
             if (s == config.scatter_symbol) {
                 break;
             }
-            if (s == base || s == "SYM_WILD") {
+            if (s == base || s == config.wild_symbol) {
                 ++match;
             } else {
                 break;
@@ -65,7 +65,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         if (pt_it == config.paytable.end()) continue;
 
         std::uint32_t line_payout = 0;
-        for (std::uint8_t c = match; c >= 2; --c) {
+        for (std::uint8_t c = match; c >= 1; --c) {
             auto m_it = pt_it->second.find(c);
             if (m_it != pt_it->second.end()) {
                 line_payout = m_it->second;
