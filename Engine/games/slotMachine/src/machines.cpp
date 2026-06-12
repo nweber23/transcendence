@@ -109,11 +109,10 @@ std::string Machine::play_full_iteration(std::string_view game_name,
 
     FreeSpinState fs_state;
     std::uint32_t cur_step_idx = 1;
-    std::uint32_t accumulated_win = 0;
 
     SpinResult base = get_monetary_result(game_name, line_count, bet_per_line, fs_state, false);
     cycle.bonus_triggered = base.bonus_triggered;
-    cycle.total_overall_win = base.total_overall_win;
+    cycle.total_overall_win = base.win_amount;
     cycle.timeline.push_back({
         cur_step_idx++,
         base.is_free_spin,
@@ -125,9 +124,10 @@ std::string Machine::play_full_iteration(std::string_view game_name,
     });
     if (!base.bonus_triggered) {
         std::string json_out;
-        glz::write_json(cycle, json_out);
+        (void)glz::write_json(cycle, json_out);
         return json_out;
     }
+    std::uint32_t accumulated_win = base.win_amount;
     while (fs_state.free_spins_remaining > 0) {
         SpinResult fs_res = get_monetary_result(game_name, line_count, bet_per_line, fs_state, true);
 
@@ -145,7 +145,7 @@ std::string Machine::play_full_iteration(std::string_view game_name,
     }
     cycle.total_overall_win = accumulated_win;
     std::string json_out;
-    glz::write_json(cycle, json_out);
+    (void)glz::write_json(cycle, json_out);
     return json_out;
 }
 
