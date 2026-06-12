@@ -82,7 +82,7 @@ func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 	lowID, highID := swapIDs(firstID, secondID)
 	var friendship models.Friendship
-	err := s.db.Where("low_id = ? AND high_id = ? AND deleted_at IS NULL", lowID, highID).First(&friendship).Error
+	err := s.db.Where("low_id = ? AND high_id = ? AND status != 'dormant'", lowID, highID).First(&friendship).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.New("no friend to remove")
 	} else if err != nil {
@@ -97,39 +97,39 @@ func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 	return nil
 }
 
-func queryRelativePending(tx *gorm.DB, userID uint, operation string) (*gorm.DB) {
-	return tx.
-		Or("status = 'pending_id_low'  AND low_id  ? ?", operation, userID).
-		Or("status = 'pending_id_high' AND high_id ? ?", operation, userID)
-}
-
 func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit int) ([]models.Friendship, error) {
-	tx := s.db.Where("low_id = ? OR high_id = ?", userID, userID).
-	Where(func(tx *gorm.DB) (*gorm.DB) {
-		tx = tx.Where("TRUE")
-		for _, status := range statuses {
-			switch status {
-				case models.FriendshipStatusDormant:
-					fallthrough
-				case models.FriendshipStatusActive:
-					fallthrough
-				case models.FriendshipStatusPendingIDLow:
-					fallthrough
-				case models.FriendshipStatusPendingIDHigh:
-					tx = tx.Or("status = ?", status)
-				case models.FriendshipStatusPendingSelf:
-					tx = queryRelativePending(tx, userID, "=")
-				case models.FriendshipStatusPendingOther:
-					tx = queryRelativePending(tx, userID, "!=")
-				default:
-					tx.AddError(errors.New("invalid status"))
-					return tx
-			}
+	tx := s.db.Where("TRUE")
+	for _, status := range statuses {
+		switch status {
+			case models.FriendshipStatusDormant:
+				fallthrough
+			case models.FriendshipStatusActive:
+				fallthrough
+			case models.FriendshipStatusPendingIDLow:
+				fallthrough
+			case models.FriendshipStatusPendingIDHigh:
+				tx = tx.Or("status = ?", status)
+			case models.FriendshipStatusPendingSelf:
+				tx = tx.
+					Or("status = 'pending_id_low'  AND low_id  = ?", userID).
+					Or("status = 'pending_id_high' AND high_id = ?", userID)
+			case models.FriendshipStatusPendingOther:
+				tx = tx.
+					Or("status = 'pending_id_low'  AND low_id  != ?", userID).
+					Or("status = 'pending_id_high' AND high_id != ?", userID)
+			default:
+				return nil, errors.New("invalid status")
 		}
-		return tx
-	})
+	}
 	var friends []models.Friendship
-	if err := tx.Order("status ASC").Order("created_at DESC").Limit(limit).Find(&friends).Error; err != nil {
+	if err := s.db.
+		Where("low_id = ? OR high_id = ?", userID, userID).
+		Where(tx).
+		Order("status ASC").
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&friends).
+	Error; err != nil {
 		return nil, err
 	}
 	return friends, nil
@@ -141,7 +141,7 @@ func (s *FriendService) AreFriends(firstID uint, secondID uint) (bool, error) {
 	} 
 	lowID, highID := swapIDs(firstID, secondID)
 	var friendship models.Friendship
-	err := s.db.Where("low_id = ? AND high_id = ? AND deleted_at IS NULL", lowID, highID).First(&friendship).Error
+	err := s.db.Where("low_id = ? AND high_id = ? AND status = 'active'", lowID, highID).First(&friendship).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if err != nil {
