@@ -53,7 +53,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         for (auto& s : syms) {
             if (s == config.scatter_symbol) {
                 break;
-            }kmuhlbau: Developer
+            }
             if (s == base || s == config.wild_symbol) {
                 ++match;
             } else {
