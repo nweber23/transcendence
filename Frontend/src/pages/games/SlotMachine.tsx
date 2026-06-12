@@ -71,7 +71,7 @@ const SlotMachine: React.FC = () => {
     if (!windowRef.current) return;
     const measured = Math.floor(windowRef.current.clientHeight / 3);
     if (measured > 0) setItemHeight(measured);
-  }, []);
+  }, [isSmallScreen]);
 
   // Initialize reels once item height is known
   useEffect(() => {
@@ -137,8 +137,18 @@ const SlotMachine: React.FC = () => {
   const ghostButton = 'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.12)] text-[var(--text-3)] text-[9px] font-semibold uppercase tracking-[0.12em] hover:border-[rgba(212,175,55,0.3)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
 
   return (
-    <>
-      <style>{`
+      <div
+        className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
+        style={{ height: 'calc(100dvh - 4.75rem)' }}
+      >
+        {isSmallScreen ? (
+          <UnsupportedScreenSize
+            title="Screen Too Small"
+            subtitle="This game is best enjoyed on a larger display. Please use a tablet or desktop to play."
+          />
+        ) : (
+        <>
+        <style>{`
         .slot-col {
           padding: 0 10px;
           transform: translateY(calc(-100% + ${itemHeight * 3}px));
@@ -181,19 +191,6 @@ const SlotMachine: React.FC = () => {
           to { transform: translateY(0); }
         }
       `}</style>
-
-      {/* mt-[4.75rem] clears the floating global Header pill */}
-      <div
-        className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
-        style={{ height: 'calc(100dvh - 4.75rem)' }}
-      >
-        {isSmallScreen ? (
-          <UnsupportedScreenSize
-            title="Screen Too Small"
-            subtitle="This game is best enjoyed on a larger display. Please use a tablet or desktop to play."
-          />
-        ) : (
-        <>
         <GameTopBar title="Lucky Fruits" subtitle={`5-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
@@ -379,7 +376,6 @@ const SlotMachine: React.FC = () => {
         </>
         )}
       </div>
-    </>
   );
 };
 
