@@ -83,6 +83,24 @@ struct SpinEvalResult {
     bool bonus_triggered;
 };
 
+struct SpinStep {
+    std::uint32_t step;
+    bool is_free_spin;
+    std::uint8_t free_spins_remaining;
+    std::uint8_t multiplier;
+    std::vector<std::uint8_t> stops;
+    std::uint32_t step_win;
+    std::uint32_t accumulated_free_win;
+};
+
+struct CompleteGameCycle {
+    std::string game_name;
+    std::uint32_t total_initial_bet;
+    std::uint32_t total_overall_win;
+    bool bonus_triggered;
+    std::vector<SpinStep> timeline;
+};
+
 template <>
 struct glz::meta<SymbolInfo> {
     using type = SymbolInfo;
@@ -135,6 +153,11 @@ class Machine {
     public:
         Machine();
         explicit Machine(std::uint64_t seed);
+
+        [[nodiscard]]
+        std::string play_full_iteration(std::string_view game_name,
+                                        std::uint8_t line_count,
+                                        std::uint32_t bet_per_line);
 
         [[nodiscard]]
         SpinResult get_monetary_result(std::string_view game_name,
