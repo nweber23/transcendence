@@ -254,6 +254,16 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
 
     if (is_free_spin) {
         total_win *= fs_state.current_multiplier;
+    }
+
+    if (cfg.max_win_multiplier > 0) {
+        std::uint32_t max_win = cfg.max_win_multiplier * line_count * bet_per_line;
+        if (total_win > max_win) {
+            total_win = max_win;
+        }
+    }
+
+    if (is_free_spin) {
         if (fs_state.free_spins_remaining > 0) {
             --fs_state.free_spins_remaining;
         }
@@ -263,13 +273,6 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
             fs_state.free_spins_remaining = cfg.free_spin_count;
             fs_state.current_multiplier = cfg.free_spin_multiplier;
             fs_state.total_free_win = 0;
-        }
-    }
-
-    if (cfg.max_win_multiplier > 0) {
-        std::uint32_t max_win = cfg.max_win_multiplier * line_count * bet_per_line;
-        if (total_win > max_win) {
-            total_win = max_win;
         }
     }
 
