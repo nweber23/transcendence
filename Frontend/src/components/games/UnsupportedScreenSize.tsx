@@ -25,7 +25,7 @@ const UnsupportedScreenSize: React.FC<UnsupportedScreenSizeProps> = ({
         </h1>
 
         {/* Subtitle */}
-        <p className="text-[var(--text-2)] text-base leading-relaxed">
+        <p className="text-text text-base leading-relaxed opacity-75">
           {subtitle}
         </p>
       </div>
