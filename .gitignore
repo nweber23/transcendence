@@ -34,8 +34,11 @@ go.work.sum
 # Claude
 .claude
 .playwright-mcp
+.superpowers
+docs/superpowers
 
 _*
+!**/__tests__/
 
 # Incase of local test builds
 Backend/backend

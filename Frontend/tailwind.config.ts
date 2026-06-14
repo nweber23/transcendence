@@ -27,7 +27,7 @@ export default {
       },
       fontFamily: {
         serif: ['Playfair Display', 'Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
       },
       fontSize: {
         xs: ['0.6875rem', { lineHeight: '1.15' }],
