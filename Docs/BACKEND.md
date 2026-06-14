@@ -32,17 +32,20 @@ Backend/
 │   ├── user.go                 # User struct with auth fields
 │   ├── account.go              # Account balance, transaction tracking
 │   ├── transaction.go          # Immutable audit log
-│   └── game.go                 # Game, BlackjackGame, PokerGame, SlotsGame
+│   ├── game.go                 # Game, BlackjackGame, PokerGame, SlotsGame
+│   └── friendship.go           # Multi-ID friendship with absolute status
 ├── handlers/
 │   ├── auth.go                 # POST /auth/register, /login, /logout
 │   ├── games.go                # GET/POST /games, POST /games/:id/action
 │   ├── user.go                 # GET /user/profile, /account, deposits, withdrawals
-│   └── ws.go                   # WebSocket upgrade, game room broadcast
+│   └── ws.go                   # WebSocket upgrade
 ├── services/
 │   ├── user_service.go         # User CRUD, authentication
 │   ├── account_service.go      # Balance ops, transaction creation
 │   ├── game_service.go         # Game creation, action execution
-│   └── engine_client.go        # gRPC stub (placeholder for C++ engine)
+│   ├── engine_client.go        # gRPC stub (placeholder for C++ engine)
+│   ├── friend_service.go       # Friend System
+│   └── services_test.go        # Service Integration tests
 ├── middleware/
 │   ├── auth.go                 # JWT validation middleware
 │   └── cors.go                 # CORS headers
@@ -50,10 +53,14 @@ Backend/
 │   ├── jwt.go                  # Token generation/validation
 │   ├── password.go             # Bcrypt hashing/verification
 │   ├── email.go                # Email format + DNS validation
-│   └── response.go             # Standardized JSON responses
+│   ├── response.go             # Standardized JSON responses
+│   ├── other.go                # Everything else
+│   └── utils_test.go           # Utils Unit tests
+├── ws/
+│   └── ws.go                   # WebSocket management, topic system
 ├── Dockerfile                  # Multi-stage Go build
-├── go.mod / go.sum            # Dependencies
-└── .env.example               # Configuration template
+├── go.mod / go.sum             # Dependencies
+└── .env.example                # Configuration template
 ```
 
 ---
@@ -99,6 +106,9 @@ The backend will:
 | GET | `/user/account/transactions` | Paginated transaction history |
 | POST | `/user/account/deposit` | Add funds |
 | POST | `/user/account/withdraw` | Withdraw funds |
+| POST | `/user/:id/friends` | Add friend, both parties must run this endpoint |
+| DELETE | `/user/:id/friends` | Remove friend
+| GET | `/user/friends?limit=<NUMBER>&statuses=<RELATIVE_STATUS{,RELATIVE_STATUS}>` | Enumerate up to "limit" friends with "statuses" as a filter |
 
 ### Games (Protected with JWT)
 | Method | Path | Purpose |
@@ -111,7 +121,7 @@ The backend will:
 ### WebSocket (Real-time)
 | Endpoint | Purpose |
 |----------|---------|
-| GET `/ws?token=<JWT>&game_id=<ID>` | Join game room, receive live updates |
+| GET `/ws?token=<JWT>&topics=<TOPIC{,TOPIC}>` | Create a websocket that subscribes to the specified topics |
 
 **Events broadcast to connected clients:**
 - `player_joined` - New player connected
@@ -136,9 +146,8 @@ The backend will:
 - Verified on login via `bcrypt.CompareHashAndPassword`
 
 **WebSocket Security:**
-- JWT passed in query string: `ws://localhost:8080/ws?token=<JWT>&game_id=<ID>`
-- Token validated before WebSocket upgrade
-- User verified to own the game before joining
+- JWT passed in query string: `ws://localhost:8080/ws?token=<JWT>&topics=<TOPIC{,TOPIC}>`
+- Token is moved from query string to header then validated as per usual
 
 ---
 
@@ -146,7 +155,7 @@ The backend will:
 
 **Automatic Schema Migration:**
 - Runs on startup via GORM `AutoMigrate()`
-- Creates tables: `users`, `accounts`, `transactions`, `games`, `blackjack_games`, `poker_games`, `slots_games`, `game_statistics`
+- Creates tables: `users`, `accounts`, `transactions`, `games`, `blackjack_games`, `poker_games`, `slots_games`, `game_statistics`, `friendships`
 - Foreign key constraints with CASCADE delete
 
 **Key Data Types:**
@@ -216,6 +225,12 @@ Hub (global)
 - `ExecutePokerAction(...)` - Call C++ engine (stub)
 - `ExecuteSlotsAction(...)` - Call C++ engine (stub)
 - `Health(ctx)` - Health check
+
+**FriendService**
+- `AddFriend(userID, friendID)` - Advances the friend status between two users (ID order matters)
+- `RemoveFriend(firstID, secondID)` - Removes a friendships between two users (ID order does not matter)
+- `EnumerateFriends(userID, statuses, limit)` - Enumerate friends with a filter and a limit, applied in that order
+- `AreFriends(firstID, secondID)` - Checks whether two users are friends (ID order does not matter)
 
 ---
 
