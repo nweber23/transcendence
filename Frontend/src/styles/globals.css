@@ -61,7 +61,7 @@
   }
 
   /* Enhanced input focus feedback with glow effect */
-  input:focus {
+  input:not([type="range"]):focus {
     background-image: linear-gradient(
       to bottom,
       rgba(212, 175, 55, 0.02),
@@ -382,6 +382,121 @@
   .card-transition:hover .card-icon {
     transform: translateY(-5px) scale(1.04);
   }
+}
+
+/* ─── GAME TABLES (Blackjack · Poker) ─── */
+@keyframes card-deal {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-deal {
+  animation: card-deal 420ms var(--ease-out) backwards;
+}
+
+@keyframes card-flip-in {
+  from {
+    transform: perspective(600px) rotateY(88deg);
+  }
+  to {
+    transform: perspective(600px) rotateY(0deg);
+  }
+}
+
+.card-flip-in {
+  animation: card-flip-in 340ms var(--ease-out);
+}
+
+@keyframes banner-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.banner-pop {
+  animation: banner-pop 360ms var(--ease-out) 120ms backwards;
+}
+
+@keyframes chip-pop {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.chip-pop {
+  animation: chip-pop 200ms var(--ease-out);
+}
+
+/* Gold range slider — set --fill inline to the filled percentage */
+.range-gold {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--gold) var(--fill, 50%),
+    var(--border-2) var(--fill, 50%)
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.range-gold:focus-visible {
+  box-shadow: 0 0 0 2px rgba(10, 14, 18, 0.9), 0 0 0 4px rgba(212, 175, 55, 0.45);
+}
+
+.range-gold::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid #0a0e12;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.range-gold::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.range-gold::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-2);
+}
+
+.range-gold::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gold);
+}
+
+.range-gold::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid #0a0e12;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
 }
 
 /* ─── SCROLLBAR ─── */
