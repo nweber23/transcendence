@@ -401,7 +401,7 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 	}
 	friendID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", "Invalid id format")
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err)
 		return
 	}
 	isPending, err := uh.friendService.AddFriend(userID.(uint), uint(friendID))
@@ -409,9 +409,9 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		if (err.Error() == "self love only works irl" ||
 			errors.Is(err, gorm.ErrRecordNotFound) ||
 			err.Error() == "friend already added") {
-			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", "Invalid ids")
+			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", err)
 		} else {
-			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", "Failed to add friend")
+			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", err)
 		}
 	} else {
 		status := models.FriendshipStatusActive
@@ -434,11 +434,11 @@ func (uh *UserHandler) RemoveFriend(c *gin.Context) {
 	}
 	friendID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", "Invalid id format")
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err)
 		return
 	}
 	if err := uh.friendService.RemoveFriend(userID.(uint), uint(friendID)); err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", "Failed to remove friend")
+		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", err)
 	} else {
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
@@ -508,7 +508,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
 			Status:    status,
-			IsOnline:  status == models.FriendshipStatusActive && ws.IsOnline(friendID),
+			IsOnline:  status != models.FriendshipStatusDormant && ws.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}

@@ -111,12 +111,12 @@ func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit i
 				statusTx = statusTx.Or("status = ?", status)
 			case models.FriendshipStatusPendingSelf:
 				statusTx = statusTx.
-					Or("status = \"pending_id_low\"  AND low_id  = ?", userID).
-					Or("status = \"pending_id_high\" AND high_id = ?", userID)
+					Or("status = 'pending_id_low'  AND low_id  = ?", userID).
+					Or("status = 'pending_id_high' AND high_id = ?", userID)
 			case models.FriendshipStatusPendingOther:
 				statusTx = statusTx.
-					Or("status = \"pending_id_low\"  AND low_id  != ?", userID).
-					Or("status = \"pending_id_high\" AND high_id != ?", userID)
+					Or("status = 'pending_id_low'  AND low_id  != ?", userID).
+					Or("status = 'pending_id_high' AND high_id != ?", userID)
 			default:
 				return nil, errors.New("invalid status")
 		}

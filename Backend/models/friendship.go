@@ -5,8 +5,8 @@ import (
 )
 
 type Friendship struct {
-	LowID       uint       `gorm:"primaryKey"`
-	HighID      uint       `gorm:"primaryKey"`
+	LowID       uint       `gorm:"primaryKey;uniqueIndex:friendship_binding"`
+	HighID      uint       `gorm:"primaryKey;uniqueIndex:friendship_binding"`
 	Status      string     `gorm:"default:'dormant';index"`
 	CreatedAt   time.Time
 	DeletedAt   *time.Time `gorm:"index"`
