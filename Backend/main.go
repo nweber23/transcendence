@@ -21,10 +21,6 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	// Start wsMain
-	ws.State.FriendService = services.NewFriendService(db)
-	go ws.Main()
-
 	router := gin.Default()
 
 	// CORS middleware
@@ -37,10 +33,15 @@ func main() {
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 
+	// Initialize WebSockets
+	wsState := ws.CreateWebSocketState(friendService)
+	go wsState.Main()
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
+	wsHandler   := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")
@@ -77,7 +78,7 @@ func main() {
 	}
 
 	// WebSocket route
-	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), handlers.UpgradeConnection)
+	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), wsHandler.UpgradeConnection)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -29,9 +29,12 @@ const AppLayout: React.FC = () => {
   const token = localStorage.getItem('auth_token')
   if(token != null) {
     const socket = createWebSocket(token, ["generic"])
-    socket.addEventListener("open", (event: Event) => {
+    socket.onopen = (e) => {
       console.log("Connection established");
-    });
+    }
+    socket.onmessage = (e) => {
+      console.log("Message: " + e.data);
+    }
   }
 
   return (

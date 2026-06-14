@@ -1,8 +1,8 @@
 package ws
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -28,7 +28,7 @@ var TopicMap = map[string]Topic{
 }
 
 type packet struct {
-	UserID  uint
+	UserID  uint            `json:"-"`
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
@@ -36,11 +36,6 @@ type packet struct {
 type packetOnline struct {
 	UserID   uint `json:"user_id"`
 	IsOnline bool `json:"is_online"`
-}
-
-type protectedConnectionList struct {
-	Mutex       sync.RWMutex
-	Connections []*websocket.Conn
 }
 
 type topicSendList struct {
@@ -54,61 +49,76 @@ type client struct {
 	SendLists      [TopicMax]topicSendList
 }
 
-type SocketState struct {
-	Clients       map[uint]*client
-	ClientsMutex  sync.RWMutex
-	ReadChannel   chan packet
-	ReadMutex     sync.RWMutex
-	ReadOk        bool
+type WebSocketState struct {
+	clients       map[uint]*client
+	clientsMutex  sync.RWMutex
+	readChannel   chan packet
+	readMutex     sync.RWMutex
+	readOk        bool
 
-	FriendService *services.FriendService
+	friendService *services.FriendService
 }
 
-var State SocketState
+func CreateWebSocketState(friendService *services.FriendService) (*WebSocketState) {
+	return &WebSocketState{
+		clients:       make(map[uint]*client),
+		readChannel:   make(chan packet, 256),
+		readOk:        true,
+
+		friendService: friendService,
+	}
+}
 
 // Internal connection Managers (Only manages protected connection lists directly)
 
-func appendConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
-	connectionList.Mutex.Lock()
-	connectionList.Connections = append(connectionList.Connections, connection)
-	connectionList.Mutex.Unlock()
-}
-
-func popSwapConnection(connectionList *protectedConnectionList, connection *websocket.Conn) {
-	connectionList.Mutex.Lock()
-	defer connectionList.Mutex.Unlock()
-	connections := &connectionList.Connections
-	for connectionIndex, toDelete := range *connections {
-		if toDelete == connection {
-			newLength := len(*connections) - 1
-			(*connections)[connectionIndex] = (*connections)[newLength]
-			(*connections)[newLength] = nil
-			(*connections) = (*connections)[:newLength]
-			return
-		}
-	}
-}
-
-func SendToTopic(userID uint, topic Topic, packetType string, payload any) (error) {
+func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, packetType string, payload any) (error) {
 	var Packet packet
+	var err error
 	Packet.Type = packetType
-	Packet.Payload, err := json.Marshal(payload)
+	Packet.Payload, err = json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	State.ClientsMutex.RLock()
-	defer State.ClientsMutex.RUnlock()
-	if State.Clients[userID] == nil {
+	wsState.clientsMutex.RLock()
+	defer wsState.clientsMutex.RUnlock()
+	if wsState.clients[userID] == nil {
 		return errors.New("client offline")
 	} else {
-		State.Clients[userID].SendLists[topic].SendChannel <- Packet
+		wsState.clients[userID].SendLists[topic].SendChannel <- Packet
 		return nil
 	}
 }
 
-func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
-	State.ClientsMutex.Lock()
-	Client := State.Clients[userID]
+func (wsState *WebSocketState) BroadcastToFriends(userID uint, topic Topic, packetType string, payload any) (error) {
+	friendships, err := wsState.friendService.EnumerateFriends(userID, []string{"active"}, 2147483647)
+	if err != nil {
+		return err
+	}
+	for _, friendship := range friendships {
+		friendID := friendship.LowID
+		if friendID == userID {
+			friendID = friendship.HighID
+		}
+		err = wsState.SendToTopic(friendID, topic, packetType, payload)
+		if err != nil {
+			return fmt.Errorf("Error sending to topic: %w\n", err)
+		}
+	}
+	return nil
+}
+
+func (wsState *WebSocketState) BroadcastToEveryone(topic Topic, packetType string, payload any) {
+	wsState.clientsMutex.RLock()
+	clients := wsState.clients
+	wsState.clientsMutex.RUnlock()
+	for userID, _ := range clients {
+		wsState.SendToTopic(userID, topic, packetType, payload)
+	}
+}
+
+func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
+	wsState.clientsMutex.Lock()
+	Client := wsState.clients[userID]
 	if Client == nil {
 		Client = &client{
 			UserID:     userID,
@@ -121,158 +131,73 @@ func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 			go pumpToTopic(&Client.SendLists[listIndex])
 			listIndex++
 		}
-		State.Clients[userID] = Client
+		wsState.clients[userID] = Client
 	}
-	appendConnection(&Client.ConnectionList, connection)
+	Client.ConnectionList.append(connection)
 	for _, topic := range topics {
-		appendConnection(&Client.SendLists[topic].ConnectionList, connection)
+		Client.SendLists[topic].ConnectionList.append(connection)
 	}
-	go pumpFromConnection(userID, &Client.ConnectionList.Mutex, connection)
-	clients := State.Clients
-	State.ClientsMutex.Unlock()
+	go wsState.pumpFromConnection(userID, connection)
+	wsState.clientsMutex.Unlock()
 	fmt.Printf("Connection added for user %d\n", userID)
-	// TODO: Implement friend system in frontend so the below code snippet can be tested
-
-	/*friends, err := State.FriendService.EnumerateFriends(userID, string{"active"}, ^uint(0))
-	for _, friend := range friends {
-		payload := packetOnline{
-			UserID:   userID,
-			IsOnline: true,
-		}
-		_ = SendToTopic(friend.ID, TopicGeneric, "online", payload)
-	}*/
-
-	for otherID, _ := range clients {
-		payload := packetOnline{
-			UserID:   userID,
-			IsOnline: true
-		}
-		_ = SendToTopic(otherID, TopicGeneric, "online", payload)
+	payload := packetOnline{
+		UserID:   userID,
+		IsOnline: true,
 	}
+	// TODO: Implement friend system in frontend so we can only broadcast to friends
+	// wsState.BroadcastToFriends(userID, TopicGeneric, "online", payload)
+	wsState.BroadcastToEveryone(TopicGeneric, "online", payload)
 }
 
-func timeoutClient() {
-	time.Sleep(time.Second * 3)
-	
-}
-
-func RemoveConnection(userID uint, connection *websocket.Conn) {
-	State.ClientsMutex.Lock()
-	defer State.ClientsMutex.Unlock()
-	Client := State.Clients[userID]
-	if Client == nil {
-		return
-	}
-	popSwapConnection(&Client.ConnectionList, connection)
-	for sendListIndex, _ := range Client.SendLists {
-		popSwapConnection(&Client.SendLists[sendListIndex].ConnectionList, connection)
-	}
-	if len(Client.ConnectionList.Connections) == 0 {
-		for _, sendList := range Client.SendLists {
-			close(sendList.SendChannel)
-		}
-		delete(State.Clients, userID)
-	}
-	fmt.Printf("Connection removed for user %d\n", userID)
-	go timeoutClient()
-}
-
-func CloseConnection(userID uint, connection *websocket.Conn) {
-	RemoveConnection(userID, connection)
-	connection.Close()
-}
-
-func IsOnline(userID uint) (bool) {
-	State.ClientsMutex.RLock()
-	isOnline := (State.Clients[userID] != nil)
-	State.ClientsMutex.RUnlock()
+func (wsState *WebSocketState) IsOnline(userID uint) (bool) {
+	wsState.clientsMutex.RLock()
+	isOnline := (wsState.clients[userID] != nil)
+	wsState.clientsMutex.RUnlock()
 	return isOnline
 }
 
-// Pumps
+func (wsState *WebSocketState) timeoutClient(userID uint) {
+	const timeout        int = 1000
+	const iterationCount int = 1000
 
-func pumpToTopic(sendList *topicSendList) {
-	for {
-		message, ok := <- sendList.SendChannel
-		if !ok {
+	for iteration := 0; iteration < iterationCount; {
+		time.Sleep(time.Millisecond * time.Duration(timeout / iterationCount))
+		if wsState.IsOnline(userID) {
 			return
 		}
-		sendList.ConnectionList.Mutex.RLock()
-		connections := make([]*websocket.Conn, len(sendList.ConnectionList.Connections))
-		copy(connections, sendList.ConnectionList.Connections)
-		sendList.ConnectionList.Mutex.RUnlock()
-		for _, connection := range connections {
-			if err := connection.WriteJSON(message); err != nil {
-				log.Printf("Failed to send message: %v", err)
-			}
-		}
+		iteration++
 	}
-}
-
-func pumpFromConnection(userID uint, mutex *sync.RWMutex, connection *websocket.Conn) {
-	for {
-		var packet packet
-		// TODO: Does connection need sync
-		if err := connection.ReadJSON(&packet); err != nil {
-			CloseConnection(userID, connection)
-			return
-		}
-		packet.UserID = userID
-		// I frickin' hate that you can't use comma ok when writing to channels
-		State.ReadMutex.RLock()
-		if !State.ReadOk {
-			State.ReadMutex.RUnlock()
-			return
-		}
-		State.ReadChannel <- packet
-		State.ReadMutex.RUnlock()
+	payload := packetOnline{
+		UserID:   userID,
+		IsOnline: false,
 	}
+	// TODO: Implement friend system in frontend so we can only broadcast to friends
+	// wsState.BroadcastToFriends(userID, TopicGeneric, "online", payload)
+	wsState.BroadcastToEveryone(TopicGeneric, "online", payload)
 }
 
-// ws.Main thread
-
-func initialize() {
-	State.Clients     = make(map[uint]*client)
-	State.ReadChannel = make(chan packet, 256)
-	State.ReadOk      = true
-}
-
-func handleIncomingPackets() {
-	for {
-		packet, ok := <- State.ReadChannel
-		if !ok {
-			return
-		}
-		log.Printf("Received packet with type %s from %d", packet.Type, packet.UserID)
-		//switch packet.Type {
-		//}
+func (wsState *WebSocketState) RemoveConnection(userID uint, connection *websocket.Conn) {
+	wsState.clientsMutex.Lock()
+	defer wsState.clientsMutex.Unlock()
+	Client := wsState.clients[userID]
+	if Client == nil {
+		return
 	}
-}
-
-func terminate() {
-	State.ClientsMutex.Lock()
-	for _, Client := range State.Clients {
+	Client.ConnectionList.swapPop(connection)
+	for sendListIndex, _ := range Client.SendLists {
+		Client.SendLists[sendListIndex].ConnectionList.swapPop(connection)
+	}
+	if Client.ConnectionList.length() == 0 {
 		for _, sendList := range Client.SendLists {
-			_, ok := <- sendList.SendChannel
-			if ok {
-				close(sendList.SendChannel)
-			}
+			close(sendList.SendChannel)
 		}
+		delete(wsState.clients, userID)
+		go wsState.timeoutClient(userID)
 	}
-	State.ClientsMutex.Unlock()
+	fmt.Printf("Connection removed for user %d\n", userID)
 }
 
-func Main() {
-	initialize()
-	handleIncomingPackets()
-	terminate()
-}
-
-// ws.Stop
-
-func Stop() {
-	State.ReadMutex.Lock()
-	close(State.ReadChannel)
-	State.ReadOk = false
-	State.ReadMutex.Unlock()
+func (wsState *WebSocketState) CloseConnection(userID uint, connection *websocket.Conn) {
+	wsState.RemoveConnection(userID, connection)
+	connection.Close()
 }

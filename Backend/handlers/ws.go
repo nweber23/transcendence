@@ -12,7 +12,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func UpgradeConnection(c *gin.Context) {
+type WebSocketHandler struct {
+	state *ws.WebSocketState
+}
+
+func NewWebSocketHandler(state *ws.WebSocketState) (*WebSocketHandler) {
+	return &WebSocketHandler{
+		state: state,
+	}
+}
+
+func (wsHandler *WebSocketHandler) UpgradeConnection(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
@@ -44,5 +54,5 @@ func UpgradeConnection(c *gin.Context) {
 		fmt.Printf("Websocket upgrade error: %v", err)
 		return
 	}
-	ws.AddConnection(userID.(uint), connection, topics)
+	wsHandler.state.AddConnection(userID.(uint), connection, topics)
 }
