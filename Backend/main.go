@@ -22,6 +22,7 @@ func main() {
 	}
 
 	// Start wsMain
+	ws.State.FriendService = services.NewFriendService(db)
 	go ws.Main()
 
 	router := gin.Default()
@@ -76,7 +77,6 @@ func main() {
 	}
 
 	// WebSocket route
-	//router.GET("/ws", handlers.HandleWebSocket(gameService, cfg.JWTSecret))
 	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), handlers.UpgradeConnection)
 
 	port := os.Getenv("PORT")

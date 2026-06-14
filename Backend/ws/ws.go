@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"encoding/json"
+	"transcendence/services"
 
 	"github.com/gorilla/websocket"
 )
@@ -31,6 +33,11 @@ type packet struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+type packetOnline struct {
+	UserID   uint `json:"user_id"`
+	IsOnline bool `json:"is_online"`
+}
+
 type protectedConnectionList struct {
 	Mutex       sync.RWMutex
 	Connections []*websocket.Conn
@@ -48,11 +55,13 @@ type client struct {
 }
 
 type SocketState struct {
-	Clients      map[uint]*client
-	ClientsMutex sync.Mutex
-	ReadChannel  chan packet
-	ReadMutex    sync.RWMutex
-	ReadOk       bool
+	Clients       map[uint]*client
+	ClientsMutex  sync.RWMutex
+	ReadChannel   chan packet
+	ReadMutex     sync.RWMutex
+	ReadOk        bool
+
+	FriendService *services.FriendService
 }
 
 var State SocketState
@@ -80,11 +89,25 @@ func popSwapConnection(connectionList *protectedConnectionList, connection *webs
 	}
 }
 
-// External connection Managers (Create and remove clients as needed)
+func SendToTopic(userID uint, topic Topic, packetType string, payload any) (error) {
+	var Packet packet
+	Packet.Type = packetType
+	Packet.Payload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	State.ClientsMutex.RLock()
+	defer State.ClientsMutex.RUnlock()
+	if State.Clients[userID] == nil {
+		return errors.New("client offline")
+	} else {
+		State.Clients[userID].SendLists[topic].SendChannel <- Packet
+		return nil
+	}
+}
 
 func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 	State.ClientsMutex.Lock()
-	defer State.ClientsMutex.Unlock()
 	Client := State.Clients[userID]
 	if Client == nil {
 		Client = &client{
@@ -105,7 +128,32 @@ func AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 		appendConnection(&Client.SendLists[topic].ConnectionList, connection)
 	}
 	go pumpFromConnection(userID, &Client.ConnectionList.Mutex, connection)
+	clients := State.Clients
+	State.ClientsMutex.Unlock()
 	fmt.Printf("Connection added for user %d\n", userID)
+	// TODO: Implement friend system in frontend so the below code snippet can be tested
+
+	/*friends, err := State.FriendService.EnumerateFriends(userID, string{"active"}, ^uint(0))
+	for _, friend := range friends {
+		payload := packetOnline{
+			UserID:   userID,
+			IsOnline: true,
+		}
+		_ = SendToTopic(friend.ID, TopicGeneric, "online", payload)
+	}*/
+
+	for otherID, _ := range clients {
+		payload := packetOnline{
+			UserID:   userID,
+			IsOnline: true
+		}
+		_ = SendToTopic(otherID, TopicGeneric, "online", payload)
+	}
+}
+
+func timeoutClient() {
+	time.Sleep(time.Second * 3)
+	
 }
 
 func RemoveConnection(userID uint, connection *websocket.Conn) {
@@ -126,6 +174,7 @@ func RemoveConnection(userID uint, connection *websocket.Conn) {
 		delete(State.Clients, userID)
 	}
 	fmt.Printf("Connection removed for user %d\n", userID)
+	go timeoutClient()
 }
 
 func CloseConnection(userID uint, connection *websocket.Conn) {
@@ -134,9 +183,9 @@ func CloseConnection(userID uint, connection *websocket.Conn) {
 }
 
 func IsOnline(userID uint) (bool) {
-	State.ClientsMutex.Lock()
+	State.ClientsMutex.RLock()
 	isOnline := (State.Clients[userID] != nil)
-	State.ClientsMutex.Unlock()
+	State.ClientsMutex.RUnlock()
 	return isOnline
 }
 
@@ -201,6 +250,7 @@ func handleIncomingPackets() {
 }
 
 func terminate() {
+	State.ClientsMutex.Lock()
 	for _, Client := range State.Clients {
 		for _, sendList := range Client.SendLists {
 			_, ok := <- sendList.SendChannel
@@ -209,6 +259,7 @@ func terminate() {
 			}
 		}
 	}
+	State.ClientsMutex.Unlock()
 }
 
 func Main() {

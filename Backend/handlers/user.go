@@ -508,7 +508,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
 			Status:    status,
-			IsOnline:  status != models.FriendshipStatusDormant && ws.IsOnline(friendID),
+			IsOnline:  status == models.FriendshipStatusActive && ws.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
 			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
