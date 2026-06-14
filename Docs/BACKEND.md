@@ -271,7 +271,6 @@ Hub (global)
    - Replace placeholder responses in `engine_client.go`
 
 2. **Testing:**
-   - Unit tests for services
    - Integration tests for API endpoints
    - WebSocket connection/broadcast tests
 
