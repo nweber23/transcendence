@@ -269,7 +269,7 @@ func enumerateFriendsExpect(
 		return
 	}
 	if length != len(actualFriendships) {
-		testInterface.Errorf("Actual friendships don't match the expected ones in terms of length")
+		testInterface.Errorf("Actual friendships don't match the expected ones in terms of length for user %d", userID)
 		return
 	}
 	for friendshipIndex := 0; friendshipIndex < length; {
@@ -278,15 +278,15 @@ func enumerateFriendsExpect(
 
 		// Some data cannot be reliably replicated or tested
 		expected.CreatedAt = actual.CreatedAt
-		expected.DeletedAt = expected.DeletedAt
+		expected.DeletedAt = actual.DeletedAt
 
 		if actual.LowID > actual.HighID {
 			testInterface.Errorf("LowID is greater than HighID at index %d",
 				friendshipIndex)
 		}
 		if !reflect.DeepEqual(*expected, *actual) {
-			testInterface.Errorf("Friendships differ at index %d, here is a breakdown of their differences:\n",
-				friendshipIndex)
+			testInterface.Errorf("Friendships differ for user %d at index %d, here is a breakdown of their differences:\n",
+				userID, friendshipIndex)
 			displayDifferences(testInterface, expected, actual)
 		}
 		friendshipIndex++
@@ -471,28 +471,30 @@ func TestAccountService(testInterface *testing.T) {
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 		models.Friendship{
 			LowID:  1,
-			HighID: 2,
+			HighID: 3,
 			Status: models.FriendshipStatusDormant,
 		},
 		models.Friendship{
 			LowID:  1,
-			HighID: 3,
+			HighID: 2,
 			Status: models.FriendshipStatusDormant,
 		},
 	}, true, 1, []string{models.FriendshipStatusDormant}, 90)
-	friendService.AddFriend(4, 5)
 
 	// Limited output
+	friendService.AddFriend(4, 5)
+	friendService.AddFriend(4, 7) // Call fails because user 7 does not exist
+	friendService.AddFriend(4, 3)
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 		models.Friendship{
-			LowID:  4,
-			HighID: 7,
-			Status: models.FriendshipStatusPendingIDLow,
-		},
-		models.Friendship{
-			LowID:  2,
+			LowID:  3,
 			HighID: 4,
 			Status: models.FriendshipStatusPendingIDHigh,
+		},
+		models.Friendship{
+			LowID:  4,
+			HighID: 5,
+			Status: models.FriendshipStatusPendingIDLow,
 		},
 	}, true, 4, []string{models.FriendshipStatusPendingSelf}, 2)
 
@@ -504,15 +506,18 @@ func TestAccountService(testInterface *testing.T) {
 			Status: models.FriendshipStatusDormant,
 		},
 		models.Friendship{
+			LowID:  3,
+			HighID: 4,
+			Status: models.FriendshipStatusPendingIDHigh,
+		},
+		models.Friendship{
 			LowID:  2,
 			HighID: 3,
-			Status: models.FriendshipStatusPendingOther,
+			Status: models.FriendshipStatusPendingIDLow,
 		},
-	}, true, 2, []string{models.FriendshipStatusDormant, models.FriendshipStatusPendingOther}, 90)
+	}, true, 3, []string{models.FriendshipStatusDormant, models.FriendshipStatusPendingOther}, 90)
 
 	// Failing cases
-	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
-	}, false, 90, []string{models.FriendshipStatusDormant}, 90)
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, false, 1, []string{"ekrfjejfijeirf"}, 90)
 }

@@ -98,7 +98,7 @@ func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 }
 
 func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit int) ([]models.Friendship, error) {
-	tx := s.db.Where("TRUE")
+	statusTx := s.db
 	for _, status := range statuses {
 		switch status {
 			case models.FriendshipStatusDormant:
@@ -108,23 +108,32 @@ func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit i
 			case models.FriendshipStatusPendingIDLow:
 				fallthrough
 			case models.FriendshipStatusPendingIDHigh:
-				tx = tx.Or("status = ?", status)
+				statusTx = statusTx.Or("status = ?", status)
 			case models.FriendshipStatusPendingSelf:
-				tx = tx.
-					Or("status = 'pending_id_low'  AND low_id  = ?", userID).
-					Or("status = 'pending_id_high' AND high_id = ?", userID)
+				statusTx = statusTx.
+					Or("status = \"pending_id_low\"  AND low_id  = ?", userID).
+					Or("status = \"pending_id_high\" AND high_id = ?", userID)
 			case models.FriendshipStatusPendingOther:
-				tx = tx.
-					Or("status = 'pending_id_low'  AND low_id  != ?", userID).
-					Or("status = 'pending_id_high' AND high_id != ?", userID)
+				statusTx = statusTx.
+					Or("status = \"pending_id_low\"  AND low_id  != ?", userID).
+					Or("status = \"pending_id_high\" AND high_id != ?", userID)
 			default:
 				return nil, errors.New("invalid status")
 		}
 	}
 	var friends []models.Friendship
+	/*fmt.Printf("%s\n", s.db.ToSQL(func(tx *gorm.DB) (*gorm.DB) {
+		return tx.
+			Where("low_id = ? OR high_id = ?", userID, userID).
+			Where(statusTx).
+			Order("status ASC").
+			Order("created_at DESC").
+			Limit(limit).
+			Find(&friends)
+	}))*/
 	if err := s.db.
 		Where("low_id = ? OR high_id = ?", userID, userID).
-		Where(tx).
+		Where(statusTx).
 		Order("status ASC").
 		Order("created_at DESC").
 		Limit(limit).
