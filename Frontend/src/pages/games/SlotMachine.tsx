@@ -28,14 +28,20 @@ const SlotMachine: React.FC = () => {
   useEffect(() => { getAccount().catch(() => {}); }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
-  const [isSmallScreen, setIsSmallScreen] = useState(true);
+  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
   const [stagedChips, setStagedChips] = useState<number[]>([]);
   const [lines, setLines] = useState(9);
   const [isSpinning, setIsSpinning] = useState(false);
   const [itemHeight, setItemHeight] = useState(100);
 
   useEffect(() => {
-    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 768);
+      if (windowRef.current) {
+        const measured = Math.floor(windowRef.current.clientHeight / 3);
+        if (measured > 0) setItemHeight(measured);
+      }
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -58,7 +64,7 @@ const SlotMachine: React.FC = () => {
     const chips: number[] = [];
     let remaining = balance;
     for (const d of denoms) {
-      while (remaining >= d && chips.length < 30) {
+      while (remaining >= d) {
         chips.push(d);
         remaining -= d;
       }

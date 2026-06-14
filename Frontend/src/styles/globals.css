@@ -456,6 +456,10 @@
   cursor: pointer;
 }
 
+.range-gold:focus-visible {
+  box-shadow: 0 0 0 2px rgba(10, 14, 18, 0.9), 0 0 0 4px rgba(212, 175, 55, 0.45);
+}
+
 .range-gold::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -471,6 +475,18 @@
 
 .range-gold::-webkit-slider-thumb:hover {
   transform: scale(1.15);
+}
+
+.range-gold::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-2);
+}
+
+.range-gold::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gold);
 }
 
 .range-gold::-moz-range-thumb {

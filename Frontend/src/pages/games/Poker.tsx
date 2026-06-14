@@ -74,7 +74,7 @@ const Poker: React.FC = () => {
   const presetButton =
     'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-xs font-semibold uppercase tracking-wider hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer';
 
-  const [isSmallScreen, setIsSmallScreen] = useState(true);
+  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 1024);
 
   useEffect(() => {
     const handleResize = () => {
@@ -275,7 +275,8 @@ const Poker: React.FC = () => {
                         setInputValue(String(MIN_BUYIN));
                       } else {
                         const num = parseInt(val);
-                        const clamped = clampBuyIn(num);
+                        const snapped = Math.round(num / BIG_BLIND) * BIG_BLIND;
+                        const clamped = clampBuyIn(snapped);
                         setBuyIn(clamped);
                         setInputValue(String(clamped));
                       }
