@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { createWebSocket } from '@/utils/ws';
 
-import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/hooks/useAccount';
