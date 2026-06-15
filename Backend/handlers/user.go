@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"net/http"
 	"strconv"
 	"strings"
+	"syscall"
 	"path/filepath"
 
 	"transcendence/models"
@@ -192,13 +194,16 @@ func createRelatedURL(uploadFilePath string) (string, error) {
 		}
 		fileURL += fileExtension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
-			return fileURL, nil
+			if os.IsNotExist(err) {
+				return fileURL, nil
+			} else {
+				return "", err
+			}
 		}
 	}
 }
 
-// UploadAvatar
-func (uh* UserHandler) UploadAvatar(c *gin.Context) {
+func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
@@ -206,10 +211,10 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H {"error": err.Error()})
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
 		return
 	}
-	err = os.Mkdir("./uploads/", os.ModeDir)
+	err = os.Mkdir("./uploads/", os.ModeDir | os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
 		return
@@ -219,13 +224,7 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
-	if user.AvatarURL != models.DefaultAvatarURL {
-		err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
-		if err != nil && !os.IsNotExist(err) {
-			utils.RespondError(c, http.StatusInternalServerError, "delete_old_avatar_failed", err.Error())
-			return
-		}
-	}
+	oldURL := user.AvatarURL
 	user.AvatarURL, err = createRelatedURL(file.Filename)
 	if err != nil {
 		var status int
@@ -238,7 +237,16 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, status, "create_url_failed", err.Error())
 		return
 	}
-	c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL))
+	if err := c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL)); err != nil {
+		var status int
+		if errors.Is(err, syscall.ENOSPC) {
+			status = http.StatusInsufficientStorage
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "save_uploaded_file_failed", err.Error())
+		return
+	}
 	user, err = uh.userService.UpdateUser(
 		userID.(uint),
 		user.Username,
@@ -258,6 +266,12 @@ func (uh* UserHandler) UploadAvatar(c *gin.Context) {
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
+	if oldURL != models.DefaultAvatarURL {
+		err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
+		if err != nil {
+			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+		}
+	}
 }
 
 // GetAccount retrieves account balance and summary
