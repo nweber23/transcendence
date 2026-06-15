@@ -153,12 +153,19 @@ CREATE INDEX idx_accounts_balance ON accounts(balance) WHERE balance > 0;
 Stores one-way friendship bindings between two users
 
 ```sql
-CREATE TABLE friendships (
-  user_id    INT SERIAL PRIMARY KEY,
-  friend_id  INT SERIAL PRIMARY KEY,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  deleted_at TIMESTAMP DEFAULT NULL
+CREATE TABLE `friendships` (
+  `low_id` integer,
+  `high_id` integer,
+  `status` text DEFAULT "dormant",
+  `created_at` datetime,
+  `deleted_at` datetime,
+
+  PRIMARY KEY (`low_id`,`high_id`)
 )
+
+CREATE INDEX `idx_friendships_deleted_at` ON `friendships`(`deleted_at`)
+CREATE INDEX `idx_friendships_status` ON `friendships`(`status`)
+CREATE UNIQUE INDEX `friendship_binding` ON `friendships`(`low_id`,`high_id`)
 ```
 
 **Design rationale:**
