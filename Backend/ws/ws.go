@@ -84,8 +84,12 @@ func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, packetType 
 	if wsState.clients[userID] == nil {
 		return errors.New("client offline")
 	} else {
-		wsState.clients[userID].SendLists[topic].SendChannel <- Packet
-		return nil
+		select {
+			case wsState.clients[userID].SendLists[topic].SendChannel <- Packet:
+				return nil
+			default:
+				return errors.New("channel full")
+		}
 	}
 }
 
@@ -100,20 +104,16 @@ func (wsState *WebSocketState) BroadcastToFriends(userID uint, topic Topic, pack
 			friendID = friendship.HighID
 		}
 		err = wsState.SendToTopic(friendID, topic, packetType, payload)
-		if err != nil {
-			return fmt.Errorf("Error sending to topic: %w\n", err)
-		}
 	}
-	return nil
+	return err
 }
 
 func (wsState *WebSocketState) BroadcastToEveryone(topic Topic, packetType string, payload any) {
 	wsState.clientsMutex.RLock()
-	clients := wsState.clients
-	wsState.clientsMutex.RUnlock()
-	for userID, _ := range clients {
+	for userID, _ := range wsState.clients {
 		wsState.SendToTopic(userID, topic, packetType, payload)
 	}
+	wsState.clientsMutex.RUnlock()
 }
 
 func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {

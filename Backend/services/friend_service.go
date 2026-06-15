@@ -58,17 +58,14 @@ func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 		HighID: highID,
 		Status: models.FriendshipStatusDormant,
 	}
-	shouldCreate := false
 	err := s.db.Where("low_id = ? AND high_id = ?", lowID, highID).First(&friendship).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		shouldCreate = true
-	} else if err != nil {
-		return false, err
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, err
+		}
 	} else {
-		friendship.DeletedAt = &time.Time{}
+		friendship.DeletedAt = nil
 	}
-	_ = shouldCreate
-	// Kept to preserve code structure that might require this bool in the future
 	if isFriendAdded(userID, friendID, friendship.Status) {
 		return false, errors.New("friend already added")
 	}

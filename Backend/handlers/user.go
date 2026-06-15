@@ -25,11 +25,17 @@ type UserHandler struct {
 	wsState        *ws.WebSocketState
 }
 
-func NewUserHandler(userService *services.UserService, accountService *services.AccountService, friendService *services.FriendService) *UserHandler {
+func NewUserHandler(
+	userService    *services.UserService,
+	accountService *services.AccountService,
+	friendService  *services.FriendService,
+	wsState        *ws.WebSocketState,
+) *UserHandler {
 	return &UserHandler{
 		userService:    userService,
 		accountService: accountService,
 		friendService:  friendService,
+		wsState:        wsState,
 	}
 }
 
@@ -402,7 +408,7 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 	}
 	friendID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err)
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err.Error())
 		return
 	}
 	isPending, err := uh.friendService.AddFriend(userID.(uint), uint(friendID))
@@ -410,9 +416,9 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		if (err.Error() == "self love only works irl" ||
 			errors.Is(err, gorm.ErrRecordNotFound) ||
 			err.Error() == "friend already added") {
-			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", err)
+			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", err.Error())
 		} else {
-			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", err)
+			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", err.Error())
 		}
 	} else {
 		status := models.FriendshipStatusActive
@@ -435,11 +441,11 @@ func (uh *UserHandler) RemoveFriend(c *gin.Context) {
 	}
 	friendID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err)
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err.Error())
 		return
 	}
 	if err := uh.friendService.RemoveFriend(userID.(uint), uint(friendID)); err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", err)
+		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", err.Error())
 	} else {
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
@@ -480,7 +486,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 	}
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil || limit < 0 {
-		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err)
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err.Error())
 		return
 	}
 	statuses := strings.Split(c.Query("statuses"), ",")
@@ -498,7 +504,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 	friendResponses := make([]FriendResponse, len(friendships))
 	for responseIndex, friendship := range friendships {
 		friendID := friendship.LowID
-		if friendID == userID {
+		if friendID == userID.(uint) {
 			friendID = friendship.HighID
 		}
 		status, isValid := determineStatus(userID.(uint), friendID, &friendship)

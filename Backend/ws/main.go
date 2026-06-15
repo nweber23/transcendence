@@ -20,9 +20,13 @@ func (wsState *WebSocketState) terminate() {
 	wsState.clientsMutex.Lock()
 	for _, Client := range wsState.clients {
 		for _, sendList := range Client.SendLists {
-			_, ok := <- sendList.SendChannel
-			if ok {
-				close(sendList.SendChannel)
+			select {
+				case _, ok := <- sendList.SendChannel:
+					if ok {
+						close(sendList.SendChannel)
+					}
+				default:
+					close(sendList.SendChannel)
 			}
 		}
 	}

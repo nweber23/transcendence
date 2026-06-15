@@ -39,7 +39,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService, friendService)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
 	wsHandler   := handlers.NewWebSocketHandler(wsState)
 

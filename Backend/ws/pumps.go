@@ -35,7 +35,10 @@ func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *webso
 			wsState.readMutex.RUnlock()
 			return
 		}
-		wsState.readChannel <- packet
+		select {
+			case wsState.readChannel <- packet:
+			default:
+		}
 		wsState.readMutex.RUnlock()
 	}
 }
