@@ -57,7 +57,10 @@ Backend/
 │   ├── other.go                # Everything else
 │   └── utils_test.go           # Utils Unit tests
 ├── ws/
-│   └── ws.go                   # WebSocket management, topic system
+│   ├── helpers.go              # Websocket system interface
+│   ├── main.go                 # Main and Stop, packet handling and cleanup
+│   ├── pumps.go                # Read and write websocket pumps
+│   └── types.go                # All relevant datatypes and their wrapper methods, most of which are mutex protected
 ├── Dockerfile                  # Multi-stage Go build
 ├── go.mod / go.sum             # Dependencies
 └── .env.example                # Configuration template
