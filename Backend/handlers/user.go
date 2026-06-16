@@ -180,7 +180,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 func createRelatedURL(uploadFilePath string) (string, error) {
 	fileName := filepath.Base(uploadFilePath)
 	if fileName == "." || fileName == "/" {
-		return "", errors.New("invalid file name")
+		return "", utils.ErrInvalidFilename
 	}
 	fileDots := strings.Split(fileName, ".")
 	fileExtension := ""
@@ -190,7 +190,7 @@ func createRelatedURL(uploadFilePath string) (string, error) {
 	for {
 		fileURL, err := utils.GetRandomHexString(16)
 		if err != nil {
-			return "", errors.New("failed to generate random string")
+			return "", utils.ErrRandomStringGenFailed
 		}
 		fileURL += fileExtension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {

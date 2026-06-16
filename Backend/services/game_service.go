@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"transcendence/models"
+	"transcendence/utils"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -22,17 +23,17 @@ func NewGameService(db *gorm.DB) *GameService {
 // CreateGame starts a new game session with initial bet validation
 func (gs *GameService) CreateGame(userID uint, gameType string, initialBet decimal.Decimal) (*models.Game, error) {
 	if initialBet.LessThanOrEqual(decimal.Zero) {
-		return nil, errors.New("bet amount must be greater than zero")
+		return nil, utils.ErrNegativeTransactionAmount
 	}
 	var account models.Account
 	if err := gs.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&account, "user_id = ?", userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("account not found")
+			return nil, utils.ErrAccountNotFound
 		}
 		return nil, fmt.Errorf("failed to fetch account: %w", err)
 	}
 	if account.Balance.LessThan(initialBet) {
-		return nil, errors.New("insufficient balance for this bet")
+		return nil, utils.ErrInsufficientBalance
 	}
 	var game *models.Game
 	err := gs.db.Transaction(func(tx *gorm.DB) error {
@@ -77,7 +78,7 @@ func (gs *GameService) ExecuteAction(userID uint, gameID uint, action string) (*
 	var game models.Game
 	if err := gs.db.First(&game, "id = ? AND user_id = ?", gameID, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("game not found")
+			return nil, utils.ErrGameNotFound
 		}
 		return nil, fmt.Errorf("failed to fetch game: %w", err)
 	}
@@ -137,7 +138,7 @@ func (gs *GameService) GetGameByID(userID uint, gameID uint) (*models.Game, erro
 	var game models.Game
 	if err := gs.db.First(&game, "id = ? AND user_id = ?", gameID, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("game not found")
+			return nil, utils.ErrGameNotFound
 		}
 		return nil, fmt.Errorf("failed to fetch game: %w", err)
 	}

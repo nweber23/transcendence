@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 	"transcendence/models"
+	"transcendence/utils"
 )
 
 type FriendService struct {
@@ -43,7 +44,7 @@ func getNextStatus(userID uint, friendID uint, status string) (string) {
 
 func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 	if userID == friendID {
-		return false, errors.New("self love only works irl")
+		return false, utils.ErrSelfLove
 	}
 	userService := NewUserService(s.db)
 	if _, err := userService.GetUserByID(userID); err != nil {
@@ -67,7 +68,7 @@ func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 		friendship.DeletedAt = nil
 	}
 	if isFriendAdded(userID, friendID, friendship.Status) {
-		return false, errors.New("friend already added")
+		return false, utils.ErrAlreadyBefriended
 	}
 	friendship.Status = getNextStatus(userID, friendID, friendship.Status)
 	if err := s.db.Save(&friendship).Error; err != nil {
@@ -81,7 +82,7 @@ func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 	var friendship models.Friendship
 	err := s.db.Where("low_id = ? AND high_id = ? AND status != 'dormant'", lowID, highID).First(&friendship).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return errors.New("no friend to remove")
+		return utils.ErrAlreadyDefriended
 	} else if err != nil {
 		return err
 	}
@@ -115,19 +116,10 @@ func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit i
 					Or("status = 'pending_id_low'  AND low_id  != ?", userID).
 					Or("status = 'pending_id_high' AND high_id != ?", userID)
 			default:
-				return nil, errors.New("invalid status")
+				return nil, utils.ErrInvalidFriendshipStatus
 		}
 	}
 	var friends []models.Friendship
-	/*fmt.Printf("%s\n", s.db.ToSQL(func(tx *gorm.DB) (*gorm.DB) {
-		return tx.
-			Where("low_id = ? OR high_id = ?", userID, userID).
-			Where(statusTx).
-			Order("status ASC").
-			Order("created_at DESC").
-			Limit(limit).
-			Find(&friends)
-	}))*/
 	if err := s.db.
 		Where("low_id = ? OR high_id = ?", userID, userID).
 		Where(statusTx).
