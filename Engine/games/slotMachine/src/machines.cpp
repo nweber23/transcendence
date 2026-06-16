@@ -292,3 +292,4 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
 bool Machine::game_exists(std::string_view game_name) {
     return configs.find(std::string(game_name)) != configs.end();
 }
+
