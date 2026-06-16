@@ -230,8 +230,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		var status int
 		if errors.Is(err, utils.ErrInvalidFilename) {
 			status = http.StatusBadRequest
-		}
-		if errors.Is(err, utils.ErrRandomStringGenFailed) {
+		} else {
 			status = http.StatusInternalServerError
 		}
 		utils.RespondError(c, status, "create_url_failed", err.Error())
