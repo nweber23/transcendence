@@ -518,6 +518,10 @@ func TestAccountService(testInterface *testing.T) {
 		},
 	}, true, 3, []string{models.FriendshipStatusDormant, models.FriendshipStatusPendingOther}, 90)
 
+	// Empty case
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+	}, true, 1, []string{}, 90)
+
 	// Failing cases
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, false, 1, []string{"ekrfjejfijeirf"}, 90)

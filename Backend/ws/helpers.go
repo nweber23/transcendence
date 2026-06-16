@@ -50,12 +50,12 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 	}
 	context := createConnectionContext(connection)
 	Client.contextList.append(context)
-	wsState.clientsMutex.Unlock()
-	go wsState.pumpFromConnection(userID, context.connection)
-	go pumpToConnection(context)
 	for _, topic := range topics {
 		Client.topicLists[topic].append(context)
 	}
+	wsState.clientsMutex.Unlock()
+	go wsState.pumpFromConnection(userID, context.connection)
+	go pumpToConnection(context)
 	fmt.Printf("Connection added for user %d\n", userID)
 	if sendOnline {
 		payload := packetOnline{

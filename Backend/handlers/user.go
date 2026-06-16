@@ -506,7 +506,12 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
 		return
 	}
-	statuses := strings.Split(c.Query("statuses"), ",")
+	statusesString := c.Query("statuses")
+	if statusesString == "" {
+		utils.RespondError(c, http.StatusBadRequest, "no_status_provided", "No status provided")
+		return
+	}
+	statuses := strings.Split(statusesString, ",")
 	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
 	if err != nil {
 		var status int
