@@ -45,9 +45,11 @@ add_test(NAME deck_test COMMAND deck_test)
 add_library(blackjack_impl STATIC
     ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/src/hand.cpp
     ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/src/game.cpp
+    ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/src/engine.cpp
 )
 target_include_directories(blackjack_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/includes)
 target_include_directories(blackjack_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+target_link_libraries(blackjack_impl PUBLIC glaze::glaze)
 
 add_executable(blackjack_test blackjack_test.cpp)
 target_include_directories(blackjack_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
