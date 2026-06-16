@@ -49,6 +49,7 @@ type protectedPacketChannel struct {
 
 func createProtectedPacketChannel() (*protectedPacketChannel) {
 	return &protectedPacketChannel{
+		ok:      true
 		channel: make(chan packet, 256),
 	}
 }

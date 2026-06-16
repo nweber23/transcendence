@@ -25,10 +25,16 @@ func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, packetType 
 
 func (wsState *WebSocketState) SendToAll(topic Topic, packetType string, payload any) {
 	wsState.clientsMutex.RLock()
+	userIDs := make([]uint, len(wsState.clients))
+	index := 0
 	for userID, _ := range wsState.clients {
-		wsState.SendToTopic(userID, topic, packetType, payload)
+		userIDs[index] = userID
+		index++
 	}
 	wsState.clientsMutex.RUnlock()
+	for _, userID := range userIDs {
+		wsState.SendToTopic(userID, topic, packetType, payload)
+	}
 }
 
 func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {

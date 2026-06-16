@@ -266,7 +266,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	}
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 	if oldURL != models.DefaultAvatarURL {
-		err = os.Remove(filepath.Join("./uploads/", user.AvatarURL))
+		err = os.Remove(filepath.Join("./uploads/", oldURL))
 		if err != nil {
 			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
 		}
@@ -498,8 +498,12 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		return
 	}
 	limit, err := strconv.Atoi(c.Query("limit"))
-	if err != nil || limit < 0 {
+	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err.Error())
+		return
+	}
+	if limit < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
 		return
 	}
 	statuses := strings.Split(c.Query("statuses"), ",")

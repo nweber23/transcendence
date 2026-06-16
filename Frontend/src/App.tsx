@@ -38,7 +38,7 @@ const AppLayout: React.FC = () => {
       console.log("Message: " + e.data);
     }
     return () => socket.close();
-  })
+  }, [])
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
