@@ -2,9 +2,29 @@ package ws
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+func (wsState *WebSocketState) timeoutClient(userID uint) {
+	const timeout        int = 3000
+	const iterationCount int = 1000
+
+	for iteration := 0; iteration < iterationCount; {
+		time.Sleep(time.Millisecond * time.Duration(timeout / iterationCount))
+		if wsState.IsOnline(userID) {
+			return
+		}
+		iteration++
+	}
+	fmt.Printf("send to all\n")
+	payload := packetOnline{
+		UserID:   userID,
+		IsOnline: false,
+	}
+	wsState.SendToAll(TopicGeneric, "online", payload)
+}
 
 func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websocket.Conn) {
 	wsState.clientsMutex.Lock()
@@ -12,6 +32,7 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	context := Client.contextList.swapPopByConnection(connection)
 	if Client.contextList.length() == 0 {
 		delete(wsState.clients, userID)
+		go wsState.timeoutClient(userID)
 	}
 	wsState.clientsMutex.Unlock()
 	if context == nil {

@@ -31,8 +31,13 @@ var TopicMap = map[string]Topic{
 
 type packet struct {
 	userID     uint            `json:"-"`
-	packetType string          `json:"packet_type"`
-	payload    json.RawMessage `json:"payload"`
+	PacketType string          `json:"packet_type"`
+	Payload    json.RawMessage `json:"payload"`
+}
+
+type packetOnline struct {
+	UserID   uint `json:"user_id"`
+	IsOnline bool `json:"is_online"`
 }
 
 // MARK: protectedPacketChannel

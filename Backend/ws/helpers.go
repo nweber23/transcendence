@@ -8,13 +8,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, payload any) (error) {
+func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, packetType string, payload any) (error) {
 	wsState.clientsMutex.RLock()
 	Client := wsState.clients[userID]
 	wsState.clientsMutex.RUnlock()
 	var packet packet
-	var err error
-	packet.payload, err = json.Marshal(payload)
+	var err    error
+	packet.PacketType = packetType
+	packet.Payload, err = json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -22,14 +23,24 @@ func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, payload any
 	return nil
 }
 
+func (wsState *WebSocketState) SendToAll(topic Topic, packetType string, payload any) {
+	wsState.clientsMutex.RLock()
+	for userID, _ := range wsState.clients {
+		wsState.SendToTopic(userID, topic, packetType, payload)
+	}
+	wsState.clientsMutex.RUnlock()
+}
+
 func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.Conn, topics []Topic) {
 	wsState.clientsMutex.Lock()
 	Client := wsState.clients[userID]
+	sendOnline := false
 	if Client == nil {
 		Client = &client{
 			userID: userID,
 		}
 		wsState.clients[userID] = Client
+		sendOnline = true
 	}
 	context := createConnectionContext(connection)
 	Client.contextList.append(context)
@@ -40,11 +51,18 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 		Client.topicLists[topic].append(context)
 	}
 	fmt.Printf("Connection added for user %d\n", userID)
+	if sendOnline {
+		payload := packetOnline{
+			UserID:   userID,
+			IsOnline: true,
+		}
+		wsState.SendToAll(TopicGeneric, "online", payload)
+	}
 }
 
 func (wsState *WebSocketState) IsOnline(userID uint) (bool) {
 	wsState.clientsMutex.RLock()
 	isOnline := (wsState.clients[userID] != nil)
-	wsState.clientsMutex.Unlock()
+	wsState.clientsMutex.RUnlock()
 	return isOnline
 }
