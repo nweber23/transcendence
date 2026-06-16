@@ -97,6 +97,8 @@ public:
     [[nodiscard]] std::size_t dealer() const noexcept;
     [[nodiscard]] std::size_t current_player() const noexcept;
     [[nodiscard]] const std::vector<std::int64_t>& pot() const noexcept;
+    [[nodiscard]] std::int64_t min_raise() const noexcept;
+    [[nodiscard]] Action last_action() const noexcept;
 };
 
 } // namespace texas

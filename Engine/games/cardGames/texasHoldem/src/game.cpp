@@ -138,6 +138,14 @@ const std::vector<std::int64_t>& Game::pot() const noexcept {
     return _pot;
 }
 
+std::int64_t Game::min_raise() const noexcept {
+    return _minRaise;
+}
+
+Action Game::last_action() const noexcept {
+    return _lastAction;
+}
+
 void Game::deal_hole_cards() {
     for (std::size_t pass = 0; pass < 2; ++pass) {
         for (auto& p : _players) {
