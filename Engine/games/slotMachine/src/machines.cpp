@@ -29,7 +29,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         }
     }
 
-    std::uint32_t payline_total = 0;
+    double payline_total = 0;
     auto count = std::min<std::uint8_t>(line_count, config.max_lines);
     for (std::uint8_t li = 0; li < count; ++li) {
         const auto& payline = config.paylines[li];
@@ -64,7 +64,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         auto pt_it = config.paytable.find(base);
         if (pt_it == config.paytable.end()) continue;
 
-        std::uint32_t line_payout = 0;
+        double line_payout = 0;
         for (std::uint8_t c = match; c >= 1; --c) {
             auto m_it = pt_it->second.find(c);
             if (m_it != pt_it->second.end()) {
@@ -86,7 +86,7 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
         }
     }
 
-    std::uint32_t scatter_win = 0;
+    double scatter_win = 0;
     if (scatter_count > 0) {
         auto sc_it = config.scatter_paytable.find(scatter_count);
         if (sc_it != config.scatter_paytable.end()) {
@@ -259,18 +259,20 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     }
 
     auto eval = evaluate_spin(cfg, stops, line_count);
-    std::uint32_t total_win = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
+    double total = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
 
     if (is_free_spin) {
-        total_win *= fs_state.current_multiplier;
+        total *= fs_state.current_multiplier;
     }
 
     if (cfg.max_win_multiplier > 0) {
-        std::uint32_t max_win = cfg.max_win_multiplier * line_count * bet_per_line;
-        if (total_win > max_win) {
-            total_win = max_win;
+        double max_win = static_cast<double>(cfg.max_win_multiplier) * line_count * bet_per_line;
+        if (total > max_win) {
+            total = max_win;
         }
     }
+
+    auto total_win = static_cast<std::uint32_t>(total);
 
     if (is_free_spin) {
         if (fs_state.free_spins_remaining > 0) {

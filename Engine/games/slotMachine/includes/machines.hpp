@@ -18,7 +18,7 @@ struct SymbolInfo {
     std::string file;
 };
 
-using PaytableEntry = std::unordered_map<uint8_t, uint32_t>;
+using PaytableEntry = std::unordered_map<uint8_t, double>;
 
 using PaylinePos = std::array<std::uint8_t, 2>;
 using Payline = std::vector<PaylinePos>;
@@ -77,8 +77,8 @@ struct FreeSpinState {
 };
 
 struct SpinEvalResult {
-    std::uint32_t payline_win;
-    std::uint32_t scatter_win;
+    double payline_win;
+    double scatter_win;
     std::uint8_t scatter_count;
     bool bonus_triggered;
 };
@@ -152,7 +152,7 @@ struct glz::meta<SlotConfig> {
         "reels",               &SlotConfig::reels,
         "paytable",            &SlotConfig::paytable,
         "max_lines",           &SlotConfig::max_lines,
-        "wild_symbol",          &SlotConfig::wild_symbol,
+        "wild_symbol",         &SlotConfig::wild_symbol,
         "scatter_symbol",      &SlotConfig::scatter_symbol,
         "scatter_paytable",    &SlotConfig::scatter_paytable,
         "bonus_trigger_count", &SlotConfig::bonus_trigger_count,
