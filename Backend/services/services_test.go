@@ -2,6 +2,7 @@
 package services
 
 import (
+	"errors"
 	"strings"
 	"fmt"
 	"testing"
@@ -350,7 +351,7 @@ func TestAccountService(testInterface *testing.T) {
 	if err == nil {
 		testInterface.Errorf("withdrawal from empty account should not succeed")
 	}
-	if err.Error() != "insufficient funds" {
+	if !errors.Is(err, utils.ErrInsufficientBalance) {
 		testInterface.Errorf("withdrawal failed for unexpected reason %v", err)
 	}
 	accountService.Deposit_f(2, 50)
