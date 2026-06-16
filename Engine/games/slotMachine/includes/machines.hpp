@@ -185,6 +185,10 @@ class Machine {
                                         std::uint8_t line_count,
                                         std::uint32_t bet_per_line);
 
+        [[nodiscard]]
+        std::string run_slot(std::string_view game_name,
+                             std::uint8_t line_count,
+                             std::uint32_t bet_per_line);
 
         [[nodiscard]]
         SpinResult get_monetary_result(std::string_view game_name,

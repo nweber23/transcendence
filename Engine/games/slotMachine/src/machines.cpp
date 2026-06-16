@@ -149,6 +149,15 @@ std::string Machine::play_full_iteration(std::string_view game_name,
     return json_out;
 }
 
+std::string Machine::run_slot(std::string_view game_name,
+                              std::uint8_t line_count,
+                              std::uint32_t bet_per_line) {
+    if (!game_exists(game_name)) {
+        return {};
+    }
+    return play_full_iteration(game_name, line_count, bet_per_line);
+}
+
 Machine::Machine()
     : rng_(std::random_device{}())
 {
