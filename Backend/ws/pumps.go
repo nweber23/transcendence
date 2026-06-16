@@ -1,44 +1,52 @@
 package ws
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/gorilla/websocket"
 )
 
-func pumpToTopic(sendList *topicSendList) {
+func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websocket.Conn) {
+	wsState.clientsMutex.Lock()
+	Client := wsState.clients[userID]
+	context := Client.contextList.swapPopByConnection(connection)
+	if Client.contextList.length() == 0 {
+		delete(wsState.clients, userID)
+	}
+	wsState.clientsMutex.Unlock()
+	if context == nil {
+		return
+	}
+	for topic := TopicGeneric; topic < TopicMax; {
+		_ = Client.topicLists[topic].swapPopByConnection(connection)
+		topic++
+	}
+	close(context.channel)
+	fmt.Printf("Connection removed for user %d\n", userID)
+}
+
+func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *websocket.Conn) {
+	defer wsState.cleanupConnection(userID, connection)
 	for {
-		message, ok := <- sendList.SendChannel
-		if !ok {
+		var packet packet
+		if err := connection.ReadJSON(&packet); err != nil {
 			return
 		}
-		for _, connection := range sendList.ConnectionList.getConnections() {
-			if err := connection.WriteJSON(message); err != nil {
-				log.Printf("Failed to send message: %v", err)
-			}
+		packet.userID = userID
+		if !wsState.readChannel.safeWrite(packet) {
+			return
 		}
 	}
 }
 
-func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *websocket.Conn) {
+func pumpToConnection(context *connectionContext) {
 	for {
-		var packet packet
-		// TODO: Does connection need sync
-		if err := connection.ReadJSON(&packet); err != nil {
-			wsState.CloseConnection(userID, connection)
+		packet, ok := <- context.channel
+		if !ok {
 			return
 		}
-		packet.UserID = userID
-		// I frickin' hate that you can't use comma ok when writing to channels
-		wsState.readMutex.RLock()
-		if !wsState.readOk {
-			wsState.readMutex.RUnlock()
+		if err := context.connection.WriteJSON(&packet); err != nil {
 			return
 		}
-		select {
-			case wsState.readChannel <- packet:
-			default:
-		}
-		wsState.readMutex.RUnlock()
 	}
 }

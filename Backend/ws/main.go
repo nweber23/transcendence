@@ -1,46 +1,24 @@
 package ws
 
 import (
-	"log"
+	"fmt"
 )
 
-func (wsState *WebSocketState) handleIncomingPackets() {
+func (wsState *WebSocketState) Main() {
 	for {
-		packet, ok := <- wsState.readChannel
+		packet, ok := <- wsState.readChannel.channel
 		if !ok {
 			return
 		}
-		log.Printf("Received packet with type %s from %d", packet.Type, packet.UserID)
-		//switch packet.Type {
-		//}
+		fmt.Printf("Received packet from %d\n", packet.userID)
 	}
-}
-
-func (wsState *WebSocketState) terminate() {
-	wsState.clientsMutex.Lock()
-	for _, Client := range wsState.clients {
-		for _, sendList := range Client.SendLists {
-			select {
-				case _, ok := <- sendList.SendChannel:
-					if ok {
-						close(sendList.SendChannel)
-					}
-				default:
-					close(sendList.SendChannel)
-			}
-		}
-	}
-	wsState.clientsMutex.Unlock()
-}
-
-func (wsState *WebSocketState) Main() {
-	wsState.handleIncomingPackets()
-	wsState.terminate()
 }
 
 func (wsState *WebSocketState) Stop() {
-	wsState.readMutex.Lock()
-	close(wsState.readChannel)
-	wsState.readOk = false
-	wsState.readMutex.Unlock()
+	wsState.readChannel.safeClose()
+	wsState.clientsMutex.RLock()
+	for _, client := range wsState.clients {
+		client.contextList.closeAll()
+	}
+	wsState.clientsMutex.RUnlock()
 }
