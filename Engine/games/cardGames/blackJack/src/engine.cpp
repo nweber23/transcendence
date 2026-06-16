@@ -2,21 +2,21 @@
 
 #include <glaze/glaze.hpp>
 
-namespace blackjack {
-
 template <>
-struct glz::meta<GameState> {
-    using type = GameState;
+struct glz::meta<blackjack::GameState> {
+    using type = blackjack::GameState;
     static constexpr auto value = object(
-        "bet",           &GameState::bet,
-        "phase",         &GameState::phase,
-        "outcome",       &GameState::outcome,
-        "player_value",  &GameState::player_value,
-        "dealer_value",  &GameState::dealer_value,
-        "player_cards",  &GameState::player_cards,
-        "dealer_cards",  &GameState::dealer_cards
+        "bet",           &blackjack::GameState::bet,
+        "phase",         &blackjack::GameState::phase,
+        "outcome",       &blackjack::GameState::outcome,
+        "player_value",  &blackjack::GameState::player_value,
+        "dealer_value",  &blackjack::GameState::dealer_value,
+        "player_cards",  &blackjack::GameState::player_cards,
+        "dealer_cards",  &blackjack::GameState::dealer_cards
     );
 };
+
+namespace blackjack {
 
 std::string serialize_game_state(const Game& game) {
     GameState state;

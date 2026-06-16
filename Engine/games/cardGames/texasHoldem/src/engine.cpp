@@ -2,35 +2,35 @@
 
 #include <glaze/glaze.hpp>
 
+template <>
+struct glz::meta<texas::PlayerState> {
+    using type = texas::PlayerState;
+    static constexpr auto value = object(
+        "stack",        &texas::PlayerState::stack,
+        "current_bet",  &texas::PlayerState::current_bet,
+        "folded",       &texas::PlayerState::folded,
+        "all_in",       &texas::PlayerState::all_in,
+        "hole_cards",   &texas::PlayerState::hole_cards
+    );
+};
+
+template <>
+struct glz::meta<texas::GameState> {
+    using type = texas::GameState;
+    static constexpr auto value = object(
+        "phase",            &texas::GameState::phase,
+        "dealer",           &texas::GameState::dealer,
+        "current_player",   &texas::GameState::current_player,
+        "community_cards",  &texas::GameState::community_cards,
+        "pot",              &texas::GameState::pot,
+        "players",          &texas::GameState::players,
+        "min_raise",        &texas::GameState::min_raise,
+        "last_action_type", &texas::GameState::last_action_type,
+        "last_action_amount", &texas::GameState::last_action_amount
+    );
+};
+
 namespace texas {
-
-template <>
-struct glz::meta<PlayerState> {
-    using type = PlayerState;
-    static constexpr auto value = object(
-        "stack",        &PlayerState::stack,
-        "current_bet",  &PlayerState::current_bet,
-        "folded",       &PlayerState::folded,
-        "all_in",       &PlayerState::all_in,
-        "hole_cards",   &PlayerState::hole_cards
-    );
-};
-
-template <>
-struct glz::meta<GameState> {
-    using type = GameState;
-    static constexpr auto value = object(
-        "phase",            &GameState::phase,
-        "dealer",           &GameState::dealer,
-        "current_player",   &GameState::current_player,
-        "community_cards",  &GameState::community_cards,
-        "pot",              &GameState::pot,
-        "players",          &GameState::players,
-        "min_raise",        &GameState::min_raise,
-        "last_action_type", &GameState::last_action_type,
-        "last_action_amount", &GameState::last_action_amount
-    );
-};
 
 std::string serialize_game_state(const Game& game) {
     GameState state;
@@ -39,40 +39,20 @@ std::string serialize_game_state(const Game& game) {
     state.min_raise = game.min_raise();
 
     switch (game.phase()) {
-        case Phase::PreFlop:
-            state.phase = "preflop";
-            break;
-        case Phase::Flop:
-            state.phase = "flop";
-            break;
-        case Phase::Turn:
-            state.phase = "turn";
-            break;
-        case Phase::River:
-            state.phase = "river";
-            break;
-        case Phase::Showdown:
-            state.phase = "showdown";
-            break;
+        case Phase::PreFlop:  state.phase = "preflop"; break;
+        case Phase::Flop:     state.phase = "flop"; break;
+        case Phase::Turn:     state.phase = "turn"; break;
+        case Phase::River:    state.phase = "river"; break;
+        case Phase::Showdown: state.phase = "showdown"; break;
     }
 
     auto act = game.last_action();
     switch (act.type) {
-        case ActionType::Fold:
-            state.last_action_type = "fold";
-            break;
-        case ActionType::Check:
-            state.last_action_type = "check";
-            break;
-        case ActionType::Call:
-            state.last_action_type = "call";
-            break;
-        case ActionType::Raise:
-            state.last_action_type = "raise";
-            break;
-        case ActionType::AllIn:
-            state.last_action_type = "all_in";
-            break;
+        case ActionType::Fold:  state.last_action_type = "fold"; break;
+        case ActionType::Check: state.last_action_type = "check"; break;
+        case ActionType::Call:  state.last_action_type = "call"; break;
+        case ActionType::Raise: state.last_action_type = "raise"; break;
+        case ActionType::AllIn: state.last_action_type = "all_in"; break;
     }
     state.last_action_amount = act.amount;
 
