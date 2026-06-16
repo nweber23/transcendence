@@ -279,3 +279,7 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     return {std::move(stops), total_win, eval.bonus_triggered, eval.scatter_count,
             is_free_spin, fs_state.free_spins_remaining, fs_state.current_multiplier, fs_state.total_free_win};
 }
+
+bool game_exists(std::string_view game_name) {
+    return  configs.find(std::string(game_name)) != configs.end();
+}

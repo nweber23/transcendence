@@ -192,4 +192,7 @@ class Machine {
                                        std::uint32_t bet_per_line,
                                        FreeSpinState& fs_state,
                                        bool is_free_spin = false);
+
+        [[nodiscard]]
+        bool game_exists(std::string_view game_name);
 };
