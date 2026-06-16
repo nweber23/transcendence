@@ -96,7 +96,7 @@ func (s *FriendService) RemoveFriend(firstID uint, secondID uint) (error) {
 }
 
 func (s *FriendService) EnumerateFriends(userID uint, statuses []string, limit int) ([]models.Friendship, error) {
-	statusTx := s.db
+	statusTx := s.db.Where("FALSE")
 	for _, status := range statuses {
 		switch status {
 			case models.FriendshipStatusDormant:

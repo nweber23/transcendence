@@ -518,7 +518,7 @@ func TestAccountService(testInterface *testing.T) {
 		},
 	}, true, 3, []string{models.FriendshipStatusDormant, models.FriendshipStatusPendingOther}, 90)
 
-	// Empty case
+	// No status
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, true, 1, []string{}, 90)
 
@@ -526,20 +526,3 @@ func TestAccountService(testInterface *testing.T) {
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, false, 1, []string{"ekrfjejfijeirf"}, 90)
 }
-
-/*
-New friend test cases:
-
-- Self love check
-- Unidirectional Add Friend calls, verify with friendService.AreFriends after
-- Add users that don't exist as friends
-- Check if removal works after the following cases
-	- Friend not added
-	- Friend pending
-	- Friend added
-- Single status
-- Multi-status
-- Limited output
-- Failing cases
-
-*/
