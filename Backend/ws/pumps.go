@@ -18,7 +18,6 @@ func (wsState *WebSocketState) timeoutClient(userID uint) {
 		}
 		iteration++
 	}
-	fmt.Printf("send to all\n")
 	payload := packetOnline{
 		UserID:   userID,
 		IsOnline: false,
