@@ -11,6 +11,14 @@ Game::Game(std::size_t numDecks)
 {
 }
 
+void Game::reset() noexcept {
+    _phase = Phase::Betting;
+    _bet = 0;
+    _playerHand.clear();
+    _dealerHand.clear();
+    _outcome.reset();
+}
+
 void Game::deal(std::int64_t bet) {
     if (_phase != Phase::Betting) {
         throw std::logic_error("Cannot deal outside betting phase");

@@ -38,6 +38,7 @@ private:
 public:
     explicit Game(std::size_t numDecks = 6);
 
+    void reset() noexcept;
     void deal(std::int64_t bet);
     void hit();
     void stand();
