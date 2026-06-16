@@ -42,7 +42,7 @@ func (s *AccountService) getAccountForUpdate(tx *gorm.DB, userID uint) (*models.
 // Deposit adds funds to account with transaction record
 func (s *AccountService) Deposit(userID uint, amount decimal.Decimal) error {
 	if amount.LessThan(decimal.Zero) {
-		return utils.ErrNegativeTransactionAmount
+		return utils.ErrAmountNotPositive
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		account, err := s.getAccountForUpdate(tx, userID)
@@ -74,7 +74,7 @@ func (s *AccountService) Deposit_f(userID uint, amount float64) error {
 // Withdraw removes the funds from accounts with transaction record
 func (s *AccountService) Withdraw(userID uint, amount decimal.Decimal) error {
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return utils.ErrNegativeTransactionAmount
+		return utils.ErrAmountNotPositive
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		account, err := s.getAccountForUpdate(tx, userID)

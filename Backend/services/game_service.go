@@ -23,7 +23,7 @@ func NewGameService(db *gorm.DB) *GameService {
 // CreateGame starts a new game session with initial bet validation
 func (gs *GameService) CreateGame(userID uint, gameType string, initialBet decimal.Decimal) (*models.Game, error) {
 	if initialBet.LessThanOrEqual(decimal.Zero) {
-		return nil, utils.ErrNegativeTransactionAmount
+		return nil, utils.ErrAmountNotPositive
 	}
 	var account models.Account
 	if err := gs.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&account, "user_id = ?", userID).Error; err != nil {
