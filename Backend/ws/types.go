@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"fmt"
 	"sync"
 
 	"encoding/json"
@@ -101,7 +100,6 @@ type protectedContextList struct {
 func (contextList *protectedContextList) append(context *connectionContext) {
 	contextList.mutex.Lock()
 	contextList.contexts = append(contextList.contexts, context)
-	fmt.Printf("after append: %d\n", len(contextList.contexts))
 	contextList.mutex.Unlock()
 }
 
@@ -115,7 +113,6 @@ func (contextList *protectedContextList) swapPopByConnection(connection *websock
 			(*contexts)[contextIndex] = (*contexts)[newLength]
 			(*contexts)[newLength] = nil
 			(*contexts) = (*contexts)[:newLength]
-			fmt.Printf("after pop: %d\n", len(contextList.contexts))
 			return context
 		}
 	}

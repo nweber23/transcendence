@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { createWebSocket } from '@/utils/ws';
 
@@ -26,8 +26,10 @@ const AppLayout: React.FC = () => {
   const showFooter = pathname === '/';
   const hideHeader = pathname === '/login' || pathname === '/signup';
 
-  const token = localStorage.getItem('auth_token')
-  if(token != null) {
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    if(token == null)
+      return;
     const socket = createWebSocket(token, ["generic"])
     socket.onopen = (e) => {
       console.log("Connection established");
@@ -35,7 +37,8 @@ const AppLayout: React.FC = () => {
     socket.onmessage = (e) => {
       console.log("Message: " + e.data);
     }
-  }
+    return () => socket.close();
+  })
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
