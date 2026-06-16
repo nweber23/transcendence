@@ -246,6 +246,34 @@ TEST_CASE("play_full_iteration handles zero bet/lines gracefully", "[slotmachine
     REQUIRE(cycle.total_overall_win == 0);
 }
 
+TEST_CASE("run_slot returns valid JSON for existing game", "[slotmachine][run_slot]") {
+    Machine m;
+    std::string result = m.run_slot("lucky-sevens", 5, 2);
+    REQUIRE(!result.empty());
+
+    CompleteGameCycle cycle;
+    auto err = glz::read_json(cycle, result);
+    REQUIRE(!err);
+    REQUIRE(cycle.game_name == "lucky-sevens");
+    REQUIRE(cycle.total_initial_bet == 10);
+}
+
+TEST_CASE("run_slot returns empty string for nonexistent game", "[slotmachine][run_slot]") {
+    Machine m;
+    std::string result = m.run_slot("nonexistent-game", 10, 1);
+    REQUIRE(result.empty());
+}
+
+TEST_CASE("run_slot matches play_full_iteration for valid game", "[slotmachine][run_slot]") {
+    Machine m1(42);
+    Machine m2(42);
+
+    std::string direct = m1.play_full_iteration("lucky-sevens", 5, 2);
+    std::string guarded = m2.run_slot("lucky-sevens", 5, 2);
+
+    REQUIRE(direct == guarded);
+}
+
 TEST_CASE("Machine handles missing config directory without crashing", "[slotmachine][config]") {
     setenv("SLOT_CONFIG_DIR", "/tmp/definitely_does_not_exist_12345", 1);
 
