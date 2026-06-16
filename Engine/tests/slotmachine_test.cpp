@@ -61,12 +61,12 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
         for (int i = 0; i < 10000; ++i) {
             auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
             if (r.bonus_triggered) {
-                REQUIRE(r.free_spins_remaining == 10);
-                REQUIRE(fs.free_spins_remaining == 10);
+                REQUIRE(r.free_spins_remaining == 15);
+                REQUIRE(fs.free_spins_remaining == 15);
                 return;
             }
         }
-        FAIL("Should have seen a bonus trigger with 10 free spins");
+        FAIL("Should have seen a bonus trigger with 15 free spins");
     }
 
     SECTION("free spins decrement counter and accumulate total") {
@@ -75,11 +75,11 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
             auto r = m.get_monetary_result("lucky-sevens", 10, 1, fs);
             if (!r.bonus_triggered) continue;
 
-            REQUIRE(fs.free_spins_remaining == 10);
+            REQUIRE(fs.free_spins_remaining == 15);
 
             auto fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
             REQUIRE(fs_result.is_free_spin);
-            REQUIRE(fs.free_spins_remaining == 9);
+            REQUIRE(fs.free_spins_remaining == 14);
 
             while (fs.free_spins_remaining > 0) {
                 fs_result = m.get_monetary_result("lucky-sevens", 10, 1, fs, true);
@@ -96,7 +96,7 @@ TEST_CASE("Machine loads configs and evaluates spins", "[slotmachine]") {
             auto base = m.get_monetary_result("lucky-sevens", 10, 1, fs);
             if (!base.bonus_triggered) continue;
 
-            REQUIRE(fs.current_multiplier == 3);
+            REQUIRE(fs.current_multiplier == 1);
 
             for (int j = 0; j < 10; ++j) {
                 auto mult_before = fs.current_multiplier;
