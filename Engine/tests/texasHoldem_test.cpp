@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include "../games/cardGames/texasHoldem/includes/game.hpp"
 #include "../games/cardGames/texasHoldem/includes/player.hpp"
+#include "../games/cardGames/texasHoldem/includes/engine.hpp"
+#include <glaze/glaze.hpp>
 
 using namespace texas;
 using namespace card;
@@ -274,4 +276,54 @@ TEST_CASE("Zero stack player at creation is not all-in until bet", "[texas][play
     Player p{0};
     REQUIRE_FALSE(p.is_all_in());
     REQUIRE(p.stack() == 0);
+}
+
+TEST_CASE("serialize_game_state returns valid JSON for initial game", "[texas][engine]") {
+    Game g{2, 1000};
+    std::string json = serialize_game_state(g);
+    REQUIRE(!json.empty());
+
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    REQUIRE(state.phase == "preflop");
+    REQUIRE(state.players.size() == 2);
+    REQUIRE(state.community_cards.empty());
+    REQUIRE(state.pot.empty());
+}
+
+TEST_CASE("serialize_game_state after blinds includes player bets", "[texas][engine]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    std::string json = serialize_game_state(g);
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    REQUIRE(state.players[0].current_bet == 10);
+    REQUIRE(state.players[1].current_bet == 20);
+    REQUIRE(state.players[0].stack == 990);
+    REQUIRE(state.players[1].stack == 980);
+}
+
+TEST_CASE("serialize_game_state round-trips player state after fold", "[texas][engine]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    g.act(0, {ActionType::Fold});
+    std::string json = serialize_game_state(g);
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    REQUIRE(state.players[0].folded);
+    REQUIRE_FALSE(state.players[1].folded);
+}
+
+TEST_CASE("serialize_game_state includes last action", "[texas][engine]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    std::string json = serialize_game_state(g);
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    REQUIRE(state.last_action_type == "raise");
+    REQUIRE(state.last_action_amount == 20);
 }

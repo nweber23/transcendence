@@ -61,9 +61,11 @@ add_test(NAME blackjack_test COMMAND blackjack_test)
 add_library(texasHoldem_impl STATIC
     ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/src/game.cpp
     ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/src/player.cpp
+    ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/src/engine.cpp
 )
 target_include_directories(texasHoldem_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/includes)
 target_include_directories(texasHoldem_impl PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
+target_link_libraries(texasHoldem_impl PUBLIC glaze::glaze)
 
 add_executable(texasHoldem_test texasHoldem_test.cpp)
 target_include_directories(texasHoldem_test PRIVATE ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes)
