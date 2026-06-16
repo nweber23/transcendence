@@ -1,9 +1,10 @@
 package utils
 
 import (
+	"errors"
+
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +20,7 @@ func GetRandomHexString(length int) (string, error) {
 
 func ReinterpretNotFound(err error) (error) {
 	if err == nil {
-		return errors.New("matching entry already exists")
+		return ErrEntryExists
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
 	} else {

@@ -20,7 +20,7 @@ func NewUserService(db *gorm.DB) *UserService {
 
 func validateUsername(username string) error {
 	if len(username) < 3 || len(username) > 32 {
-		return errors.New("username must be between 3 and 32 characters")
+		return utils.ErrUsernameWrongLength
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func (s *UserService) RegisterUser(username, email, password string) (*models.Us
 		return nil, err
 	}
 	if !utils.ValidateEmail(email) {
-		return nil, errors.New("invalid email")
+		return nil, utils.ErrInvalidEmail
 	}
 	var existingUser models.User
 	if err := utils.ReinterpretNotFound(s.db.Where("username = ? OR email = ?", username, email).First(&existingUser).Error); err != nil {
@@ -70,12 +70,12 @@ func (s *UserService) LoginUser(username string, password string) (*models.User,
 	var user models.User
 	if err := s.db.Where("username = ? and deleted_at IS NULL", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("invalid username or password")
+			return nil, utils.ErrInvalidUsername
 		}
 		return nil, fmt.Errorf("failed to login: %w", err)
 	}
 	if !utils.VerifyPassword(user.PasswordHash, password) {
-		return nil, errors.New("invalid username or password")
+		return nil, utils.ErrInvalidPassword
 	}
 	return &user, nil
 }
@@ -98,10 +98,10 @@ func (s *UserService) UpdateUser(
 	avatarURL    string,
 ) (*models.User, error) {
 	if err := validateUsername(username); err != nil {
-		return nil, errors.New("invalid username")
+		return nil, utils.ErrInvalidUsername
 	}
 	if !utils.ValidateEmail(email) {
-		return nil, errors.New("invalid email")
+		return nil, utils.ErrInvalidEmail
 	}
 	var duplicateUser models.User
 	var err error

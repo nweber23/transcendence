@@ -157,9 +157,9 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	if err != nil {
 		var status int
 		// TODO: Perhaps create a full enum of errors for our API
-		if err.Error() == "invalid username" || err.Error() == "invalid email" {
+		if utils.IsErrInvalid(err) {
 			status = http.StatusBadRequest
-		} else if err.Error() == "matching entry already exists" {
+		} else if errors.Is(err, utils.ErrEntryExists) {
 			status = http.StatusConflict
 		} else {
 			status = http.StatusInternalServerError
@@ -180,7 +180,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 func createRelatedURL(uploadFilePath string) (string, error) {
 	fileName := filepath.Base(uploadFilePath)
 	if fileName == "." || fileName == "/" {
-		return "", errors.New("invalid file name")
+		return "", utils.ErrInvalidFilename
 	}
 	fileDots := strings.Split(fileName, ".")
 	fileExtension := ""
@@ -190,7 +190,7 @@ func createRelatedURL(uploadFilePath string) (string, error) {
 	for {
 		fileURL, err := utils.GetRandomHexString(16)
 		if err != nil {
-			return "", errors.New("failed to generate random string")
+			return "", utils.ErrRandomStringGenFailed
 		}
 		fileURL += fileExtension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
@@ -228,10 +228,9 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	user.AvatarURL, err = createRelatedURL(file.Filename)
 	if err != nil {
 		var status int
-		if err.Error() == "invalid file name" {
+		if errors.Is(err, utils.ErrInvalidFilename) {
 			status = http.StatusBadRequest
-		}
-		if err.Error() == "failed to generate random string" {
+		} else {
 			status = http.StatusInternalServerError
 		}
 		utils.RespondError(c, status, "create_url_failed", err.Error())
@@ -427,9 +426,9 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 	}
 	isPending, err := uh.friendService.AddFriend(userID.(uint), uint(friendID))
 	if err != nil {
-		if (err.Error() == "self love only works irl" ||
+		if (errors.Is(err, utils.ErrSelfLove) ||
 			errors.Is(err, gorm.ErrRecordNotFound) ||
-			err.Error() == "friend already added") {
+			errors.Is(err, utils.ErrAlreadyBefriended)) {
 			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", err.Error())
 		} else {
 			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", err.Error())
@@ -507,7 +506,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
 	if err != nil {
 		var status int
-		if err.Error() == "invalid status" {
+		if errors.Is(err, utils.ErrInvalidFriendshipStatus) {
 			status = http.StatusBadRequest
 		} else {
 			status = http.StatusInternalServerError
