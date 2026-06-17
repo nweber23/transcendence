@@ -26,6 +26,9 @@ func main() {
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware())
 
+	// Serve uploaded avatar files publicly (no auth required for <img> tags)
+	router.Static("/uploads", "./uploads")
+
 	// Initialize services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)

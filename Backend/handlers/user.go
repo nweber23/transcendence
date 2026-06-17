@@ -76,6 +76,8 @@ type UpdateFriendResponse struct {
 
 type FriendResponse struct {
 	FriendID  uint   `json:"friend_id"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatarURL"`
 	Status    string `json:"status"`
 	IsOnline  bool   `json:"is_online"`
 	CreatedAt string `json:"created_at"`
@@ -534,8 +536,15 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 			utils.RespondError(c, http.StatusInternalServerError, "determine_status_failed", "Invalid friendship status")
 			return
 		}
+		friendUser, err := uh.userService.GetUserByID(friendID)
+		if err != nil {
+			utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", err.Error())
+			return
+		}
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
+			Username:  friendUser.Username,
+			AvatarURL: friendUser.AvatarURL,
 			Status:    status,
 			IsOnline:  status == models.FriendshipStatusActive && uh.wsState.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
