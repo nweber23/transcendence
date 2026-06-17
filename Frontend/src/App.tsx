@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+
+import { createWebSocket } from '@/utils/ws';
+
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -22,6 +25,20 @@ const AppLayout: React.FC = () => {
   const { pathname } = useLocation();
   const showFooter = pathname === '/';
   const hideHeader = pathname === '/login' || pathname === '/signup';
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    if(token == null)
+      return;
+    const socket = createWebSocket(token, ["generic"])
+    socket.onopen = (e) => {
+      console.log("Connection established");
+    }
+    socket.onmessage = (e) => {
+      console.log("Message: " + e.data);
+    }
+    return () => socket.close();
+  }, [])
 
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">

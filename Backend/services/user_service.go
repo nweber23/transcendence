@@ -18,33 +18,23 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
-func ValidateUsername(username string) error {
+func validateUsername(username string) error {
 	if len(username) < 3 || len(username) > 32 {
-		return errors.New("username must be between 3 and 32 characters")
+		return utils.ErrUsernameWrongLength
 	}
 	return nil
 }
 
-func reinterpretNotFound(err error) (error) {
-	if err == nil {
-		return errors.New("username or email already exists")
-	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil
-	} else {
-		return err
-	}
-}
-
 // RegisterUser creates a new user with hashed password and initializes account
 func (s *UserService) RegisterUser(username, email, password string) (*models.User, error) {
-	if err := ValidateUsername(username); err != nil {
+	if err := validateUsername(username); err != nil {
 		return nil, err
 	}
 	if !utils.ValidateEmail(email) {
-		return nil, errors.New("invalid email")
+		return nil, utils.ErrInvalidEmail
 	}
 	var existingUser models.User
-	if err := reinterpretNotFound(s.db.Where("username = ? OR email = ?", username, email).First(&existingUser).Error); err != nil {
+	if err := utils.ReinterpretNotFound(s.db.Where("username = ? OR email = ?", username, email).First(&existingUser).Error); err != nil {
 		return nil, err
 	}
 	passwordHash, err := utils.HashPassword(password)
@@ -55,6 +45,7 @@ func (s *UserService) RegisterUser(username, email, password string) (*models.Us
 		Username:     username,
 		Email:        email,
 		PasswordHash: passwordHash,
+		AvatarURL:    models.DefaultAvatarURL,
 	}
 	if err := s.db.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -79,12 +70,12 @@ func (s *UserService) LoginUser(username string, password string) (*models.User,
 	var user models.User
 	if err := s.db.Where("username = ? and deleted_at IS NULL", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("invalid username or password")
+			return nil, utils.ErrInvalidUsername
 		}
 		return nil, fmt.Errorf("failed to login: %w", err)
 	}
 	if !utils.VerifyPassword(user.PasswordHash, password) {
-		return nil, errors.New("invalid username or password")
+		return nil, utils.ErrInvalidPassword
 	}
 	return &user, nil
 }
@@ -99,20 +90,26 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 }
 
 // UpdateUser updates a user by userID
-func (s *UserService) UpdateUser(userID uint, username string, email string, passwordHash string) (*models.User, error) {
-	if err := ValidateUsername(username); err != nil {
-		return nil, errors.New("invalid username")
+func (s *UserService) UpdateUser(
+	userID       uint,
+	username     string,
+	email        string,
+	passwordHash string,
+	avatarURL    string,
+) (*models.User, error) {
+	if err := validateUsername(username); err != nil {
+		return nil, utils.ErrInvalidUsername
 	}
 	if !utils.ValidateEmail(email) {
-		return nil, errors.New("invalid email")
+		return nil, utils.ErrInvalidEmail
 	}
 	var duplicateUser models.User
 	var err error
-	err = reinterpretNotFound(s.db.Where("username = ? AND id <> ?", username, userID).First(&duplicateUser).Error)
+	err = utils.ReinterpretNotFound(s.db.Where("username = ? AND id <> ?", username, userID).First(&duplicateUser).Error)
 	if err != nil {
 		return nil, err
 	}
-	err = reinterpretNotFound(s.db.Where("email = ?    AND id <> ?", email,    userID).First(&duplicateUser).Error)
+	err = utils.ReinterpretNotFound(s.db.Where("email = ?    AND id <> ?", email,    userID).First(&duplicateUser).Error)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +120,7 @@ func (s *UserService) UpdateUser(userID uint, username string, email string, pas
 	user.Username     = username
 	user.Email        = email
 	user.PasswordHash = passwordHash
+	user.AvatarURL    = avatarURL
 	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}

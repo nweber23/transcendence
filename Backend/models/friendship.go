@@ -1,0 +1,26 @@
+package models
+
+import (
+	"time"
+)
+
+type Friendship struct {
+	LowID       uint       `gorm:"primaryKey;uniqueIndex:friendship_binding"`
+	HighID      uint       `gorm:"primaryKey;uniqueIndex:friendship_binding"`
+	Status      string     `gorm:"default:'dormant';index"`
+	CreatedAt   time.Time
+	DeletedAt   *time.Time `gorm:"index"`
+}
+
+func (Friendship) TableName() string {
+	return "friendships"
+}
+
+const (
+	FriendshipStatusDormant       = "dormant"
+	FriendshipStatusActive        = "active"
+	FriendshipStatusPendingIDLow  = "pending_id_low"
+	FriendshipStatusPendingIDHigh = "pending_id_high"
+	FriendshipStatusPendingSelf   = "pending_self"
+	FriendshipStatusPendingOther  = "pending_other"
+)

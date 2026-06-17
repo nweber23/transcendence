@@ -67,7 +67,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 	user, err := h.userService.LoginUser(req.Username, req.Password)
 	if err != nil {
-		utils.RespondError(c, http.StatusConflict, "login_fail", err.Error())
+		var message string
+		if utils.IsErrInvalid(err) {
+			message = "invalid user or password"
+		} else {
+			message = err.Error()
+		}
+		utils.RespondError(c, http.StatusConflict, "login_fail", message)
 		return
 	}
 	token := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)

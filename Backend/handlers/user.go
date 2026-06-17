@@ -1,33 +1,52 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"net/http"
 	"strconv"
+	"strings"
+	"syscall"
+	"path/filepath"
 
+	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
+	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
 	userService    *services.UserService
 	accountService *services.AccountService
+	friendService  *services.FriendService
+	wsState        *ws.WebSocketState
 }
 
-func NewUserHandler(userService *services.UserService, accountService *services.AccountService) *UserHandler {
+func NewUserHandler(
+	userService    *services.UserService,
+	accountService *services.AccountService,
+	friendService  *services.FriendService,
+	wsState        *ws.WebSocketState,
+) *UserHandler {
 	return &UserHandler{
 		userService:    userService,
 		accountService: accountService,
+		friendService:  friendService,
+		wsState:        wsState,
 	}
 }
 
 type UserProfileResponse struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	JoinedAt string `json:"joined_at"`
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatarURL"`
+	JoinedAt  string `json:"joined_at"`
 }
 
 type AccountResponse struct {
@@ -48,6 +67,18 @@ type TransactionResponse struct {
 
 type TransactionHistoryResponse struct {
 	Transactions []TransactionResponse `json:"transactions"`
+}
+
+type UpdateFriendResponse struct {
+	FriendID uint   `json:"friend_id"`
+	Status   string `json:"status"`
+}
+
+type FriendResponse struct {
+	FriendID  uint   `json:"friend_id"`
+	Status    string `json:"status"`
+	IsOnline  bool   `json:"is_online"`
+	CreatedAt string `json:"created_at"`
 }
 
 type UserProfileRequest struct {
@@ -77,10 +108,11 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
@@ -121,13 +153,13 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 			return
 		}
 	}
-	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash)
+	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash, user.AvatarURL)
 	if err != nil {
 		var status int
 		// TODO: Perhaps create a full enum of errors for our API
-		if err.Error() == "invalid username" || err.Error() == "invalid email" {
+		if utils.IsErrInvalid(err) {
 			status = http.StatusBadRequest
-		} else if err.Error() == "username or email already exists" {
+		} else if errors.Is(err, utils.ErrEntryExists) {
 			status = http.StatusConflict
 		} else {
 			status = http.StatusInternalServerError
@@ -136,12 +168,109 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:       userID.(uint),
-		Username: username,
-		Email:    email,
-		JoinedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:        userID.(uint),
+		Username:  username,
+		Email:     email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
+}
+
+func createRelatedURL(uploadFilePath string) (string, error) {
+	fileName := filepath.Base(uploadFilePath)
+	if fileName == "." || fileName == "/" {
+		return "", utils.ErrInvalidFilename
+	}
+	fileDots := strings.Split(fileName, ".")
+	fileExtension := ""
+	if len(fileDots) > 1 {
+		fileExtension = "." + fileDots[len(fileDots) - 1]
+	}
+	for {
+		fileURL, err := utils.GetRandomHexString(16)
+		if err != nil {
+			return "", utils.ErrRandomStringGenFailed
+		}
+		fileURL += fileExtension
+		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
+			if os.IsNotExist(err) {
+				return fileURL, nil
+			} else {
+				return "", err
+			}
+		}
+	}
+}
+
+func (uh *UserHandler) UploadAvatar(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	file, err := c.FormFile("file")
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	err = os.Mkdir("./uploads/", os.ModeDir | os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	oldURL := user.AvatarURL
+	user.AvatarURL, err = createRelatedURL(file.Filename)
+	if err != nil {
+		var status int
+		if errors.Is(err, utils.ErrInvalidFilename) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "create_url_failed", err.Error())
+		return
+	}
+	if err := c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL)); err != nil {
+		var status int
+		if errors.Is(err, syscall.ENOSPC) {
+			status = http.StatusInsufficientStorage
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "save_uploaded_file_failed", err.Error())
+		return
+	}
+	user, err = uh.userService.UpdateUser(
+		userID.(uint),
+		user.Username,
+		user.Email,
+		user.PasswordHash,
+		user.AvatarURL,
+	)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
+		return
+	}
+	response := UserProfileResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
+	if oldURL != models.DefaultAvatarURL {
+		err = os.Remove(filepath.Join("./uploads/", oldURL))
+		if err != nil {
+			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+		}
+	}
 }
 
 // GetAccount retrieves account balance and summary
@@ -282,4 +411,136 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		TotalLost:    account.TotalLost.String(),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Withdrawal successful", response)
+}
+
+func (uh *UserHandler) AddFriend(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	friendID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err.Error())
+		return
+	}
+	isPending, err := uh.friendService.AddFriend(userID.(uint), uint(friendID))
+	if err != nil {
+		if (errors.Is(err, utils.ErrSelfLove) ||
+			errors.Is(err, gorm.ErrRecordNotFound) ||
+			errors.Is(err, utils.ErrAlreadyBefriended)) {
+			utils.RespondError(c, http.StatusBadRequest, "add_friend_failed", err.Error())
+		} else {
+			utils.RespondError(c, http.StatusInternalServerError, "add_friend_failed", err.Error())
+		}
+	} else {
+		status := models.FriendshipStatusActive
+		if isPending {
+			status = models.FriendshipStatusPendingSelf
+		}
+		response := UpdateFriendResponse{
+			FriendID: uint(friendID),
+			Status:   status,
+		}
+		utils.RespondSuccess(c, http.StatusOK, "Friend added successfully", &response)
+	}
+}
+
+func (uh *UserHandler) RemoveFriend(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	friendID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_friend_id_failed", err.Error())
+		return
+	}
+	if err := uh.friendService.RemoveFriend(userID.(uint), uint(friendID)); err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "remove_friend_failed", err.Error())
+	} else {
+		response := UpdateFriendResponse{
+			FriendID: uint(friendID),
+			Status:   models.FriendshipStatusDormant,
+		}
+		utils.RespondSuccess(c, http.StatusOK, "Friend removed successfully", &response)
+	}
+}
+
+func absoluteToRelativePending(userID uint, requiredSelfID uint) (string) {
+	if userID == requiredSelfID {
+		return models.FriendshipStatusPendingSelf
+	} else {
+		return models.FriendshipStatusPendingOther
+	}
+}
+
+func determineStatus(userID uint, friendID uint, friendship *models.Friendship) (string, bool) {
+	switch friendship.Status {
+		case models.FriendshipStatusDormant:
+			fallthrough
+		case models.FriendshipStatusActive:
+			return friendship.Status, true
+		case models.FriendshipStatusPendingIDLow:
+			return absoluteToRelativePending(userID, friendship.LowID), true
+		case models.FriendshipStatusPendingIDHigh:
+			return absoluteToRelativePending(userID, friendship.HighID), true
+		default:
+			return "", false
+	}
+}
+
+func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err.Error())
+		return
+	}
+	if limit < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
+		return
+	}
+	statusesString := c.Query("statuses")
+	if statusesString == "" {
+		utils.RespondError(c, http.StatusBadRequest, "no_status_provided", "No status provided")
+		return
+	}
+	statuses := strings.Split(statusesString, ",")
+	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
+	if err != nil {
+		var status int
+		if errors.Is(err, utils.ErrInvalidFriendshipStatus) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "enumerate_friends_failed", err.Error())
+		return
+	}
+	friendResponses := make([]FriendResponse, len(friendships))
+	for responseIndex, friendship := range friendships {
+		friendID := friendship.LowID
+		if friendID == userID.(uint) {
+			friendID = friendship.HighID
+		}
+		status, isValid := determineStatus(userID.(uint), friendID, &friendship)
+		if !isValid {
+			utils.RespondError(c, http.StatusInternalServerError, "determine_status_failed", "Invalid friendship status")
+			return
+		}
+		friendResponses[responseIndex] = FriendResponse{
+			FriendID:  friendID,
+			Status:    status,
+			IsOnline:  status == models.FriendshipStatusActive && uh.wsState.IsOnline(friendID),
+			// TODO: Reconsider in the future if we want online status to only be advertised to friends
+			CreatedAt: friendship.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Friend list retrieved successfully", friendResponses)
 }

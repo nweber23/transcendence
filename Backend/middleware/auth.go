@@ -8,6 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func AuthFix(c *gin.Context) {
+	c.Request.Header.Set("Authorization", "Bearer " + c.Query("token"))
+	c.Next()
+}
+
 // AuthMiddleware validates JWT token from Authorization header
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {

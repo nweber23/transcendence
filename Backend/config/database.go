@@ -9,14 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// InitDB initializes PostgreSQL database connection and runs migrations
-func InitDB(cfg *Config) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL()), &gorm.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-	// Auto-migrate models
-	if err := db.AutoMigrate(
+func PrepareDB(db *gorm.DB) (error) {
+	return db.AutoMigrate(
 		&models.User{},
 		&models.Account{},
 		&models.Transaction{},
@@ -25,7 +19,18 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 		&models.PokerGame{},
 		&models.SlotsGame{},
 		&models.GameStatistics{},
-	); err != nil {
+		&models.Friendship{},
+	)
+}
+
+// InitDB initializes PostgreSQL database connection and runs migrations
+func InitDB(cfg *Config) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL()), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+	// Auto-migrate models
+	if err := PrepareDB(db); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 	return db, nil

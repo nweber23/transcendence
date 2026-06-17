@@ -2,16 +2,17 @@
 package services
 
 import (
+	"errors"
 	"strings"
 	"fmt"
 	"testing"
 	"reflect"
 	"transcendence/utils"
-	"time"
 	"github.com/shopspring/decimal"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"transcendence/config"
 	"transcendence/models"
 )
 
@@ -21,27 +22,19 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 		testInterface.Errorf(`failed to create in memory database: %v`, err)
 		testInterface.FailNow()
 	}
-	if err := db.AutoMigrate(
-		&models.User{},
-		&models.Account{},
-		&models.Transaction{},
-		&models.Game{},
-		&models.BlackjackGame{},
-		&models.PokerGame{},
-		&models.SlotsGame{},
-		&models.GameStatistics{},
-	); err != nil {
+	if err := config.PrepareDB(db); err != nil {
 		testInterface.Errorf(`failed to run migrations: %v`, err)
 		testInterface.FailNow()
 	}
 	return db
 }
 
-func createMockServices(testInterface *testing.T) (*AccountService, *UserService) {
+func createMockServices(testInterface *testing.T) (*AccountService, *UserService, *FriendService) {
 	db := InitMockDB(testInterface)
 	accountService := NewAccountService(db)
 	userService := NewUserService(db)
-	return accountService, userService
+	friendService := NewFriendService(db)
+	return accountService, userService, friendService
 }
 
 func createMockUsers(testInterface *testing.T, userService *UserService) {
@@ -126,7 +119,7 @@ func updateUserExpect(
 		testInterface.Errorf(`failed to hash password`)
 		return
 	}
-	_, err = userService.UpdateUser(userID, username, email, passwordHash)
+	_, err = userService.UpdateUser(userID, username, email, passwordHash, models.DefaultAvatarURL)
 	if (err != nil) == expectSuccess {
 		testInterface.Errorf(`update user %d with username %s and email %s did not go as expected`, userID, username, email)
 	}
@@ -146,8 +139,8 @@ func updateUserExpect(
 	loginExpect(testInterface, userService, username, password, true)
 }
 
-func displayTransactions(testInterface *testing.T, expected *models.Transaction, actual *models.Transaction) {
-	var transactionType reflect.Type  = reflect.TypeFor[models.Transaction]()
+func displayDifferences[modelType any](testInterface *testing.T, expected *modelType, actual *modelType) {
+	var transactionType reflect.Type  = reflect.TypeFor[modelType]()
 	var expectedValue   reflect.Value = reflect.ValueOf(*expected)
 	var actualValue     reflect.Value = reflect.ValueOf(*actual)
 	testInterface.Errorf("| ---------------field | ------------expected | --------------actual |")
@@ -193,17 +186,118 @@ func getTransactionHistoryExpect(
 		if !reflect.DeepEqual(*expected, *actual) {
 			testInterface.Errorf("Transactions differ at index %d, here is a breakdown of their differences:\n",
 				transactionIndex)
-			displayTransactions(testInterface, expected, actual)
+			displayDifferences(testInterface, expected, actual)
 		}
 		transactionIndex++
+	}
+}
+
+func addFriendExpect(
+	testInterface    *testing.T,
+	friendService    *FriendService,
+	userID           uint,
+	friendID         uint,
+	expectSuccess    bool,
+	expectPending    bool,
+) {
+	isPending, err := friendService.AddFriend(userID, friendID)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("user %d add friend %d did not go as expected: %v", userID, friendID, err)
+	}
+	if err != nil {
+		return
+	}
+	if err == nil && isPending != expectPending {
+		testInterface.Errorf("user %d add friend %d resulted in an unexpected pending state", userID, friendID)
+	}
+	areFriends, err := friendService.AreFriends(userID, friendID)
+	if err != nil {
+		testInterface.Errorf("AreFriends should not fail")
+		testInterface.FailNow()
+	}
+	if areFriends == expectPending {
+		testInterface.Errorf("AreFriends reports the wrong state for user %d and friend %d", userID, friendID)
+	}
+}
+
+func ordinaryAddFriendCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
+	addFriendExpect(testInterface, friendService, 2, 1, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 4, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 3, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 2, 5, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 2, expectSuccess, false)
+	addFriendExpect(testInterface, friendService, 1, 4, expectSuccess, expectSuccess)
+	addFriendExpect(testInterface, friendService, 1, 3, expectSuccess, expectSuccess)
+}
+
+func removeFriendExpect(
+	testInterface *testing.T,
+	friendService *FriendService,
+	userID        uint,
+	friendID      uint,
+	expectSuccess bool,
+) {
+	if err := friendService.RemoveFriend(userID, friendID); (err != nil) == expectSuccess {
+		testInterface.Errorf("user %d remove friend %d did not go as expected: %v", userID, friendID, err)
+	}
+}
+
+func ordinaryRemoveFriendCases(testInterface *testing.T, friendService *FriendService, expectSuccess bool) {
+	removeFriendExpect(testInterface, friendService, 2, 1, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 4, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 3, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 2, 5, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 1, 2, false)
+	removeFriendExpect(testInterface, friendService, 1, 4, expectSuccess)
+	removeFriendExpect(testInterface, friendService, 1, 3, expectSuccess)
+}
+
+func enumerateFriendsExpect(
+	testInterface       *testing.T,
+	friendService       *FriendService,
+	expectedFriendships []models.Friendship,
+	expectSuccess       bool,
+	userID              uint,
+	statuses            []string,
+	limit               int,
+) {
+	var length int = len(expectedFriendships)
+	actualFriendships, err := friendService.EnumerateFriends(userID, statuses, limit)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("Enumerating friends did not go as expected: %v", err)
+	}
+	if err != nil {
+		return
+	}
+	if length != len(actualFriendships) {
+		testInterface.Errorf("Actual friendships don't match the expected ones in terms of length for user %d", userID)
+		return
+	}
+	for friendshipIndex := 0; friendshipIndex < length; {
+		expected := &expectedFriendships[friendshipIndex]
+		actual   := &actualFriendships[friendshipIndex]
+
+		// Some data cannot be reliably replicated or tested
+		expected.CreatedAt = actual.CreatedAt
+		expected.DeletedAt = actual.DeletedAt
+
+		if actual.LowID > actual.HighID {
+			testInterface.Errorf("LowID is greater than HighID at index %d",
+				friendshipIndex)
+		}
+		if !reflect.DeepEqual(*expected, *actual) {
+			testInterface.Errorf("Friendships differ for user %d at index %d, here is a breakdown of their differences:\n",
+				userID, friendshipIndex)
+			displayDifferences(testInterface, expected, actual)
+		}
+		friendshipIndex++
 	}
 }
 
 const STRESS_TEST_AMOUNT int = 500
 
 func TestAccountService(testInterface *testing.T) {
-	accountService, userService := createMockServices(testInterface)
-	_ = accountService
+	accountService, userService, friendService := createMockServices(testInterface)
 
 	// Create test users and check if they exist after
 	createMockUsers(testInterface, userService)
@@ -257,7 +351,7 @@ func TestAccountService(testInterface *testing.T) {
 	if err == nil {
 		testInterface.Errorf("withdrawal from empty account should not succeed")
 	}
-	if err.Error() != "insufficient funds" {
+	if !errors.Is(err, utils.ErrInsufficientBalance) {
 		testInterface.Errorf("withdrawal failed for unexpected reason %v", err)
 	}
 	accountService.Deposit_f(2, 50)
@@ -293,8 +387,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(2),
 			BalanceAfter: decimal.NewFromInt(12),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 		models.Transaction {
 			ID:           2,
@@ -303,8 +397,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(40),
 			BalanceAfter: decimal.NewFromInt(10),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 		models.Transaction {
 			ID:           1,
@@ -313,8 +407,8 @@ func TestAccountService(testInterface *testing.T) {
 			Amount:       decimal.NewFromInt(50),
 			BalanceAfter: decimal.NewFromInt(50),
 			Status:       "completed",
-			Metadata:     []byte {},
-			CreatedAt:    time.Now(),
+			//Metadata:     []byte {},
+			//CreatedAt:    time.Now(),
 		},
 	}
 	getTransactionHistoryExpect(testInterface, accountService, expectedTransactions[1:],  2, 50, 0)
@@ -332,4 +426,103 @@ func TestAccountService(testInterface *testing.T) {
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)
+
+	// Self love
+	addFriendExpect(testInterface, friendService, 1, 1, false, false)
+
+	// Test ordinary cases and test duplicate detection
+	ordinaryAddFriendCases(testInterface, friendService, true)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+
+	// Self love shouldn't suddenly work
+	addFriendExpect(testInterface, friendService, 1, 1, false, false)
+	addFriendExpect(testInterface, friendService, 2, 2, false, false)
+
+	// Inexistent users
+	addFriendExpect(testInterface, friendService,  1, 90, false, false)
+	addFriendExpect(testInterface, friendService, 90,  1, false, false)
+	addFriendExpect(testInterface, friendService, 90, 90, false, false)
+
+	// Remove friends that never existed
+	removeFriendExpect(testInterface, friendService, 1,  1, false)
+	removeFriendExpect(testInterface, friendService, 4,  3, false)
+	removeFriendExpect(testInterface, friendService, 1, 90, false)
+
+	// Remove ordinary cases and test duplicate detection
+	ordinaryRemoveFriendCases(testInterface, friendService, true)
+	ordinaryRemoveFriendCases(testInterface, friendService, false)
+	ordinaryRemoveFriendCases(testInterface, friendService, false)
+
+	// Add back ordinary cases just like earlier
+	ordinaryAddFriendCases(testInterface, friendService, true)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+	ordinaryAddFriendCases(testInterface, friendService, false)
+
+	// Single status
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+		models.Friendship{
+			LowID:  1,
+			HighID: 2,
+			Status: models.FriendshipStatusActive,
+		},
+	}, true, 1, []string{models.FriendshipStatusActive}, 90)
+	friendService.RemoveFriend(1, 2)
+	friendService.RemoveFriend(3, 1)
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+		models.Friendship{
+			LowID:  1,
+			HighID: 3,
+			Status: models.FriendshipStatusDormant,
+		},
+		models.Friendship{
+			LowID:  1,
+			HighID: 2,
+			Status: models.FriendshipStatusDormant,
+		},
+	}, true, 1, []string{models.FriendshipStatusDormant}, 90)
+
+	// Limited output
+	friendService.AddFriend(4, 5)
+	friendService.AddFriend(4, 7) // Call fails because user 7 does not exist
+	friendService.AddFriend(4, 3)
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+		models.Friendship{
+			LowID:  3,
+			HighID: 4,
+			Status: models.FriendshipStatusPendingIDHigh,
+		},
+		models.Friendship{
+			LowID:  4,
+			HighID: 5,
+			Status: models.FriendshipStatusPendingIDLow,
+		},
+	}, true, 4, []string{models.FriendshipStatusPendingSelf}, 2)
+
+	// Multistatus
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+		models.Friendship{
+			LowID:  1,
+			HighID: 3,
+			Status: models.FriendshipStatusDormant,
+		},
+		models.Friendship{
+			LowID:  3,
+			HighID: 4,
+			Status: models.FriendshipStatusPendingIDHigh,
+		},
+		models.Friendship{
+			LowID:  2,
+			HighID: 3,
+			Status: models.FriendshipStatusPendingIDLow,
+		},
+	}, true, 3, []string{models.FriendshipStatusDormant, models.FriendshipStatusPendingOther}, 90)
+
+	// No status
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+	}, true, 1, []string{}, 90)
+
+	// Failing cases
+	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
+	}, false, 1, []string{"ekrfjejfijeirf"}, 90)
 }
