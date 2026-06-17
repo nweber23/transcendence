@@ -126,3 +126,33 @@ func (s *UserService) UpdateUser(
 	}
 	return user, nil
 }
+
+type UserSearchResult struct {
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatarURL"`
+}
+
+// SearchUsers returns users whose username starts with query (case-insensitive).
+func (s *UserService) SearchUsers(query string, limit int) ([]UserSearchResult, error) {
+	if len(query) == 0 {
+		return nil, errors.New("query must not be empty")
+	}
+	var users []models.User
+	if err := s.db.
+		Where("LOWER(username) LIKE LOWER(?) AND deleted_at IS NULL", query+"%").
+		Order("username ASC").
+		Limit(limit).
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	results := make([]UserSearchResult, len(users))
+	for i, u := range users {
+		results[i] = UserSearchResult{
+			ID:        u.ID,
+			Username:  u.Username,
+			AvatarURL: u.AvatarURL,
+		}
+	}
+	return results, nil
+}
