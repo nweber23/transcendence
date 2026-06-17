@@ -544,3 +544,23 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Friend list retrieved successfully", friendResponses)
 }
+
+func (uh *UserHandler) SearchUsers(c *gin.Context) {
+	q := c.Query("q")
+	if len(q) == 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_query", "query parameter 'q' is required")
+		return
+	}
+	limit := 10
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
+			limit = parsed
+		}
+	}
+	results, err := uh.userService.SearchUsers(q, limit)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "search_failed", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Search results", results)
+}

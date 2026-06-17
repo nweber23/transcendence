@@ -65,6 +65,7 @@ func main() {
 		userRoutes.POST("/:id/friends", userHandler.AddFriend)
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
+		userRoutes.GET("/search", userHandler.SearchUsers)
 	}
 
 	// Game routes (protected)
