@@ -10,6 +10,7 @@ import Landing from '@/pages/landing/Landing';
 import Login from '@/pages/auth/Login';
 import SignUp from '@/pages/auth/SignUp';
 import Account from '@/pages/Account';
+import ProfilePage from '@/pages/account/ProfilePage';
 import Blackjack from '@/pages/games/Blackjack';
 import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
@@ -52,6 +53,14 @@ const AppLayout: React.FC = () => {
           element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />
