@@ -11,9 +11,9 @@ import { apiCall } from '@/utils/api';
 const mockApiCall = vi.mocked(apiCall);
 
 const mockFriendsResponse = [
-  { friend_id: 2, status: 'active',        is_online: true,  created_at: '2024-01-01T00:00:00Z' },
-  { friend_id: 3, status: 'pending_self',  is_online: false, created_at: '2024-01-01T00:00:00Z' },
-  { friend_id: 4, status: 'pending_other', is_online: false, created_at: '2024-01-01T00:00:00Z' },
+  { friend_id: 2, username: 'bob',   avatarURL: 'default_avatar', status: 'active',        is_online: true,  created_at: '2024-01-01T00:00:00Z' },
+  { friend_id: 3, username: 'carol', avatarURL: 'default_avatar', status: 'pending_self',  is_online: false, created_at: '2024-01-01T00:00:00Z' },
+  { friend_id: 4, username: 'dave',  avatarURL: 'default_avatar', status: 'pending_other', is_online: false, created_at: '2024-01-01T00:00:00Z' },
 ];
 
 beforeEach(() => {
@@ -59,7 +59,7 @@ describe('useFriends - addFriend', () => {
     mockApiCall
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([{ friend_id: 5, status: 'pending_self', is_online: false, created_at: '2024-01-01T00:00:00Z' }]);
+      .mockResolvedValueOnce([{ friend_id: 5, username: 'erin', avatarURL: 'default_avatar', status: 'pending_self', is_online: false, created_at: '2024-01-01T00:00:00Z' }]);
 
     const { result } = renderHook(() => useFriends());
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -76,7 +76,7 @@ describe('useFriends - removeFriend', () => {
   it('calls DELETE /user/:id/friends and refreshes list', async () => {
     localStorage.setItem('auth_token', 'mock-token');
     mockApiCall
-      .mockResolvedValueOnce([{ friend_id: 2, status: 'active', is_online: true, created_at: '2024-01-01T00:00:00Z' }])
+      .mockResolvedValueOnce([{ friend_id: 2, username: 'bob', avatarURL: 'default_avatar', status: 'active', is_online: true, created_at: '2024-01-01T00:00:00Z' }])
       .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce([]);
 

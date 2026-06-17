@@ -3,6 +3,8 @@ import { apiCall } from '@/utils/api';
 
 export interface Friend {
   friendId: number;
+  username: string;
+  avatarURL: string;
   isOnline: boolean;
   createdAt: string;
 }
@@ -15,6 +17,8 @@ export interface UserSearchResult {
 
 interface RawFriendResponse {
   friend_id: number;
+  username: string;
+  avatarURL: string;
   status: string;
   is_online: boolean;
   created_at: string;
@@ -34,7 +38,13 @@ export interface UseFriendsReturn {
 }
 
 function toFriend(raw: RawFriendResponse): Friend {
-  return { friendId: raw.friend_id, isOnline: raw.is_online, createdAt: raw.created_at };
+  return {
+    friendId: raw.friend_id,
+    username: raw.username,
+    avatarURL: raw.avatarURL,
+    isOnline: raw.is_online,
+    createdAt: raw.created_at,
+  };
 }
 
 export function useFriends(): UseFriendsReturn {

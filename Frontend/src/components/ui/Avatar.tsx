@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Spinner from '@/components/ui/Spinner';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -23,6 +23,8 @@ const Avatar: React.FC<AvatarProps> = ({
   onClick,
   isUploading = false,
 }) => {
+  const [hasError, setHasError] = useState(false);
+
   return (
     <div
       className={`relative rounded-full overflow-hidden border-2 border-[rgba(212,175,55,0.3)] flex-shrink-0 bg-[var(--surface-2)] ${
@@ -34,10 +36,11 @@ const Avatar: React.FC<AvatarProps> = ({
       aria-label={onClick ? 'Change avatar' : undefined}
     >
       <img
-        src={getAvatarSrc(avatarURL)}
+        src={hasError ? '/sonne.jpeg' : getAvatarSrc(avatarURL)}
         alt="Avatar"
         className="w-full h-full object-cover"
         draggable={false}
+        onError={() => setHasError(true)}
       />
       {onClick && (
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">

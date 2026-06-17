@@ -16,8 +16,9 @@ const OnlineDot: React.FC<{ isOnline: boolean }> = ({ isOnline }) => (
 const FriendRow: React.FC<{ friend: Friend; actions: React.ReactNode }> = ({ friend, actions }) => (
   <div className="flex items-center justify-between py-2 px-2.5 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.06)]">
     <div className="flex items-center gap-2">
+      <Avatar avatarURL={friend.avatarURL} size={28} />
       <OnlineDot isOnline={friend.isOnline} />
-      <span className="text-sm font-medium text-[var(--text)]">User #{friend.friendId}</span>
+      <span className="text-sm font-medium text-[var(--text)]">{friend.username || `User #${friend.friendId}`}</span>
     </div>
     {actions}
   </div>
