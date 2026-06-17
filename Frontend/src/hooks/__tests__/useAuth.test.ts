@@ -10,7 +10,7 @@ import { apiCall } from '@/utils/api';
 
 const mockApiCall = vi.mocked(apiCall);
 
-const mockUser = { id: 1, username: 'testuser', email: 'test@example.com' };
+const mockUser = { id: 1, username: 'testuser', email: 'test@example.com', avatarURL: 'default_avatar' };
 const mockToken = 'mock-jwt-token';
 
 beforeEach(() => {
@@ -204,5 +204,37 @@ describe('useAuth - logout', () => {
 
     expect(localStorage.getItem('auth_token')).toBeNull();
     expect(localStorage.getItem('auth_user')).toBeNull();
+  });
+});
+
+describe('useAuth - refreshUser', () => {
+  it('updates user state and localStorage with the latest profile', async () => {
+    localStorage.setItem('auth_user', JSON.stringify(mockUser));
+    const updatedUser = { ...mockUser, avatarURL: 'new_avatar.png' };
+    mockApiCall.mockResolvedValueOnce(updatedUser);
+
+    const { result } = renderHook(() => useAuth());
+
+    await act(async () => {
+      await result.current.refreshUser();
+    });
+
+    expect(mockApiCall).toHaveBeenCalledWith('GET', '/user/profile');
+    expect(result.current.user).toEqual(updatedUser);
+    expect(JSON.parse(localStorage.getItem('auth_user')!)).toEqual(updatedUser);
+  });
+
+  it('silently fails and keeps stale user data when the fetch errors', async () => {
+    localStorage.setItem('auth_user', JSON.stringify(mockUser));
+    mockApiCall.mockRejectedValueOnce(new Error('Network error'));
+
+    const { result } = renderHook(() => useAuth());
+
+    await act(async () => {
+      await expect(result.current.refreshUser()).resolves.toBeUndefined();
+    });
+
+    expect(result.current.user).toEqual(mockUser);
+    expect(JSON.parse(localStorage.getItem('auth_user')!)).toEqual(mockUser);
   });
 });

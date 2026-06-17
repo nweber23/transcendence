@@ -5,6 +5,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  avatarURL: string;
 }
 
 export interface UseAuthReturn {
@@ -15,6 +16,7 @@ export interface UseAuthReturn {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -106,6 +108,16 @@ export function useAuth(): UseAuthReturn {
     setError(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const profile = await apiCall<User>('GET', '/user/profile');
+      localStorage.setItem('auth_user', JSON.stringify(profile));
+      setUser(profile);
+    } catch {
+      // Silently fail — stale data is better than breaking the UI
+    }
+  };
+
   return {
     token,
     user,
@@ -114,5 +126,6 @@ export function useAuth(): UseAuthReturn {
     login,
     register,
     logout,
+    refreshUser,
   };
 }
