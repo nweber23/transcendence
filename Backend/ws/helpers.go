@@ -12,6 +12,9 @@ func (wsState *WebSocketState) SendToTopic(userID uint, topic Topic, packetType 
 	wsState.clientsMutex.RLock()
 	Client := wsState.clients[userID]
 	wsState.clientsMutex.RUnlock()
+	if Client == nil {
+		return nil
+	}
 	var packet packet
 	var err    error
 	packet.PacketType = packetType
