@@ -66,6 +66,7 @@ func pumpToConnection(context *connectionContext) {
 			return
 		}
 		if err := context.connection.WriteJSON(&packet); err != nil {
+			context.connection.Close()
 			return
 		}
 	}

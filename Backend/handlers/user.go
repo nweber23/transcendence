@@ -520,7 +520,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		} else {
 			status = http.StatusInternalServerError
 		}
-		utils.RespondError(c, status, "enumerate_friends_failed", err)
+		utils.RespondError(c, status, "enumerate_friends_failed", err.Error())
 		return
 	}
 	friendResponses := make([]FriendResponse, len(friendships))
