@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 
-import { createWebSocket } from '@/utils/ws';
+import { connectWebSocket, disconnectWebSocket } from '@/utils/wsClient';
+import { AUTH_TOKEN_CHANGED_EVENT } from '@/hooks/useAuth';
 
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -28,17 +29,20 @@ const AppLayout: React.FC = () => {
   const hideHeader = pathname === '/login' || pathname === '/signup';
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if(token == null)
-      return;
-    const socket = createWebSocket(token, ["generic"])
-    socket.onopen = (e) => {
-      console.log("Connection established");
-    }
-    socket.onmessage = (e) => {
-      console.log("Message: " + e.data);
-    }
-    return () => socket.close();
+    const syncConnection = () => {
+      const token = localStorage.getItem('auth_token');
+      if (token == null) {
+        disconnectWebSocket();
+      } else {
+        connectWebSocket(token);
+      }
+    };
+    syncConnection();
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncConnection);
+    return () => {
+      window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncConnection);
+      disconnectWebSocket();
+    };
   }, [])
 
   return (

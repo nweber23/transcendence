@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { apiCall } from '@/utils/api';
 
+export const AUTH_TOKEN_CHANGED_EVENT = 'auth-token-changed';
+
 export interface User {
   id: number;
   username: string;
@@ -46,6 +48,7 @@ export function useAuth(): UseAuthReturn {
         const profile = await apiCall<User>('GET', '/user/profile');
         localStorage.setItem('auth_user', JSON.stringify(profile));
         setUser(profile);
+        window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       } catch (profileErr) {
         // If profile fetch fails, clear the token and error out
         localStorage.removeItem('auth_token');
@@ -83,6 +86,7 @@ export function useAuth(): UseAuthReturn {
         const profile = await apiCall<User>('GET', '/user/profile');
         localStorage.setItem('auth_user', JSON.stringify(profile));
         setUser(profile);
+        window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       } catch (profileErr) {
         // If profile fetch fails, clear the token and error out
         localStorage.removeItem('auth_token');
@@ -106,6 +110,7 @@ export function useAuth(): UseAuthReturn {
     setToken(null);
     setUser(null);
     setError(null);
+    window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
   };
 
   const refreshUser = async () => {

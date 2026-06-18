@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiCall } from '@/utils/api';
+import { subscribeToWebSocket, WsPacket } from '@/utils/wsClient';
 
 export interface Friend {
   friendId: number;
@@ -113,6 +114,16 @@ export function useFriends(): UseFriendsReturn {
       fetchFriends().catch(() => {});
     }
   }, [fetchFriends]);
+
+  useEffect(() => {
+    return subscribeToWebSocket((packet: WsPacket) => {
+      if (packet.packet_type !== 'online') return;
+      const { user_id, is_online } = packet.payload as { user_id: number; is_online: boolean };
+      setFriends((prev) =>
+        prev.map((f) => (f.friendId === user_id ? { ...f, isOnline: is_online } : f))
+      );
+    });
+  }, []);
 
   return { friends, incoming, outgoing, searchResults, isLoading, error, searchUsers, addFriend, removeFriend, refetch: fetchFriends };
 }
