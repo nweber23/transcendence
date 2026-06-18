@@ -44,6 +44,9 @@ func (s *AccountService) Deposit(userID uint, amount decimal.Decimal) error {
 	if amount.LessThan(decimal.Zero) {
 		return utils.ErrAmountNotPositive
 	}
+	if amount.GreaterThan(decimal.NewFromInt(utils.MaxTransactionAmount)) {
+		return utils.ErrAmountTooLarge
+	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		account, err := s.getAccountForUpdate(tx, userID)
 		if err != nil {
