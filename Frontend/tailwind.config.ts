@@ -10,8 +10,15 @@ export default {
         'surface-2': 'var(--surface-2)',
         'surface-3': 'var(--surface-3)',
         gold: 'var(--gold)',
-        emerald: 'var(--emerald)',
-        red: 'var(--red)',
+        emerald: {
+          DEFAULT: 'var(--emerald)',
+          400: 'var(--emerald)',
+        },
+        red: {
+          DEFAULT: 'var(--red)',
+          400: 'var(--red)',
+          500: 'var(--red)',
+        },
         text: 'var(--text)',
         'text-2': 'var(--text-2)',
         'text-3': 'var(--text-3)',
