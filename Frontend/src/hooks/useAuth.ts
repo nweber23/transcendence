@@ -32,6 +32,16 @@ export function useAuth(): UseAuthReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const syncFromStorage = () => {
+      const savedUser = localStorage.getItem('auth_user');
+      setUser(savedUser ? JSON.parse(savedUser) : null);
+      setToken(localStorage.getItem('auth_token'));
+    };
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncFromStorage);
+    return () => window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncFromStorage);
+  }, []);
+
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     setError(null);
@@ -118,6 +128,7 @@ export function useAuth(): UseAuthReturn {
       const profile = await apiCall<User>('GET', '/user/profile');
       localStorage.setItem('auth_user', JSON.stringify(profile));
       setUser(profile);
+      window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
     } catch {
       // Silently fail — stale data is better than breaking the UI
     }
