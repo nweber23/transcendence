@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"transcendence/models"
 	"transcendence/utils"
@@ -89,6 +90,22 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 	return &user, nil
 }
 
+// GetUsersByIDs retrieves multiple users in a single query, keyed by ID
+func (s *UserService) GetUsersByIDs(userIDs []uint) (map[uint]*models.User, error) {
+	if len(userIDs) == 0 {
+		return map[uint]*models.User{}, nil
+	}
+	var users []models.User
+	if err := s.db.Where("id IN ? AND deleted_at IS NULL", userIDs).Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("failed to get users: %w", err)
+	}
+	usersByID := make(map[uint]*models.User, len(users))
+	for i := range users {
+		usersByID[users[i].ID] = &users[i]
+	}
+	return usersByID, nil
+}
+
 // UpdateUser updates a user by userID
 func (s *UserService) UpdateUser(
 	userID       uint,
@@ -133,6 +150,14 @@ type UserSearchResult struct {
 	AvatarURL string `json:"avatarURL"`
 }
 
+// escapeLike escapes LIKE wildcard characters so user input is matched literally.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
+
 // SearchUsers returns users whose username starts with query (case-insensitive).
 func (s *UserService) SearchUsers(query string, limit int) ([]UserSearchResult, error) {
 	if len(query) == 0 {
@@ -140,7 +165,7 @@ func (s *UserService) SearchUsers(query string, limit int) ([]UserSearchResult, 
 	}
 	var users []models.User
 	if err := s.db.
-		Where("LOWER(username) LIKE LOWER(?) AND deleted_at IS NULL", query+"%").
+		Where("LOWER(username) LIKE LOWER(?) AND deleted_at IS NULL", escapeLike(query)+"%").
 		Order("username ASC").
 		Limit(limit).
 		Find(&users).Error; err != nil {

@@ -525,20 +525,30 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		utils.RespondError(c, status, "enumerate_friends_failed", err.Error())
 		return
 	}
-	friendResponses := make([]FriendResponse, len(friendships))
-	for responseIndex, friendship := range friendships {
+	friendIDs := make([]uint, len(friendships))
+	for i, friendship := range friendships {
 		friendID := friendship.LowID
 		if friendID == userID.(uint) {
 			friendID = friendship.HighID
 		}
+		friendIDs[i] = friendID
+	}
+	usersByID, err := uh.userService.GetUsersByIDs(friendIDs)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", err.Error())
+		return
+	}
+	friendResponses := make([]FriendResponse, len(friendships))
+	for responseIndex, friendship := range friendships {
+		friendID := friendIDs[responseIndex]
 		status, isValid := determineStatus(userID.(uint), friendID, &friendship)
 		if !isValid {
 			utils.RespondError(c, http.StatusInternalServerError, "determine_status_failed", "Invalid friendship status")
 			return
 		}
-		friendUser, err := uh.userService.GetUserByID(friendID)
-		if err != nil {
-			utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", err.Error())
+		friendUser, ok := usersByID[friendID]
+		if !ok {
+			utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", "friend user not found")
 			return
 		}
 		friendResponses[responseIndex] = FriendResponse{
