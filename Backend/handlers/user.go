@@ -76,6 +76,8 @@ type UpdateFriendResponse struct {
 
 type FriendResponse struct {
 	FriendID  uint   `json:"friend_id"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatarURL"`
 	Status    string `json:"status"`
 	IsOnline  bool   `json:"is_online"`
 	CreatedAt string `json:"created_at"`
@@ -523,19 +525,36 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		utils.RespondError(c, status, "enumerate_friends_failed", err.Error())
 		return
 	}
-	friendResponses := make([]FriendResponse, len(friendships))
-	for responseIndex, friendship := range friendships {
+	friendIDs := make([]uint, len(friendships))
+	for i, friendship := range friendships {
 		friendID := friendship.LowID
 		if friendID == userID.(uint) {
 			friendID = friendship.HighID
 		}
+		friendIDs[i] = friendID
+	}
+	usersByID, err := uh.userService.GetUsersByIDs(friendIDs)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", err.Error())
+		return
+	}
+	friendResponses := make([]FriendResponse, len(friendships))
+	for responseIndex, friendship := range friendships {
+		friendID := friendIDs[responseIndex]
 		status, isValid := determineStatus(userID.(uint), friendID, &friendship)
 		if !isValid {
 			utils.RespondError(c, http.StatusInternalServerError, "determine_status_failed", "Invalid friendship status")
 			return
 		}
+		friendUser, ok := usersByID[friendID]
+		if !ok {
+			utils.RespondError(c, http.StatusInternalServerError, "get_friend_user_failed", "friend user not found")
+			return
+		}
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
+			Username:  friendUser.Username,
+			AvatarURL: friendUser.AvatarURL,
 			Status:    status,
 			IsOnline:  status == models.FriendshipStatusActive && uh.wsState.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
@@ -543,4 +562,24 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		}
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Friend list retrieved successfully", friendResponses)
+}
+
+func (uh *UserHandler) SearchUsers(c *gin.Context) {
+	q := c.Query("q")
+	if len(q) == 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_query", "query parameter 'q' is required")
+		return
+	}
+	limit := 10
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
+			limit = parsed
+		}
+	}
+	results, err := uh.userService.SearchUsers(q, limit)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "search_failed", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Search results", results)
 }

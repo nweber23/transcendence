@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Logo from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import FriendsDropdown from '@/components/layout/FriendsDropdown';
+import ProfileDropdown from '@/components/layout/ProfileDropdown';
 
 interface HeaderProps {
   onScroll?: (section: string) => void;
@@ -96,15 +98,11 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
             )}
 
             {/* Auth buttons — desktop */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1">
               {token ? (
                 <>
-                  <Link to="/account">
-                    <Button variant="nav-ghost" size="sm">Account</Button>
-                  </Link>
-                  <Button variant="nav-ghost" size="sm" onClick={handleLogout}>
-                    Logout
-                  </Button>
+                  <FriendsDropdown />
+                  <ProfileDropdown />
                 </>
               ) : (
                 <>
@@ -183,21 +181,31 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           {token ? (
             <>
               <Link
-                to="/account"
+                to="/account/profile"
                 onClick={() => setMenuOpen(false)}
                 className={`font-serif text-4xl font-semibold text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? '220ms' : '0ms' }}
               >
-                Account
+                Profile
+              </Link>
+              <Link
+                to="/account"
+                onClick={() => setMenuOpen(false)}
+                className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDelay: menuOpen ? '260ms' : '0ms' }}
+              >
+                Deposit
               </Link>
               <button
                 onClick={handleLogout}
                 className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '280ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '300ms' : '0ms' }}
               >
                 Logout
               </button>
