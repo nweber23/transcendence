@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	// TODO: Move to env or config?
 	MaxTransactionAmount = 1000000
 )
 

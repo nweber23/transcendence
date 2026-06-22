@@ -9,6 +9,8 @@ import Button from '@/components/ui/Button';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
 
+const MaxTransactionAmount: number = 1000000
+
 const Account: React.FC = () => {
   const { user } = useAuth();
   const { account, transactions, isLoading, error, deposit, withdraw } = useAccount();
@@ -22,7 +24,7 @@ const Account: React.FC = () => {
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositAmount) return;
-    if (parseInt(depositAmount) > 1000000) return;
+    if (parseInt(depositAmount) > MaxTransactionAmount) return;
     setOperationError(null);
     setDepositLoading(true);
     try {
@@ -167,7 +169,7 @@ const Account: React.FC = () => {
                     className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(45,122,99,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(45,122,99,0.5)] focus:ring-2 focus:ring-[rgba(45,122,99,0.15)] input-focus-transition"
                   />
                   <p className="text-sm text-red-400">
-                    {parseInt(depositAmount) > 1000000 && "Please only deposit up to 1000000 at a time"}
+                    {Number(depositAmount) > MaxTransactionAmount && "Please only deposit up to " + String(MaxTransactionAmount) + " at a time"}
                   </p>
                 </div>
                 <button
