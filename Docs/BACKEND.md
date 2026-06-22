@@ -29,7 +29,7 @@ Backend/
 │   ├── config.go               # Environment variables, Config struct
 │   └── database.go             # PostgreSQL connection, auto-migrations
 ├── models/
-│   ├── user.go                 # User struct with auth fields
+│   ├── user.go                 # User struct with auth fields + AvatarURL
 │   ├── account.go              # Account balance, transaction tracking
 │   ├── transaction.go          # Immutable audit log
 │   ├── game.go                 # Game, BlackjackGame, PokerGame, SlotsGame
@@ -109,9 +109,11 @@ The backend will:
 | GET | `/user/account/transactions` | Paginated transaction history |
 | POST | `/user/account/deposit` | Add funds |
 | POST | `/user/account/withdraw` | Withdraw funds |
+| POST | `/user/avatar` | Upload/replace avatar image (multipart form field `file`), serves from `/uploads/<random>.<ext>` |
 | POST | `/user/:id/friends` | Add friend, both parties must run this endpoint |
 | DELETE | `/user/:id/friends` | Remove friend
 | GET | `/user/friends?limit=<NUMBER>&statuses=<RELATIVE_STATUS{,RELATIVE_STATUS}>` | Enumerate up to "limit" friends with "statuses" as a filter |
+| GET | `/user/search?q=<QUERY>&limit=<NUMBER>` | Search users by username prefix (case-insensitive), default limit 10, max 50 |
 
 ### Games (Protected with JWT)
 | Method | Path | Purpose |
@@ -175,32 +177,31 @@ The backend will:
 
 ## Real-time WebSocket Architecture
 
-**Hub Pattern (in-memory client registry):**
+**Topic-based client registry (`ws` package, in-memory):**
 ```
-Hub (global)
-├── Rooms (per game)
-│   ├── GameID: 1
-│   │   ├── Clients
-│   │   │   ├── UserID: 10 (connection, send buffer)
-│   │   │   └── UserID: 20 (connection, send buffer)
-│   │   └── Send (broadcast channel)
-│   └── GameID: 2
+WebSocketState (global)
+├── clients (by UserID)
+│   ├── UserID: 10
+│   │   ├── contextList     (one connectionContext per open tab/connection)
+│   │   └── topicLists[]    (per-topic fan-out lists of connectionContexts)
+│   └── UserID: 20
 │       └── ...
+└── readChannel             (inbound packets from all connections, drained by Main())
 ```
+
+A user can have multiple simultaneous connections (e.g. multiple tabs); each subscribes to a subset of `topics` (`generic`, `game`, `chat`) passed as a query param. Messages are addressed to a topic via `SendToTopic`/`SendToAll` and fanned out to every connection subscribed to that topic for the target user(s).
 
 **Connection Flow:**
-1. Client connects to `/ws?token=JWT&game_id=ID`
-2. Server validates JWT, verifies game ownership
-3. Server creates `Client` struct, registers in hub
-4. `readPump()` goroutine reads messages from client
-5. `writePump()` goroutine writes messages to client
-6. Messages broadcast to all clients in the room
+1. Client connects to `/ws?token=JWT&topics=generic,game`
+2. `AuthFix` middleware copies `token` query param into the `Authorization` header, then standard `AuthMiddleware` validates it
+3. `WebSocketHandler.UpgradeConnection` upgrades the connection and calls `WebSocketState.AddConnection`
+4. `AddConnection` registers the connection under the user's `client`, subscribes it to the requested topics, and starts `pumpFromConnection`/`pumpToConnection` goroutines
+5. On first connection for a user, an `online` packet (topic `generic`) is broadcast to all clients; on last disconnection, a debounced `timeoutClient` goroutine broadcasts `offline` after a grace period (handles tab refreshes without flapping)
 
 **Error Handling:**
-- Graceful disconnection on network errors
-- Automatic unregistration from hub
-- Buffer overflow protection (drop message if send buffer full)
-- Nil room checks to prevent panics
+- Read errors close the connection and trigger `cleanupConnection`, which removes the context from the user's `client` and topic lists
+- Buffer overflow protection (non-blocking channel sends drop messages if a connection's buffer is full)
+- Online/offline notifications are debounced via `timeoutClient` to avoid flapping on reconnects
 
 ---
 
@@ -247,8 +248,10 @@ Hub (global)
 - ✅ Game creation with bet validation
 - ✅ Game action execution (placeholder engine response)
 - ✅ Game history retrieval with pagination
-- ✅ WebSocket real-time game updates
-- ✅ Multi-game room support with client registry
+- ✅ Topic-based WebSocket real-time updates (generic/game/chat) with online/offline presence
+- ✅ Friend system (add/remove/enumerate with pending states, online status)
+- ✅ Avatar upload (multipart upload, served from `/uploads`)
+- ✅ Username search
 - ✅ CORS middleware
 - ✅ PostgreSQL auto-migrations
 - ✅ Email validation (regex + DNS MX check)

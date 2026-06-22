@@ -529,3 +529,38 @@ func TestAccountService(testInterface *testing.T) {
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, false, 1, []string{"ekrfjejfijeirf"}, 90)
 }
+
+func searchUsersExpect(
+	t       *testing.T,
+	svc     *UserService,
+	query   string,
+	limit   int,
+	wantLen int,
+) {
+	results, err := svc.SearchUsers(query, limit)
+	if err != nil {
+		t.Errorf("SearchUsers(%q, %d) unexpected error: %v", query, limit, err)
+		return
+	}
+	if len(results) != wantLen {
+		t.Errorf("SearchUsers(%q, %d): got %d results, want %d", query, limit, len(results), wantLen)
+	}
+}
+
+func TestSearchUsers(t *testing.T) {
+	_, userService, _ := createMockServices(t)
+	createMockUsers(t, userService)
+	// createMockUsers creates: test0, test1, test2, test3, test4, herold
+
+	searchUsersExpect(t, userService, "test",   10, 5) // prefix match
+	searchUsersExpect(t, userService, "Test",   10, 5) // case-insensitive
+	searchUsersExpect(t, userService, "hero",   10, 1) // partial prefix
+	searchUsersExpect(t, userService, "herold", 10, 1) // exact prefix
+	searchUsersExpect(t, userService, "xyz",    10, 0) // no match
+	searchUsersExpect(t, userService, "test",    2, 2) // limit respected
+
+	_, err := userService.SearchUsers("", 10)
+	if err == nil {
+		t.Errorf("SearchUsers with empty query should return an error")
+	}
+}

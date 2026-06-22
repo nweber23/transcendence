@@ -34,6 +34,7 @@ CREATE TABLE users (
   username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  avatar_url TEXT DEFAULT 'default_avatar',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP DEFAULT NULL,
@@ -52,6 +53,7 @@ CREATE INDEX idx_users_deleted_at ON users(deleted_at);
 - `deleted_at` enables soft deletes for user data retention compliance
 - Email validation via CHECK constraint prevents invalid data at DB level
 - Timestamps track account lifecycle
+- `avatar_url` stores the filename of the uploaded avatar (served from `/uploads/<avatar_url>`); defaults to `default_avatar` until the user uploads one
 
 ---
 
