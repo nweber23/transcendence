@@ -24,7 +24,7 @@ const Account: React.FC = () => {
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositAmount) return;
-    if (parseInt(depositAmount) > MaxTransactionAmount) return;
+    if (Number(depositAmount) > MaxTransactionAmount) return;
     setOperationError(null);
     setDepositLoading(true);
     try {
