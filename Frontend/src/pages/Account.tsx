@@ -22,6 +22,7 @@ const Account: React.FC = () => {
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositAmount) return;
+    if (parseInt(depositAmount) > 1000000) return;
     setOperationError(null);
     setDepositLoading(true);
     try {
@@ -165,6 +166,9 @@ const Account: React.FC = () => {
                     placeholder="0.00"
                     className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(45,122,99,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(45,122,99,0.5)] focus:ring-2 focus:ring-[rgba(45,122,99,0.15)] input-focus-transition"
                   />
+                  <p className="text-sm text-red-400">
+                    {parseInt(depositAmount) > 1000000 && "Please only deposit up to 1000000 at a time"}
+                  </p>
                 </div>
                 <button
                   type="submit"
