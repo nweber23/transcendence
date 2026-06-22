@@ -2,6 +2,11 @@ package utils
 
 import (
 	"errors"
+	"fmt"
+)
+
+const (
+	MaxTransactionAmount = 1000000
 )
 
 var (
@@ -13,6 +18,7 @@ var (
 
 	ErrRandomStringGenFailed   = errors.New("failed to generate random string")
 	ErrAmountNotPositive       = errors.New("amount must be greater than zero")
+	ErrAmountTooLarge          = fmt.Errorf("amount must be less than %d", MaxTransactionAmount + 1)
 	ErrInsufficientBalance     = errors.New("insufficient balance")
 	ErrSelfLove                = errors.New("self love only works irl")
 	ErrAlreadyBefriended       = errors.New("friend already added")

@@ -374,6 +374,9 @@ func TestAccountService(testInterface *testing.T) {
 	if accountService.Withdraw_f(2, -700) == nil {
 		testInterface.Errorf("withdraw should fail with negative values")
 	}
+	if accountService.Deposit_f(2, utils.MaxTransactionAmount + 1) == nil {
+		testInterface.Errorf("deposit should fail with excessive values")
+	}
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)

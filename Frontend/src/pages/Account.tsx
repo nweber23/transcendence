@@ -9,6 +9,8 @@ import Button from '@/components/ui/Button';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
 
+const MAX_TRANSACTION_AMOUNT = 1_000_000;
+
 const Account: React.FC = () => {
   const { user } = useAuth();
   const { account, transactions, isLoading, error, deposit, withdraw } = useAccount();
@@ -19,9 +21,11 @@ const Account: React.FC = () => {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
 
+  const depositExceedsLimit = Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depositAmount) return;
+    if (!depositAmount || depositExceedsLimit) return;
     setOperationError(null);
     setDepositLoading(true);
     try {
@@ -165,10 +169,13 @@ const Account: React.FC = () => {
                     placeholder="0.00"
                     className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(45,122,99,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(45,122,99,0.5)] focus:ring-2 focus:ring-[rgba(45,122,99,0.15)] input-focus-transition"
                   />
+                  <p className="text-sm text-red-400">
+                    {depositExceedsLimit && `Please only deposit up to ${MAX_TRANSACTION_AMOUNT.toLocaleString()} at a time`}
+                  </p>
                 </div>
                 <button
                   type="submit"
-                  disabled={depositLoading || !depositAmount}
+                  disabled={depositLoading || !depositAmount || depositExceedsLimit}
                   className="w-full py-3 rounded-lg bg-[rgba(45,122,99,0.12)] border border-[rgba(45,122,99,0.3)] text-emerald-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(45,122,99,0.22)] hover:border-[rgba(45,122,99,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {depositLoading ? 'Processing…' : 'Add Chips'}
