@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Logo from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import { useFriends } from '@/hooks/useFriends';
 import FriendsDropdown from '@/components/layout/FriendsDropdown';
+import FriendsPanelContent from '@/components/layout/FriendsPanelContent';
 import ProfileDropdown from '@/components/layout/ProfileDropdown';
 
 interface HeaderProps {
@@ -14,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { token, logout } = useAuth();
+  const friendsState = useFriends();
   const isHome = location.pathname === '/';
 
   const navLinks: { label: string; href: string; id: string }[] = [
@@ -21,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   ];
   const [activeNav, setActiveNav] = React.useState<string>('');
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [mobileFriendsOpen, setMobileFriendsOpen] = React.useState(false);
 
   const handleNavClick = (id: string) => {
     setActiveNav(id);
@@ -43,6 +47,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   // Close menu on route change
   React.useEffect(() => {
     setMenuOpen(false);
+    setMobileFriendsOpen(false);
   }, [location.pathname]);
 
   // Prevent scroll when menu is open, restoring whatever was set before
@@ -101,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
             <div className="hidden md:flex items-center gap-1">
               {token ? (
                 <>
-                  <FriendsDropdown />
+                  <FriendsDropdown {...friendsState} />
                   <ProfileDropdown />
                 </>
               ) : (
@@ -118,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
             {/* Hamburger — mobile */}
             <button
-              className="md:hidden flex flex-col items-center justify-center w-9 h-9 gap-[5px] relative"
+              className="md:hidden relative flex flex-col items-center justify-center w-11 h-11 gap-[5px] rounded-full hover:bg-[rgba(255,255,255,0.06)] active:scale-95 transition-colors duration-200"
               onClick={() => setMenuOpen((o) => !o)}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
@@ -138,6 +143,11 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                   menuOpen ? '-translate-y-[6.5px] -rotate-45' : ''
                 }`}
               />
+              {!menuOpen && token && friendsState.incoming.length > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-[9px] font-bold flex items-center justify-center">
+                  {friendsState.incoming.length}
+                </span>
+              )}
             </button>
           </div>
         </nav>
@@ -145,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
       {/* Mobile full-screen overlay */}
       <div
-        className={`fixed inset-0 z-[99] md:hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed inset-0 z-[99] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         style={{ backdropFilter: menuOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
@@ -153,7 +163,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
         inert={!menuOpen ? '' : undefined}
       >
-        <div className="flex flex-col items-center justify-center h-full gap-2 px-8">
+        <div className="flex flex-col items-center min-h-full gap-2 px-8 pt-28 pb-12">
           {/* Nav links */}
           {isHome &&
             navLinks.map((link, i) => (
@@ -180,13 +190,48 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           {/* Auth actions */}
           {token ? (
             <>
+              <button
+                onClick={() => setMobileFriendsOpen((o) => {
+                  const next = !o;
+                  if (next) friendsState.refetch();
+                  return next;
+                })}
+                aria-expanded={mobileFriendsOpen}
+                className={`flex items-center gap-2 font-serif text-4xl font-semibold text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDelay: menuOpen ? '220ms' : '0ms' }}
+              >
+                Friends
+                {friendsState.incoming.length > 0 && (
+                  <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-xs font-bold flex items-center justify-center">
+                    {friendsState.incoming.length}
+                  </span>
+                )}
+              </button>
+
+              {mobileFriendsOpen && (
+                <div className="w-full max-w-sm bg-[rgba(13,17,23,0.85)] border border-[rgba(212,175,55,0.15)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 mb-2 fade-in-up">
+                  <FriendsPanelContent
+                    friends={friendsState.friends}
+                    incoming={friendsState.incoming}
+                    outgoing={friendsState.outgoing}
+                    searchResults={friendsState.searchResults}
+                    error={friendsState.error}
+                    searchUsers={friendsState.searchUsers}
+                    addFriend={friendsState.addFriend}
+                    removeFriend={friendsState.removeFriend}
+                  />
+                </div>
+              )}
+
               <Link
                 to="/account/profile"
                 onClick={() => setMenuOpen(false)}
                 className={`font-serif text-4xl font-semibold text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '220ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '260ms' : '0ms' }}
               >
                 Profile
               </Link>
@@ -196,7 +241,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                 className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '260ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '300ms' : '0ms' }}
               >
                 Deposit
               </Link>
@@ -205,7 +250,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                 className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '300ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '340ms' : '0ms' }}
               >
                 Logout
               </button>
