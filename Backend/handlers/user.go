@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"path/filepath"
 
+	"encoding/json"
 	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
@@ -88,6 +90,13 @@ type FriendResponse struct {
 
 type RemoveNotificationResponse struct {
 	NotificationID uint `json:"notification_id"`
+}
+
+type NotificationResponse struct {
+	ID        uint            `json:"id"`
+	Type      string          `json:"type"`
+	Contents  json.RawMessage `json:"contents"`
+	CreatedAt time.Time       `json:"created_at"`
 }
 
 type UserProfileRequest struct {
@@ -618,4 +627,48 @@ func (uh *UserHandler) RemoveNotification(c *gin.Context) {
 		}
 		utils.RespondSuccess(c, http.StatusOK, "Notification removed successfully", &response)
 	}
+}
+
+func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err.Error())
+		return
+	}
+	if limit < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
+		return
+	}
+	TypesString := c.Query("types")
+	if TypesString == "" {
+		utils.RespondError(c, http.StatusBadRequest, "no_type_provided", "No status provided")
+		return
+	}
+	Types := strings.Split(TypesString, ",")
+	notifications, err := uh.notificationService.EnumerateNotifications(userID.(uint), Types, limit)
+	if err != nil {
+		var status int
+		if errors.Is(err, utils.ErrInvalidNotificationType) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "enumerate_notifications_failed", err.Error())
+		return
+	}
+	notificationResponses := make([]NotificationResponse, len(notifications))
+	for responseIndex, notification := range notifications {
+		notificationResponses[responseIndex] = NotificationResponse{
+			ID:        notification.ID,
+			Type:      notification.Type,
+			Contents:  notification.Contents,
+			CreatedAt: notification.CreatedAt,
+		}
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notificationResponses)
 }
