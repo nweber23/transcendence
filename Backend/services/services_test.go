@@ -29,12 +29,13 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 	return db
 }
 
-func createMockServices(testInterface *testing.T) (*AccountService, *UserService, *FriendService) {
+func createMockServices(testInterface *testing.T) (*AccountService, *UserService, *FriendService, *NotificationService) {
 	db := InitMockDB(testInterface)
-	accountService := NewAccountService(db)
-	userService := NewUserService(db)
-	friendService := NewFriendService(db)
-	return accountService, userService, friendService
+	accountService      := NewAccountService(db)
+	userService         := NewUserService(db)
+	friendService       := NewFriendService(db)
+	notificationService := NewNotificationService(db)
+	return accountService, userService, friendService, notificationService
 }
 
 func createMockUsers(testInterface *testing.T, userService *UserService) {
@@ -294,9 +295,71 @@ func enumerateFriendsExpect(
 	}
 }
 
+func addNotificationExpect(
+	testInterface       *testing.T,
+	notificationService *NotificationService,
+	expectSuccess       bool,
+	userID              uint,
+	Type                string,
+	contents            any,
+) {
+	if err := notificationService.AddNotification(userID, Type, contents); (err != nil) == expectSuccess {
+		testInterface.Errorf("user %d add notification did not go as expected: %v", userID, err)
+	}
+}
+
+func removeNotificationExpect(
+	testInterface       *testing.T,
+	notificationService *NotificationService,
+	expectSuccess       bool,
+	notificationID      uint,
+	userID              uint,
+) {
+	if err := notificationService.RemoveNotification(notificationID, userID); (err != nil) == expectSuccess {
+		testInterface.Errorf("remove notification %d did not go as expected: %v", notificationID, err)
+	}
+}
+
+func enumerateNotificationsExpect(
+	testInterface         *testing.T,
+	notificationService   *NotificationService,
+	expectedNotifications []models.Notification,
+	expectSuccess         bool,
+	userID                userID,
+	Types                 []string,
+	limit                 int,
+) {
+	var length int = len(expectedNotifications)
+	actualNotifications, err := notificationService.EnumerateNotifications(userID, Types, limit)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("Enumerating notifications did not go as expected: %v", err)
+	}
+	if err != nil {
+		return
+	}
+	if length != len(actualNotifications) {
+		testInterface.Errorf("Actual notifications don't match the expected ones in terms of length for user %d", userID)
+		return
+	}
+	for notificationIndex := 0; notificationIndex < length; {
+		expected := &expectedNotifications[notificationIndex]
+		actual   := &actualNotifications[notificationIndex]
+
+		// Some data cannot be reliably replicated or tested
+		expected.CreatedAt = actual.CreatedAt
+
+		if !reflect.DeepEqual(*expected, *actual) {
+			testInterface.Errorf("Notifications differ for user %d at index %d, here is a breakdown of their differences:\n",
+				userID, notificationIndex)
+			displayDifferences(testInterface, expected, actual)
+		}
+		notificationIndex++
+	}
+}
+
 const STRESS_TEST_AMOUNT int = 500
 
-func TestAccountService(testInterface *testing.T) {
+func TestServices(testInterface *testing.T) {
 	accountService, userService, friendService := createMockServices(testInterface)
 
 	// Create test users and check if they exist after
