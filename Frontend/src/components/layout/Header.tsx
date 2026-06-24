@@ -64,10 +64,10 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
 
   // Refetch friends data each time the full-screen panel opens
   React.useEffect(() => {
-    if (mobileFriendsOpen) {
-      friendsState.refetch();
+    if (mobileFriendsOpen && token) {
+      friendsState.refetch().catch(() => {});
     }
-  }, [mobileFriendsOpen, friendsState.refetch]);
+  }, [mobileFriendsOpen, token, friendsState.refetch]);
 
   return (
     <>
