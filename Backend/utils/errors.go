@@ -29,6 +29,7 @@ var (
 	ErrGameNotFound            = errors.New("game not found")
 	ErrUsernameWrongLength     = errors.New("username must be between 3 and 32 characters")
 	ErrEntryExists             = errors.New("matching entry already exists")
+	ErrNotificationIsNotYours  = errors.New("notification is not yours")
 )
 
 func IsErrInvalid(err error) (bool) {

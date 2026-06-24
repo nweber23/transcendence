@@ -49,9 +49,15 @@ func (s *NotificationService) AddNotification(userID uint, Type string, contents
 	return nil
 }
 
-func (s *NotificationService) RemoveNotification(notificationID uint) (error) {
-	notification := &models.Notification{
-		ID: notificationID,
+// userID is additionally passed here to verify that the notification in question
+// does in fact belong to the specified user
+func (s *NotificationService) RemoveNotification(notificationID uint, userID uint) (error) {
+	var notification models.Notification
+	if err := s.db.Where("id = ?", notificationID).First(&notification).Error; err != nil {
+		return err
+	}
+	if notification.UserID != userID {
+		return utils.ErrNotificationIsNotYours
 	}
 	if err := s.db.Delete(notification).Error; err != nil {
 		return fmt.Errorf("failed to delete notification: %w", err)

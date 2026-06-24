@@ -21,23 +21,26 @@ import (
 )
 
 type UserHandler struct {
-	userService    *services.UserService
-	accountService *services.AccountService
-	friendService  *services.FriendService
-	wsState        *ws.WebSocketState
+	userService         *services.UserService
+	accountService      *services.AccountService
+	friendService       *services.FriendService
+	notificationService *services.NotificationService
+	wsState             *ws.WebSocketState
 }
 
 func NewUserHandler(
-	userService    *services.UserService,
-	accountService *services.AccountService,
-	friendService  *services.FriendService,
-	wsState        *ws.WebSocketState,
+	userService         *services.UserService,
+	accountService      *services.AccountService,
+	friendService       *services.FriendService,
+	notificationService *services.NotificationService,
+	wsState             *ws.WebSocketState,
 ) *UserHandler {
 	return &UserHandler{
-		userService:    userService,
-		accountService: accountService,
-		friendService:  friendService,
-		wsState:        wsState,
+		userService:         userService,
+		accountService:      accountService,
+		friendService:       friendService,
+		notificationService: notificationService,
+		wsState:             wsState,
 	}
 }
 
@@ -81,6 +84,10 @@ type FriendResponse struct {
 	Status    string `json:"status"`
 	IsOnline  bool   `json:"is_online"`
 	CreatedAt string `json:"created_at"`
+}
+
+type RemoveNotificationResponse struct {
+	NotificationID uint `json:"notification_id"`
 }
 
 type UserProfileRequest struct {
@@ -582,4 +589,33 @@ func (uh *UserHandler) SearchUsers(c *gin.Context) {
 		return
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Search results", results)
+}
+
+func (uh *UserHandler) RemoveNotification(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	notificationID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_notification_id_failed", err.Error())
+		return
+	}
+	if err := uh.notificationService.RemoveNotification(uint(notificationID), userID.(uint)); err != nil {
+		var status int
+		if errors.Is(err, utils.ErrNotificationIsNotYours) {
+			status = http.StatusForbidden
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "remove_friend_failed", err.Error())
+	} else {
+		response := RemoveNotificationResponse{
+			NotificationID: uint(notificationID),
+		}
+		utils.RespondSuccess(c, http.StatusOK, "Notification removed successfully", &response)
+	}
 }

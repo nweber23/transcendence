@@ -35,7 +35,7 @@ func main() {
 	friendService := services.NewFriendService(db)
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
-	//notificationService := services.NewNotificationService(db)
+	notificationService := services.NewNotificationService(db)
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(friendService)
@@ -43,7 +43,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService, friendService, wsState)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
 	wsHandler   := handlers.NewWebSocketHandler(wsState)
 
@@ -70,6 +70,8 @@ func main() {
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
 		userRoutes.GET("/search", userHandler.SearchUsers)
+		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
+		//userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
 	}
 
 	// Game routes (protected)
