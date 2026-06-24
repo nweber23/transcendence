@@ -54,7 +54,7 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
   };
 
   const inputClass =
-    'flex-1 px-3 py-2 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(212,175,55,0.4)] text-sm';
+    'flex-1 min-w-0 px-3 py-2 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(212,175,55,0.4)] text-sm';
 
   return (
     <>
