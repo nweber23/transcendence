@@ -17,13 +17,17 @@ const (
 	TopicGeneric Topic = iota
 	TopicGame
 	TopicChat
+	TopicNotificationGames
+	TopicNotificationFriends
 	TopicMax
 )
 
 var TopicMap = map[string]Topic{
-	"generic": TopicGeneric,
-	"game":    TopicGame,
-	"chat":    TopicChat,
+	"generic":              TopicGeneric,
+	"game":                 TopicGame,
+	"chat":                 TopicChat,
+	"notification_games":   TopicNotificationGames,
+	"notification_friends": TopicNotificationFriends,
 }
 
 // MARK: packet
@@ -158,16 +162,18 @@ type client struct {
 // This is the root datatype of the websocket system
 
 type WebSocketState struct {
-	clients       map[uint]*client
-	clientsMutex  sync.RWMutex
-	readChannel   *protectedPacketChannel
-	friendService *services.FriendService
+	clients             map[uint]*client
+	clientsMutex        sync.RWMutex
+	readChannel         *protectedPacketChannel
+	friendService       *services.FriendService
 }
 
-func CreateWebSocketState(friendService *services.FriendService) (*WebSocketState) {
+func CreateWebSocketState(
+	friendService       *services.FriendService,
+) (*WebSocketState) {
 	return &WebSocketState{
-		clients:       make(map[uint]*client),
-		readChannel:   createProtectedPacketChannel(),
-		friendService: friendService,
+		clients:             make(map[uint]*client),
+		readChannel:         createProtectedPacketChannel(),
+		friendService:       friendService,
 	}
 }

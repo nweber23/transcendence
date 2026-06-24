@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"encoding/json"
+	"transcendence/services"
+	"transcendence/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -74,4 +76,32 @@ func (wsState *WebSocketState) IsOnline(userID uint) (bool) {
 	isOnline := (wsState.clients[userID] != nil)
 	wsState.clientsMutex.RUnlock()
 	return isOnline
+}
+
+func PostNotification(
+	wsState             *WebSocketState,
+	notificationService *services.NotificationService,
+	userID              uint,
+	Type                string,
+	contents            any,
+) (error) {
+	information := services.NotificationTypeInformations[Type]
+	if information == nil {
+		return utils.ErrInvalidNotificationType
+	}
+	if !(information.ShouldAdd || information.ShouldSend) {
+		panic("Invalid notificationTypeInformation")
+	}
+	if information.ShouldAdd {
+		if err := notificationService.AddNotification(userID, Type, contents); err != nil {
+			return err
+		}
+	}
+	if information.ShouldSend {
+		typic := "notification_" + Type
+		if err := wsState.SendToTopic(userID, TopicMap[typic], typic, contents); err != nil {
+			return err
+		}
+	}
+	return nil
 }

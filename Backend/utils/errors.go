@@ -15,6 +15,7 @@ var (
 	ErrInvalidPassword         = errors.New("invalid password")
 	ErrInvalidEmail            = errors.New("invalid email")
 	ErrInvalidToken            = errors.New("invalid token")
+	ErrInvalidNotificationType = errors.New("invalid notification type")
 
 	ErrRandomStringGenFailed   = errors.New("failed to generate random string")
 	ErrAmountNotPositive       = errors.New("amount must be greater than zero")

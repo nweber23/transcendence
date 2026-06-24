@@ -35,6 +35,7 @@ func main() {
 	friendService := services.NewFriendService(db)
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
+	//notificationService := services.NewNotificationService(db)
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(friendService)
