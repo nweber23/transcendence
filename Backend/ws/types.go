@@ -6,6 +6,7 @@ import (
 
 	"encoding/json"
 	"transcendence/services"
+	"transcendence/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,16 +25,21 @@ const (
 	TopicMax
 )
 
-var TopicMap = map[string]Topic{
-	"generic":              TopicGeneric,
+var topicMap = map[string]Topic{
+	"generic":              TopicGeneric,             // emitted packet types: online
 	"game":                 TopicGame,
 	"chat":                 TopicChat,
-	"notification_games":   TopicNotificationGames,
-	"notification_friends": TopicNotificationFriends,
+	"notification_games":   TopicNotificationGames,   // emitted packet types: notification
+	"notification_friends": TopicNotificationFriends, // emitted packet types: notification
 }
 
-func IsValidTopicString(topicString string) (bool) {
-	return !(topicString != "generic" && TopicMap[topicString] == TopicGeneric)
+func TopicFromString(topicString string) (Topic, error) {
+	topic := topicMap[topicString]
+	if topic == Topic(0) && topicString != "generic" {
+		return Topic(0), utils.ErrInvalidTopicString
+	} else {
+		return topic, nil
+	}
 }
 
 // MARK: Packets

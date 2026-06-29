@@ -69,7 +69,7 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 			UserID:   userID,
 			IsOnline: true,
 		}
-		wsState.SendToAll(TopicGeneric, "online", payload)
+		wsState.SendToAll(TopicGeneric, PacketTypeOnline, payload)
 	}
 }
 
@@ -94,11 +94,15 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 		}
 	}
 	if information.ShouldSend {
+		topic, err := TopicFromString("notification_" + notification.Type)
+		if err != nil {
+			return err
+		}
 		notification.CreatedAt = time.Now()
 		if err := wsState.SendToTopic(
 			notification.UserID,
-			TopicMap["notification_" + notification.Type],
-			"notification",
+			topic,
+			PacketTypeNotification,
 			notification,
 		); err != nil {
 			return err

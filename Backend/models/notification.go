@@ -5,7 +5,7 @@ import (
 )
 
 type Notification struct {
-	ID        uint      `json:"id"         gorm:"primaryKey;uniqueIndex"`
+	ID        uint      `json:"id"          gorm:"primaryKey;uniqueIndex"`
 	UserID    uint      `json:"-"`
 	Type      string    `json:"type"`
 	Head      string    `json:"head"`

@@ -22,7 +22,7 @@ func (wsState *WebSocketState) timeoutClient(userID uint) {
 		UserID:   userID,
 		IsOnline: false,
 	}
-	wsState.SendToAll(TopicGeneric, "online", payload)
+	wsState.SendToAll(TopicGeneric, PacketTypeOnline, payload)
 }
 
 func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websocket.Conn) {

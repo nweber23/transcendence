@@ -299,12 +299,10 @@ func addNotificationExpect(
 	testInterface       *testing.T,
 	notificationService *NotificationService,
 	expectSuccess       bool,
-	userID              uint,
-	Type                string,
-	contents            any,
+	notification        models.Notification,
 ) {
-	if err := notificationService.AddNotification(userID, Type, contents); (err != nil) == expectSuccess {
-		testInterface.Errorf("user %d add notification did not go as expected: %v", userID, err)
+	if err := notificationService.AddNotification(notification); (err != nil) == expectSuccess {
+		testInterface.Errorf("user %d add notification did not go as expected: %v", notification.UserID, err)
 	}
 }
 
@@ -325,7 +323,7 @@ func enumerateNotificationsExpect(
 	notificationService   *NotificationService,
 	expectedNotifications []models.Notification,
 	expectSuccess         bool,
-	userID                userID,
+	userID                uint,
 	Types                 []string,
 	limit                 int,
 ) {
@@ -357,10 +355,34 @@ func enumerateNotificationsExpect(
 	}
 }
 
+func createTestNotificationA(notificationID uint, userID uint) (models.Notification) {
+	return models.Notification{
+		ID:        notificationID,
+		UserID:    userID,
+		Type:      models.NotificationTypeFriends,
+		Head:      "Citric notice",
+		Body:      "Lemons are better than Oranges!",
+		ImageURL:  "lemon.png",
+		ActionURL: "link-to-article-about-lemons",
+	}
+}
+
+func createTestNotificationB(notificationID uint, userID uint) (models.Notification) {
+	return models.Notification{
+		ID:        notificationID,
+		UserID:    userID,
+		Type:      models.NotificationTypeGames,
+		Head:      "Deep information",
+		Body:      "If you marry your Mom you are your own Step Dad",
+		ImageURL:  "potato.png",
+		ActionURL: "guthib.com",
+	}
+}
+
 const STRESS_TEST_AMOUNT int = 500
 
 func TestServices(testInterface *testing.T) {
-	accountService, userService, friendService := createMockServices(testInterface)
+	accountService, userService, friendService, notificationService := createMockServices(testInterface)
 
 	// Create test users and check if they exist after
 	createMockUsers(testInterface, userService)
@@ -591,6 +613,60 @@ func TestServices(testInterface *testing.T) {
 	// Failing cases
 	enumerateFriendsExpect(testInterface, friendService, []models.Friendship{
 	}, false, 1, []string{"ekrfjejfijeirf"}, 90)
+
+	var ordinaryAddNotificationCases = func() {
+		addNotificationExpect(testInterface, notificationService, true, createTestNotificationA(0, 1))
+		addNotificationExpect(testInterface, notificationService, true, createTestNotificationB(0, 1))
+		addNotificationExpect(testInterface, notificationService, true, createTestNotificationA(0, 2))
+		addNotificationExpect(testInterface, notificationService, true, createTestNotificationA(0, 4))
+	}
+
+	// Ordinary add cases
+	ordinaryAddNotificationCases()
+
+	// Adding notification to user that does not exist
+	addNotificationExpect(testInterface, notificationService, false, createTestNotificationA(5, 90))
+
+	// Ordinary remove cases
+	removeNotificationExpect(testInterface, notificationService, true, 1, 1)
+	removeNotificationExpect(testInterface, notificationService, true, 2, 1)
+	removeNotificationExpect(testInterface, notificationService, true, 3, 2)
+	removeNotificationExpect(testInterface, notificationService, true, 4, 4)
+
+	// Remove notifications that never existed or no longer exist
+	removeNotificationExpect(testInterface, notificationService, false,  2,   2)
+	removeNotificationExpect(testInterface, notificationService, false, 90, 184)
+	removeNotificationExpect(testInterface, notificationService, false, 43, 184)
+
+	// Add back notifications
+	ordinaryAddNotificationCases()
+
+	// Remove notifications that are mismatched with the userID
+	removeNotificationExpect(testInterface, notificationService, false, 1, 2)
+	removeNotificationExpect(testInterface, notificationService, false, 2, 1)
+	removeNotificationExpect(testInterface, notificationService, false, 3, 1)
+	removeNotificationExpect(testInterface, notificationService, false, 4, 3)
+
+	// Ordinary enumerates
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+		createTestNotificationB(6, 1),
+		createTestNotificationA(5, 1),
+	}, true, 1, []string{models.NotificationTypeFriends, models.NotificationTypeGames}, 90)
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+		createTestNotificationA(7, 2),
+	}, true, 2, []string{models.NotificationTypeFriends, models.NotificationTypeGames}, 90)
+
+	// Empty output
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+	}, true, 5, []string{models.NotificationTypeFriends, models.NotificationTypeGames}, 90)
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+	}, true, 1, []string{}, 90)
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+	}, true, 1, []string{models.NotificationTypeFriends, models.NotificationTypeGames}, 0)
+
+	// Invalid notification type
+	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
+	}, false, 1, []string{"wergfijijwer"}, 90)
 }
 
 func searchUsersExpect(
@@ -611,7 +687,7 @@ func searchUsersExpect(
 }
 
 func TestSearchUsers(t *testing.T) {
-	_, userService, _ := createMockServices(t)
+	_, userService, _, _ := createMockServices(t)
 	createMockUsers(t, userService)
 	// createMockUsers creates: test0, test1, test2, test3, test4, herold
 

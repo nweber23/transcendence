@@ -33,7 +33,8 @@ func (s *NotificationService) AddNotification(notification models.Notification) 
 	if _, err := NewUserService(s.db).GetUserByID(notification.UserID); err != nil {
 		return err
 	}
-	if err := s.db.Create(notification).Error; err != nil {
+	notification.ID = 0
+	if err := s.db.Create(&notification).Error; err != nil {
 		return fmt.Errorf("failed to create notification: %w", err)
 	}
 	return nil
@@ -49,7 +50,7 @@ func (s *NotificationService) RemoveNotification(notificationID uint, userID uin
 	if notification.UserID != userID {
 		return utils.ErrNotificationIsNotYours
 	}
-	if err := s.db.Delete(notification).Error; err != nil {
+	if err := s.db.Delete(&notification).Error; err != nil {
 		return fmt.Errorf("failed to delete notification: %w", err)
 	}
 	return nil
