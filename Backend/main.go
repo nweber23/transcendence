@@ -8,6 +8,7 @@ import (
 	"transcendence/handlers"
 	"transcendence/middleware"
 	"transcendence/services"
+	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,16 +26,25 @@ func main() {
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware())
 
+	// Serve uploaded avatar files publicly (no auth required for <img> tags)
+	router.Static("/uploads", "./uploads")
+
 	// Initialize services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)
+	friendService := services.NewFriendService(db)
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 
+	// Initialize WebSockets
+	wsState := ws.CreateWebSocketState(friendService)
+	go wsState.Main()
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
+	wsHandler   := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")
@@ -49,10 +59,16 @@ func main() {
 	userRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	{
 		userRoutes.GET("/profile", userHandler.GetProfile)
+		userRoutes.PUT("/profile", userHandler.UpdateProfile)
+		userRoutes.POST("/avatar", userHandler.UploadAvatar)
 		userRoutes.GET("/account", userHandler.GetAccount)
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
 		userRoutes.POST("/account/deposit", userHandler.Deposit)
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
+		userRoutes.POST("/:id/friends", userHandler.AddFriend)
+		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
+		userRoutes.GET("/friends", userHandler.EnumerateFriends)
+		userRoutes.GET("/search", userHandler.SearchUsers)
 	}
 
 	// Game routes (protected)
@@ -66,7 +82,7 @@ func main() {
 	}
 
 	// WebSocket route
-	router.GET("/ws", handlers.HandleWebSocket(gameService, cfg.JWTSecret))
+	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), wsHandler.UpgradeConnection)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+
+import { connectWebSocket, disconnectWebSocket } from '@/utils/wsClient';
+import { AUTH_TOKEN_CHANGED_EVENT } from '@/hooks/useAuth';
+
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -7,6 +11,7 @@ import Landing from '@/pages/landing/Landing';
 import Login from '@/pages/auth/Login';
 import SignUp from '@/pages/auth/SignUp';
 import Account from '@/pages/Account';
+import ProfilePage from '@/pages/account/ProfilePage';
 import Blackjack from '@/pages/games/Blackjack';
 import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
@@ -23,6 +28,23 @@ const AppLayout: React.FC = () => {
   const showFooter = pathname === '/';
   const hideHeader = pathname === '/login' || pathname === '/signup';
 
+  useEffect(() => {
+    const syncConnection = () => {
+      const token = localStorage.getItem('auth_token');
+      if (token == null) {
+        disconnectWebSocket();
+      } else {
+        connectWebSocket(token);
+      }
+    };
+    syncConnection();
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncConnection);
+    return () => {
+      window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncConnection);
+      disconnectWebSocket();
+    };
+  }, [])
+
   return (
     <div className="min-h-screen bg-[var(--base)] text-[var(--text)] flex flex-col">
       {!hideHeader && <Header />}
@@ -35,6 +57,14 @@ const AppLayout: React.FC = () => {
           element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

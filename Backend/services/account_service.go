@@ -1,10 +1,10 @@
 package services
 
 import (
-	"errors"
 	"fmt"
 
 	"transcendence/models"
+	"transcendence/utils"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -42,7 +42,10 @@ func (s *AccountService) getAccountForUpdate(tx *gorm.DB, userID uint) (*models.
 // Deposit adds funds to account with transaction record
 func (s *AccountService) Deposit(userID uint, amount decimal.Decimal) error {
 	if amount.LessThan(decimal.Zero) {
-		return errors.New("amount must be greater than zero")
+		return utils.ErrAmountNotPositive
+	}
+	if amount.GreaterThan(decimal.NewFromInt(utils.MaxTransactionAmount)) {
+		return utils.ErrAmountTooLarge
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		account, err := s.getAccountForUpdate(tx, userID)
@@ -74,7 +77,7 @@ func (s *AccountService) Deposit_f(userID uint, amount float64) error {
 // Withdraw removes the funds from accounts with transaction record
 func (s *AccountService) Withdraw(userID uint, amount decimal.Decimal) error {
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return errors.New("amount must be greater than zero")
+		return utils.ErrAmountNotPositive
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		account, err := s.getAccountForUpdate(tx, userID)
@@ -82,7 +85,7 @@ func (s *AccountService) Withdraw(userID uint, amount decimal.Decimal) error {
 			return err
 		}
 		if account.Balance.LessThan(amount) {
-			return errors.New("insufficient funds")
+			return utils.ErrInsufficientBalance
 		}
 		newBalance := account.Balance.Sub(amount)
 		if err := tx.Model(account).Update("balance", newBalance).Error; err != nil {

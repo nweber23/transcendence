@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
+import Logo from '@/components/ui/Logo';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
 
@@ -101,7 +102,15 @@ const SignUp: React.FC = () => {
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-8 py-8 pt-20">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md fade-in-up" style={{ animationDelay: '80ms' }}>
+          {/* Brand anchor */}
+          <div className="flex justify-center mb-8">
+            <Link to="/" className="flex items-center gap-2.5 opacity-70 hover:opacity-100 transition-opacity duration-200">
+              <Logo size={26} />
+              <span className="font-serif text-sm font-semibold tracking-widest text-[var(--gold)]">FT_CASINO</span>
+            </Link>
+          </div>
+
           {/* Card Container */}
           <div className="border border-[rgba(212,175,55,0.15)] rounded-2xl bg-[var(--surface)] p-8 md:p-10 hover:border-[rgba(212,175,55,0.25)] transition-colors duration-300">
             {/* Heading */}
@@ -340,7 +349,7 @@ const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
   return (
     <button
       type="button"
-      className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.15)] bg-[var(--surface-2)] text-[var(--text)] font-medium text-sm hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-3)] transition-all duration-200 flex items-center justify-center gap-2"
+      className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.15)] bg-[var(--surface-2)] text-[var(--text)] font-medium text-sm hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-3)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2"
     >
       {renderIcon()}
       Continue with {provider}

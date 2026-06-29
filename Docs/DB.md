@@ -34,6 +34,7 @@ CREATE TABLE users (
   username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  avatar_url TEXT DEFAULT 'default_avatar',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP DEFAULT NULL,
@@ -52,6 +53,7 @@ CREATE INDEX idx_users_deleted_at ON users(deleted_at);
 - `deleted_at` enables soft deletes for user data retention compliance
 - Email validation via CHECK constraint prevents invalid data at DB level
 - Timestamps track account lifecycle
+- `avatar_url` stores the filename of the uploaded avatar (served from `/uploads/<avatar_url>`); defaults to `default_avatar` until the user uploads one
 
 ---
 
@@ -149,7 +151,33 @@ CREATE INDEX idx_accounts_balance ON accounts(balance) WHERE balance > 0;
 
 ---
 
-### 5. `transactions`
+### 5. `friendships`
+Stores one-way friendship bindings between two users
+
+```sql
+CREATE TABLE `friendships` (
+  `low_id` integer,
+  `high_id` integer,
+  `status` text DEFAULT "dormant",
+  `created_at` datetime,
+  `deleted_at` datetime,
+
+  PRIMARY KEY (`low_id`,`high_id`)
+)
+
+CREATE INDEX `idx_friendships_deleted_at` ON `friendships`(`deleted_at`)
+CREATE INDEX `idx_friendships_status` ON `friendships`(`status`)
+CREATE UNIQUE INDEX `friendship_binding` ON `friendships`(`low_id`,`high_id`)
+```
+
+**Design rationale:**
+- No unique index for simplicity, only id combinations shall be unique
+- Friendships use composite primary keys because there is no sensible way to access a friendship by a single ID
+- Creation timestamp for convenience
+
+---
+
+### 6. `transactions`
 Immutable financial transaction log.
 
 ```sql
@@ -185,7 +213,7 @@ CREATE INDEX idx_transactions_status ON transactions(status) WHERE status IN ('p
 
 ---
 
-### 6. `games`
+### 7. `games`
 Game session records (parent table for all game types).
 
 ```sql
@@ -220,7 +248,7 @@ CREATE INDEX idx_games_game_type ON games(game_type);
 
 ---
 
-### 7. `blackjack_games`
+### 8. `blackjack_games`
 Game-specific record for Blackjack.
 
 ```sql
@@ -263,7 +291,7 @@ CREATE INDEX idx_blackjack_games_game_id ON blackjack_games(game_id);
 
 ---
 
-### 8. `poker_games`
+### 9. `poker_games`
 Game-specific record for Poker.
 
 ```sql
@@ -293,7 +321,7 @@ CREATE INDEX idx_poker_games_table_id ON poker_games(table_id);
 
 ---
 
-### 9. `slots_games`
+### 10. `slots_games`
 Game-specific record for Slot Machine.
 
 ```sql
@@ -331,7 +359,7 @@ CREATE INDEX idx_slots_games_game_id ON slots_games(game_id);
 
 ## Analytics & Audit Tables
 
-### 10. `game_statistics`
+### 11. `game_statistics`
 Aggregated player statistics for quick queries.
 
 ```sql
@@ -383,6 +411,8 @@ users (1) ──── (1) user_profiles
   │               │
   │               └─ (1) ──── (n) transactions
   │
+  ├─ (1) ──── (1) friendships
+  |
   ├─ (1) ──── (n) sessions
   │
   ├─ (1) ──── (n) games

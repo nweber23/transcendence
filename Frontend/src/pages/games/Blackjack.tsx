@@ -1,187 +1,254 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '@/components/ui/Button';
+import React, { useEffect, useState } from 'react';
+import PlayingCard, { CardData, CardSlot } from '@/components/games/PlayingCard';
+import Chip, { CHIP_VALUES } from '@/components/games/Chip';
+import GameTopBar from '@/components/games/GameTopBar';
+import { useAccount } from '@/hooks/useAccount';
 
-interface Card {
-  suit: string;
-  rank: string;
-}
+const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
 const Blackjack: React.FC = () => {
-  const navigate = useNavigate();
+  /* autoFetch=false: only the account is needed here, not the transaction history */
+  const { account, getAccount } = useAccount(false);
+  useEffect(() => {
+    getAccount().catch(() => {});
+  }, [getAccount]);
+  const balance = account ? Math.floor(Number(account.balance)) : 0;
 
-  const balance     = 10_000; // TODO: connect to account/wallet
-  const [bet, setBet]               = useState(0);
-  const [playerHand]                = useState<Card[]>([]);
-  const [dealerHand]                = useState<Card[]>([]);
-  const [gameActive]                = useState(false);
-  const [dealerRevealed]            = useState(false);
+  /* Bet is staged as a stack of chips so the engine receives a single amount on deal */
+  const [stagedChips, setStagedChips] = useState<number[]>([]);
 
-  const addBet = (n: number) => setBet((b) => Math.min(b + n, balance));
-  const subBet = (n: number) => setBet((b) => Math.max(b - n, 0));
+  /* TODO: all game state below comes from the game engine */
+  const [playerHand] = useState<CardData[]>([]);
+  const [dealerHand] = useState<CardData[]>([]);
+  const [gameActive] = useState(false);
+  const [dealerRevealed] = useState(false);
+
+  const bet = sum(stagedChips);
   const canDeal = bet > 0 && bet <= balance;
 
-  const calculateHandValue = (hand: Card[]): number => {
+  /* Display-only helper — authoritative totals come from the engine */
+  const calculateHandValue = (hand: CardData[]): number => {
     let value = 0;
-    let aces  = 0;
+    let aces = 0;
     hand.forEach((card) => {
-      if (card.rank === 'A') { aces += 1; value += 11; }
-      else if (['K', 'Q', 'J'].includes(card.rank)) value += 10;
-      else value += parseInt(card.rank);
+      if (card.rank === 'A') {
+        aces += 1;
+        value += 11;
+      } else if (['K', 'Q', 'J'].includes(card.rank)) {
+        value += 10;
+      } else {
+        value += parseInt(card.rank);
+      }
     });
-    while (value > 21 && aces > 0) { value -= 10; aces -= 1; }
+    while (value > 21 && aces > 0) {
+      value -= 10;
+      aces -= 1;
+    }
     return value;
   };
 
+  const addChip = (value: number) => {
+    if (bet + value <= balance) setStagedChips((c) => [...c, value]);
+  };
+  const undoChip = () => setStagedChips((c) => c.slice(0, -1));
+  const clearChips = () => setStagedChips([]);
+
+  const dealerTotal = dealerRevealed
+    ? calculateHandValue(dealerHand)
+    : calculateHandValue(dealerHand.slice(0, 1));
+
+  const ghostButton =
+    'px-4 py-2.5 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-sm font-semibold hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
+
+  const actionButton =
+    'flex-1 py-4 rounded-xl font-semibold uppercase tracking-[0.18em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
+
+  /* mt-[4.75rem] clears the floating global Header pill (pt-4 + h-14 = 4.5 rem) */
   return (
-    <div className="mt-16 flex flex-col h-[calc(100dvh-4rem)] overflow-hidden bg-[var(--base)]">
+    <div
+      className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
+      style={{ height: 'calc(100dvh - 4.75rem)' }}
+    >
+      <GameTopBar title="Blackjack" subtitle="Single Deck · Pays 3 to 2" balance={balance} />
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-[var(--surface)] border-b border-[rgba(212,175,55,0.1)] px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/')}
-          className="text-[var(--gold)] hover:text-[var(--text)] transition-colors text-sm cursor-pointer"
-          aria-label="Back to home"
+      {/* ── Table felt ─────────────────────────────────────────────────────── */}
+      <div
+        className="relative flex-1 min-h-0 m-3 mb-2 rounded-2xl overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(ellipse 130% 100% at 50% -10%, #1b5742 0%, #123c2d 48%, #0b2a1f 78%, #071e16 100%)',
+          boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(212,175,55,0.18)',
+        }}
+      >
+        {/* Inner pinstripe */}
+        <div className="absolute inset-2.5 rounded-xl border border-[rgba(212,175,55,0.12)] pointer-events-none" />
+
+        {/* Arc inscription */}
+        <svg
+          className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2 w-[min(78%,560px)] pointer-events-none"
+          viewBox="0 0 600 240"
+          aria-hidden="true"
         >
-          ← Back
-        </button>
-        <h1 className="font-serif text-xl font-semibold">Blackjack</h1>
-        <div className="w-16" />
-      </header>
+          <defs>
+            <path id="bj-arc-1" d="M 60 200 A 300 300 0 0 1 540 200" fill="none" />
+            <path id="bj-arc-2" d="M 80 232 A 330 330 0 0 1 520 232" fill="none" />
+          </defs>
+          <text
+            fill="rgba(212,175,55,0.4)"
+            fontSize="23"
+            letterSpacing="7"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            <textPath href="#bj-arc-1" startOffset="50%" textAnchor="middle">
+              BLACKJACK PAYS 3 TO 2
+            </textPath>
+          </text>
+          <text fill="rgba(212,175,55,0.26)" fontSize="11" letterSpacing="4">
+            <textPath href="#bj-arc-2" startOffset="50%" textAnchor="middle">
+              DEALER MUST STAND ON 17 AND DRAW TO 16
+            </textPath>
+          </text>
+        </svg>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4">
-        <div className="relative w-full max-w-lg">
-          {/* Top rail */}
-          <div className="h-0.5 bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-40 mb-1 rounded-full" />
-
-          {/* Felt surface */}
-          <div className="bg-gradient-to-b from-[var(--surface-2)] to-[var(--surface-3)] rounded-2xl border border-[rgba(212,175,55,0.12)] px-6 py-5">
-
-            {/* Dealer */}
-            <div className="mb-4">
-              <p className="eyebrow text-center mb-3">Dealer</p>
-              <div className="flex justify-center gap-3 min-h-24">
-                {dealerHand.map((card, idx) => (
-                  <CardDisplay key={idx} card={card} isHidden={!dealerRevealed && idx === 0} />
-                ))}
-              </div>
-              {dealerRevealed && dealerHand.length > 0 && (
-                <p className="text-center text-[var(--gold)] font-serif mt-2">
-                  Total: {calculateHandValue(dealerHand)}
-                </p>
-              )}
+        <div className="relative h-full flex flex-col items-center justify-between px-4 py-5">
+          {/* Dealer */}
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgba(212,175,55,0.55)]">
+                Dealer
+              </span>
+              {dealerHand.length > 0 && <TotalBadge value={dealerTotal} />}
             </div>
-
-            {/* Divider */}
-            <div className="h-px bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.2)] to-transparent my-4" />
-
-            {/* Player */}
-            <div>
-              <p className="eyebrow text-center mb-3">Your Hand</p>
-              <div className="flex justify-center gap-3 min-h-24">
-                {playerHand.map((card, idx) => (
-                  <CardDisplay key={idx} card={card} />
-                ))}
-              </div>
-              {playerHand.length > 0 && (
-                <p className="text-center text-[var(--gold)] font-serif mt-2">
-                  Total: {calculateHandValue(playerHand)}
-                </p>
+            <div className="flex gap-2 min-h-[7.7rem]">
+              {dealerHand.length === 0 ? (
+                <>
+                  <CardSlot size="xl" />
+                  <CardSlot size="xl" />
+                </>
+              ) : (
+                dealerHand.map((card, i) => (
+                  <div key={i} className={dealerRevealed && i === 1 ? 'card-flip-in' : ''}>
+                    <PlayingCard
+                      card={card}
+                      faceDown={i === 1 && !dealerRevealed}
+                      size="xl"
+                      className="card-deal"
+                      style={{ animationDelay: `${i < 2 ? i * 160 + 80 : 0}ms` }}
+                    />
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {/* Bottom rail */}
-          <div className="h-0.5 bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-30 mt-1 rounded-full" />
+          {/* Bet circle */}
+          <div className="flex flex-col items-center gap-1.5">
+            <div
+              className="relative w-[5.75rem] h-[5.75rem] rounded-full border-2 border-dashed border-[rgba(212,175,55,0.35)]"
+              style={{ background: 'rgba(0,0,0,0.18)' }}
+            >
+              {stagedChips.length === 0 ? (
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] tracking-[0.25em] text-[rgba(212,175,55,0.45)] uppercase">
+                  Bet
+                </span>
+              ) : (
+                <div
+                  className="absolute left-1/2 -translate-x-1/2"
+                  style={{ width: 46, height: 46, bottom: 14 }}
+                >
+                  {stagedChips.slice(-6).map((value, i) => (
+                    <div key={i} className="absolute left-0 chip-pop" style={{ bottom: i * 6 }}>
+                      <Chip value={value} size={46} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {bet > 0 && (
+              <span className="font-serif text-xl text-[var(--gold)]">${bet.toLocaleString()}</span>
+            )}
+          </div>
 
-          {/* Glow */}
-          <div className="glow-gold absolute -inset-8 -z-10 pointer-events-none" />
+          {/* Player */}
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="flex gap-2 min-h-[7.7rem]">
+              {playerHand.length === 0 ? (
+                <>
+                  <CardSlot size="xl" />
+                  <CardSlot size="xl" />
+                </>
+              ) : (
+                playerHand.map((card, i) => (
+                  <PlayingCard
+                    key={i}
+                    card={card}
+                    size="xl"
+                    className="card-deal"
+                    style={{ animationDelay: `${i < 2 ? i * 160 : 0}ms` }}
+                  />
+                ))
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgba(212,175,55,0.55)]">
+                Your Hand
+              </span>
+              {playerHand.length > 0 && <TotalBadge value={calculateHandValue(playerHand)} />}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Controls panel ──────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-[rgba(212,175,55,0.1)] bg-[var(--surface)] px-5 pt-4 pb-5 space-y-3">
-
+      {/* ── Console ────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-[rgba(212,175,55,0.12)] bg-[var(--surface)] px-5 py-4 min-h-[88px] flex items-center">
         {!gameActive ? (
-          <>
-            {/* Quick add row */}
-            <div className="flex gap-2">
-              {[10, 50, 100, 500].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => addBet(n)}
-                  className="flex-1 py-3.5 rounded-lg border border-[rgba(212,175,55,0.12)] text-[var(--text-2)] text-sm font-semibold hover:border-[var(--gold)] hover:text-[var(--gold)] transition-all cursor-pointer active:scale-95"
-                >
-                  +{n}
-                </button>
-              ))}
-            </div>
-
-            {/* Quick subtract row */}
-            <div className="flex gap-2">
-              {[10, 50, 100, 500].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => subBet(n)}
-                  className="flex-1 py-3.5 rounded-lg border border-[rgba(212,175,55,0.08)] text-[var(--text-3)] text-sm font-semibold hover:border-red-500/40 hover:text-red-400 transition-all cursor-pointer active:scale-95"
-                >
-                  -{n}
-                </button>
-              ))}
-            </div>
-
-            {/* Bet input row */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-3 bg-[var(--surface-2)] border border-[rgba(212,175,55,0.1)] rounded-lg px-4 py-3">
-                <span className="text-xs text-[var(--text-3)] uppercase tracking-widest shrink-0">Bet</span>
-                <input
-                  type="number"
-                  min="0"
-                  max={balance}
-                  value={bet}
-                  onChange={(e) => setBet(Math.max(0, Math.min(parseInt(e.target.value) || 0, balance)))}
-                  className="flex-1 bg-transparent text-[var(--gold)] font-serif text-xl text-right focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  aria-label="Bet amount"
+          <div className="w-full flex flex-wrap items-center gap-x-5 gap-y-3">
+            <div className="flex items-end gap-2.5">
+              {CHIP_VALUES.map((value) => (
+                <Chip
+                  key={value}
+                  value={value}
+                  onClick={() => addChip(value)}
+                  disabled={bet + value > balance}
                 />
-                <span className="text-[var(--text-3)] text-sm">$</span>
-              </div>
-              <button
-                onClick={() => setBet(0)}
-                className="px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.1)] text-[var(--text-3)] text-sm hover:border-[rgba(212,175,55,0.25)] hover:text-[var(--text-2)] transition-all cursor-pointer"
-              >
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={undoChip} disabled={stagedChips.length === 0} className={ghostButton}>
+                Undo
+              </button>
+              <button onClick={clearChips} disabled={stagedChips.length === 0} className={ghostButton}>
                 Clear
               </button>
-              <button
-                onClick={() => setBet(balance)}
-                className="px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.1)] text-[var(--text-3)] text-sm hover:border-[rgba(212,175,55,0.25)] hover:text-[var(--text-2)] transition-all cursor-pointer"
-              >
-                Max
-              </button>
             </div>
-
-            {/* Deal button */}
             <button
               disabled={!canDeal}
-              className={`
-                w-full py-5 rounded-xl font-semibold text-lg tracking-widest uppercase transition-all duration-150 cursor-pointer
-                ${canDeal
-                  ? 'bg-[var(--gold)] text-[#0a0e12] hover:opacity-90 active:scale-[0.98] shadow-[0_2px_24px_rgba(212,175,55,0.25)]'
-                  : 'bg-[var(--surface-2)] text-[var(--text-3)] cursor-not-allowed border border-[rgba(212,175,55,0.08)]'
-                }
-              `}
+              className={`ml-auto px-12 py-3.5 rounded-xl font-semibold text-base tracking-[0.22em] uppercase transition-all duration-150 ${
+                canDeal
+                  ? 'bg-[var(--gold)] text-[#0a0e12] hover:opacity-90 active:scale-[0.98] shadow-[0_2px_24px_rgba(212,175,55,0.3)] cursor-pointer'
+                  : 'bg-[var(--surface-2)] text-[var(--text-3)] border border-[rgba(212,175,55,0.08)] cursor-not-allowed'
+              }`}
             >
               {/* TODO: wire up to game engine */}
-              Deal Hand
+              Deal
             </button>
-          </>
+          </div>
         ) : (
-          /* In-game action buttons */
-          <div className="flex gap-3">
-            <Button variant="gold" className="flex-1">Hit</Button>
-            <Button variant="gold" className="flex-1">Stand</Button>
-            <Button variant="gold" className="flex-1">Double</Button>
-            <Button variant="ghost" className="flex-1">Split</Button>
+          /* In-game actions — TODO: wire up to game engine */
+          <div className="w-full flex items-center gap-3">
+            <div className="hidden sm:block mr-2 leading-tight">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Wager</p>
+              <p className="font-serif text-lg text-[var(--gold)]">${bet.toLocaleString()}</p>
+            </div>
+            <button className={`${actionButton} text-[#e9f5ef] bg-[#1e5a45] hover:bg-[#247052]`}>
+              Hit
+            </button>
+            <button className={`${actionButton} text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]`}>
+              Stand
+            </button>
+            <button className={`${actionButton} text-[#0a0e12] bg-[var(--gold)] hover:opacity-90 border-none`}>
+              Double
+            </button>
           </div>
         )}
       </div>
@@ -189,33 +256,20 @@ const Blackjack: React.FC = () => {
   );
 };
 
-// ─── Card display ─────────────────────────────────────────────────────────────
+// ─── Hand total badge ─────────────────────────────────────────────────────────
 
-const CardDisplay: React.FC<{ card: Card; isHidden?: boolean }> = ({ card, isHidden = false }) => {
-  const suits: Record<string, string> = {
-    '♠': 'text-[var(--text)]',
-    '♥': 'text-red-500',
-    '♦': 'text-red-500',
-    '♣': 'text-[var(--text)]',
-  };
-
-  return (
-    <div
-      className={`w-16 h-22 rounded border flex items-center justify-center font-serif font-bold text-lg transition-all ${
-        isHidden
-          ? 'bg-gradient-to-br from-[rgba(212,175,55,0.1)] to-[rgba(212,175,55,0.05)] border-[rgba(212,175,55,0.2)]'
-          : `bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] border-[rgba(212,175,55,0.3)] ${suits[card.suit] || ''}`
-      }`}
-      style={{ width: '4rem', height: '5.5rem' }}
-    >
-      {!isHidden && (
-        <div className="text-center">
-          <div>{card.rank}</div>
-          <div className={`text-sm ${suits[card.suit] || ''}`}>{card.suit}</div>
-        </div>
-      )}
-    </div>
-  );
-};
+const TotalBadge: React.FC<{ value: number }> = ({ value }) => (
+  <span
+    className={`px-2.5 py-0.5 rounded-full border font-serif text-sm leading-tight ${
+      value > 21
+        ? 'border-[rgba(139,38,53,0.6)] bg-[rgba(139,38,53,0.25)] text-[#e8a5ae]'
+        : value === 21
+          ? 'border-[rgba(212,175,55,0.6)] bg-[rgba(212,175,55,0.15)] text-[var(--gold)]'
+          : 'border-[rgba(212,175,55,0.25)] bg-[rgba(0,0,0,0.35)] text-[var(--text)]'
+    }`}
+  >
+    {value > 21 ? `${value} · Bust` : value}
+  </span>
+);
 
 export default Blackjack;

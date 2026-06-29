@@ -29,20 +29,23 @@ Backend/
 │   ├── config.go               # Environment variables, Config struct
 │   └── database.go             # PostgreSQL connection, auto-migrations
 ├── models/
-│   ├── user.go                 # User struct with auth fields
+│   ├── user.go                 # User struct with auth fields + AvatarURL
 │   ├── account.go              # Account balance, transaction tracking
 │   ├── transaction.go          # Immutable audit log
-│   └── game.go                 # Game, BlackjackGame, PokerGame, SlotsGame
+│   ├── game.go                 # Game, BlackjackGame, PokerGame, SlotsGame
+│   └── friendship.go           # Multi-ID friendship with absolute status
 ├── handlers/
 │   ├── auth.go                 # POST /auth/register, /login, /logout
 │   ├── games.go                # GET/POST /games, POST /games/:id/action
 │   ├── user.go                 # GET /user/profile, /account, deposits, withdrawals
-│   └── ws.go                   # WebSocket upgrade, game room broadcast
+│   └── ws.go                   # WebSocket upgrade
 ├── services/
 │   ├── user_service.go         # User CRUD, authentication
 │   ├── account_service.go      # Balance ops, transaction creation
 │   ├── game_service.go         # Game creation, action execution
-│   └── engine_client.go        # gRPC stub (placeholder for C++ engine)
+│   ├── engine_client.go        # gRPC stub (placeholder for C++ engine)
+│   ├── friend_service.go       # Friend System
+│   └── services_test.go        # Service Integration tests
 ├── middleware/
 │   ├── auth.go                 # JWT validation middleware
 │   └── cors.go                 # CORS headers
@@ -50,10 +53,17 @@ Backend/
 │   ├── jwt.go                  # Token generation/validation
 │   ├── password.go             # Bcrypt hashing/verification
 │   ├── email.go                # Email format + DNS validation
-│   └── response.go             # Standardized JSON responses
+│   ├── response.go             # Standardized JSON responses
+│   ├── other.go                # Everything else
+│   └── utils_test.go           # Utils Unit tests
+├── ws/
+│   ├── helpers.go              # Websocket system interface
+│   ├── main.go                 # Main and Stop, packet handling and cleanup
+│   ├── pumps.go                # Read and write websocket pumps
+│   └── types.go                # All relevant datatypes and their wrapper methods, most of which are mutex protected
 ├── Dockerfile                  # Multi-stage Go build
-├── go.mod / go.sum            # Dependencies
-└── .env.example               # Configuration template
+├── go.mod / go.sum             # Dependencies
+└── .env.example                # Configuration template
 ```
 
 ---
@@ -99,6 +109,11 @@ The backend will:
 | GET | `/user/account/transactions` | Paginated transaction history |
 | POST | `/user/account/deposit` | Add funds |
 | POST | `/user/account/withdraw` | Withdraw funds |
+| POST | `/user/avatar` | Upload/replace avatar image (multipart form field `file`), serves from `/uploads/<random>.<ext>` |
+| POST | `/user/:id/friends` | Add friend, both parties must run this endpoint |
+| DELETE | `/user/:id/friends` | Remove friend
+| GET | `/user/friends?limit=<NUMBER>&statuses=<RELATIVE_STATUS{,RELATIVE_STATUS}>` | Enumerate up to "limit" friends with "statuses" as a filter |
+| GET | `/user/search?q=<QUERY>&limit=<NUMBER>` | Search users by username prefix (case-insensitive), default limit 10, max 50 |
 
 ### Games (Protected with JWT)
 | Method | Path | Purpose |
@@ -111,7 +126,7 @@ The backend will:
 ### WebSocket (Real-time)
 | Endpoint | Purpose |
 |----------|---------|
-| GET `/ws?token=<JWT>&game_id=<ID>` | Join game room, receive live updates |
+| GET `/ws?token=<JWT>&topics=<TOPIC{,TOPIC}>` | Create a websocket that subscribes to the specified topics |
 
 **Events broadcast to connected clients:**
 - `player_joined` - New player connected
@@ -136,9 +151,8 @@ The backend will:
 - Verified on login via `bcrypt.CompareHashAndPassword`
 
 **WebSocket Security:**
-- JWT passed in query string: `ws://localhost:8080/ws?token=<JWT>&game_id=<ID>`
-- Token validated before WebSocket upgrade
-- User verified to own the game before joining
+- JWT passed in query string: `ws://localhost:8080/ws?token=<JWT>&topics=<TOPIC{,TOPIC}>`
+- Token is moved from query string to header then validated as per usual
 
 ---
 
@@ -146,7 +160,7 @@ The backend will:
 
 **Automatic Schema Migration:**
 - Runs on startup via GORM `AutoMigrate()`
-- Creates tables: `users`, `accounts`, `transactions`, `games`, `blackjack_games`, `poker_games`, `slots_games`, `game_statistics`
+- Creates tables: `users`, `accounts`, `transactions`, `games`, `blackjack_games`, `poker_games`, `slots_games`, `game_statistics`, `friendships`
 - Foreign key constraints with CASCADE delete
 
 **Key Data Types:**
@@ -163,32 +177,31 @@ The backend will:
 
 ## Real-time WebSocket Architecture
 
-**Hub Pattern (in-memory client registry):**
+**Topic-based client registry (`ws` package, in-memory):**
 ```
-Hub (global)
-├── Rooms (per game)
-│   ├── GameID: 1
-│   │   ├── Clients
-│   │   │   ├── UserID: 10 (connection, send buffer)
-│   │   │   └── UserID: 20 (connection, send buffer)
-│   │   └── Send (broadcast channel)
-│   └── GameID: 2
+WebSocketState (global)
+├── clients (by UserID)
+│   ├── UserID: 10
+│   │   ├── contextList     (one connectionContext per open tab/connection)
+│   │   └── topicLists[]    (per-topic fan-out lists of connectionContexts)
+│   └── UserID: 20
 │       └── ...
+└── readChannel             (inbound packets from all connections, drained by Main())
 ```
+
+A user can have multiple simultaneous connections (e.g. multiple tabs); each subscribes to a subset of `topics` (`generic`, `game`, `chat`) passed as a query param. Messages are addressed to a topic via `SendToTopic`/`SendToAll` and fanned out to every connection subscribed to that topic for the target user(s).
 
 **Connection Flow:**
-1. Client connects to `/ws?token=JWT&game_id=ID`
-2. Server validates JWT, verifies game ownership
-3. Server creates `Client` struct, registers in hub
-4. `readPump()` goroutine reads messages from client
-5. `writePump()` goroutine writes messages to client
-6. Messages broadcast to all clients in the room
+1. Client connects to `/ws?token=JWT&topics=generic,game`
+2. `AuthFix` middleware copies `token` query param into the `Authorization` header, then standard `AuthMiddleware` validates it
+3. `WebSocketHandler.UpgradeConnection` upgrades the connection and calls `WebSocketState.AddConnection`
+4. `AddConnection` registers the connection under the user's `client`, subscribes it to the requested topics, and starts `pumpFromConnection`/`pumpToConnection` goroutines
+5. On first connection for a user, an `online` packet (topic `generic`) is broadcast to all clients; on last disconnection, a debounced `timeoutClient` goroutine broadcasts `offline` after a grace period (handles tab refreshes without flapping)
 
 **Error Handling:**
-- Graceful disconnection on network errors
-- Automatic unregistration from hub
-- Buffer overflow protection (drop message if send buffer full)
-- Nil room checks to prevent panics
+- Read errors close the connection and trigger `cleanupConnection`, which removes the context from the user's `client` and topic lists
+- Buffer overflow protection (non-blocking channel sends drop messages if a connection's buffer is full)
+- Online/offline notifications are debounced via `timeoutClient` to avoid flapping on reconnects
 
 ---
 
@@ -217,6 +230,12 @@ Hub (global)
 - `ExecuteSlotsAction(...)` - Call C++ engine (stub)
 - `Health(ctx)` - Health check
 
+**FriendService**
+- `AddFriend(userID, friendID)` - Advances the friend status between two users (ID order matters)
+- `RemoveFriend(firstID, secondID)` - Removes a friendships between two users (ID order does not matter)
+- `EnumerateFriends(userID, statuses, limit)` - Enumerate friends with a filter and a limit, applied in that order
+- `AreFriends(firstID, secondID)` - Checks whether two users are friends (ID order does not matter)
+
 ---
 
 ## What's Implemented ✅
@@ -229,8 +248,10 @@ Hub (global)
 - ✅ Game creation with bet validation
 - ✅ Game action execution (placeholder engine response)
 - ✅ Game history retrieval with pagination
-- ✅ WebSocket real-time game updates
-- ✅ Multi-game room support with client registry
+- ✅ Topic-based WebSocket real-time updates (generic/game/chat) with online/offline presence
+- ✅ Friend system (add/remove/enumerate with pending states, online status)
+- ✅ Avatar upload (multipart upload, served from `/uploads`)
+- ✅ Username search
 - ✅ CORS middleware
 - ✅ PostgreSQL auto-migrations
 - ✅ Email validation (regex + DNS MX check)
@@ -256,7 +277,6 @@ Hub (global)
    - Replace placeholder responses in `engine_client.go`
 
 2. **Testing:**
-   - Unit tests for services
    - Integration tests for API endpoints
    - WebSocket connection/broadcast tests
 
