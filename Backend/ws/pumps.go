@@ -18,7 +18,7 @@ func (wsState *WebSocketState) timeoutClient(userID uint) {
 		}
 		iteration++
 	}
-	payload := packetOnline{
+	payload := PacketOnline{
 		UserID:   userID,
 		IsOnline: false,
 	}

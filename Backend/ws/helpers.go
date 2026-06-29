@@ -2,8 +2,10 @@ package ws
 
 import (
 	"fmt"
+	"time"
 
 	"encoding/json"
+	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
 
@@ -63,7 +65,7 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 	go pumpToConnection(context)
 	fmt.Printf("Connection added for user %d\n", userID)
 	if sendOnline {
-		payload := packetOnline{
+		payload := PacketOnline{
 			UserID:   userID,
 			IsOnline: true,
 		}
@@ -78,14 +80,8 @@ func (wsState *WebSocketState) IsOnline(userID uint) (bool) {
 	return isOnline
 }
 
-func PostNotification(
-	wsState             *WebSocketState,
-	notificationService *services.NotificationService,
-	userID              uint,
-	Type                string,
-	contents            any,
-) (error) {
-	information := services.NotificationTypeInformations[Type]
+func (wsState *WebSocketState) PostNotification(notification models.Notification) (error) {
+	information := services.NotificationTypeInformations[notification.Type]
 	if information == nil {
 		return utils.ErrInvalidNotificationType
 	}
@@ -93,13 +89,18 @@ func PostNotification(
 		panic("Invalid notificationTypeInformation")
 	}
 	if information.ShouldAdd {
-		if err := notificationService.AddNotification(userID, Type, contents); err != nil {
+		if err := wsState.notificationService.AddNotification(notification); err != nil {
 			return err
 		}
 	}
 	if information.ShouldSend {
-		typic := "notification_" + Type
-		if err := wsState.SendToTopic(userID, TopicMap[typic], typic, contents); err != nil {
+		notification.CreatedAt = time.Now()
+		if err := wsState.SendToTopic(
+			notification.UserID,
+			TopicMap["notification_" + notification.Type],
+			"notification",
+			notification,
+		); err != nil {
 			return err
 		}
 	}

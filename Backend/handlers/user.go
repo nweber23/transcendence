@@ -92,13 +92,6 @@ type RemoveNotificationResponse struct {
 	NotificationID uint `json:"notification_id"`
 }
 
-type NotificationResponse struct {
-	ID        uint            `json:"id"`
-	Type      string          `json:"type"`
-	Contents  json.RawMessage `json:"contents"`
-	CreatedAt time.Time       `json:"created_at"`
-}
-
 type UserProfileRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -661,7 +654,7 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 		utils.RespondError(c, status, "enumerate_notifications_failed", err.Error())
 		return
 	}
-	notificationResponses := make([]NotificationResponse, len(notifications))
+	/*notificationResponses := make([]NotificationResponse, len(notifications))
 	for responseIndex, notification := range notifications {
 		notificationResponses[responseIndex] = NotificationResponse{
 			ID:        notification.ID,
@@ -669,6 +662,6 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 			Contents:  notification.Contents,
 			CreatedAt: notification.CreatedAt,
 		}
-	}
-	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notificationResponses)
+	}*/
+	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
 }

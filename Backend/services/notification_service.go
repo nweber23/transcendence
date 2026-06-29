@@ -3,14 +3,13 @@ package services
 import (
 	"fmt"
 
-	"encoding/json"
 	"transcendence/models"
 	"transcendence/utils"
 
 	"gorm.io/gorm"
 )
 
-type notificationTypeInformation struct {
+type NotificationTypeInformation struct {
 	ShouldAdd  bool
 	ShouldSend bool
 }
@@ -20,9 +19,9 @@ type NotificationService struct {
 }
 
 var (
-	NotificationTypeInformations = map[string]*notificationTypeInformation{
-		models.NotificationTypeFriends: &notificationTypeInformation{true,  false},
-		models.NotificationTypeGames:   &notificationTypeInformation{false, true },
+	NotificationTypeInformations = map[string]*NotificationTypeInformation{
+		models.NotificationTypeFriends: &NotificationTypeInformation{true,  false},
+		models.NotificationTypeGames:   &NotificationTypeInformation{false, true },
 	}
 )
 
@@ -30,18 +29,9 @@ func NewNotificationService(db *gorm.DB) *NotificationService {
 	return &NotificationService{db: db}
 }
 
-func (s *NotificationService) AddNotification(userID uint, Type string, contents any) (error) {
-	if _, err := NewUserService(s.db).GetUserByID(userID); err != nil {
+func (s *NotificationService) AddNotification(notification models.Notification) (error) {
+	if _, err := NewUserService(s.db).GetUserByID(notification.UserID); err != nil {
 		return err
-	}
-	contentsJson, err := json.Marshal(contents)
-	if err != nil {
-		return err
-	}
-	notification := &models.Notification{
-		UserID:   userID,
-		Type:     Type,
-		Contents: contentsJson,
 	}
 	if err := s.db.Create(notification).Error; err != nil {
 		return fmt.Errorf("failed to create notification: %w", err)
