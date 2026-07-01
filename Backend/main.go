@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"transcendence/config"
 	"transcendence/handlers"
@@ -71,7 +70,7 @@ func main() {
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
 		userRoutes.GET("/search", userHandler.SearchUsers)
 		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
-		//userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		//userRoutes.GET("/notifications", userHandler.E numerateNotifications)
 	}
 
 	// Game routes (protected)
@@ -87,13 +86,8 @@ func main() {
 	// WebSocket route
 	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), wsHandler.UpgradeConnection)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
+	log.Printf("Starting server on port %s", cfg.Port)
+	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
