@@ -84,3 +84,22 @@ add_executable(slotmachine_test slotmachine_test.cpp)
 target_include_directories(slotmachine_test PRIVATE ${CMAKE_SOURCE_DIR}/games/slotMachine/includes)
 target_link_libraries(slotmachine_test PRIVATE Catch2::Catch2WithMain slotmachine_impl)
 add_test(NAME slotmachine_test COMMAND slotmachine_test WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+# Engine interface test
+add_executable(engine_test engine_test.cpp ${CMAKE_SOURCE_DIR}/interface.cpp)
+target_include_directories(engine_test PRIVATE
+  ${CMAKE_SOURCE_DIR}
+  ${CMAKE_SOURCE_DIR}/games/cardGames/shared/includes
+  ${CMAKE_SOURCE_DIR}/games/cardGames/blackJack/includes
+  ${CMAKE_SOURCE_DIR}/games/cardGames/texasHoldem/includes
+  ${CMAKE_SOURCE_DIR}/games/slotMachine/includes
+)
+target_link_libraries(engine_test PRIVATE
+  Catch2::Catch2WithMain
+  blackjack_impl
+  texasHoldem_impl
+  slotmachine_impl
+  deck_impl
+  cards_impl
+)
+add_test(NAME engine_test COMMAND engine_test WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
