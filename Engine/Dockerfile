@@ -12,6 +12,7 @@ RUN apt-get update \
  && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
  && apt-get update \
  && apt-get install -y --no-install-recommends build-essential cmake git gcc-14 g++-14 \
+    libgrpc++-dev protobuf-compiler protobuf-compiler-grpc libprotobuf-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # Make gcc-14/g++-14 the default
@@ -28,16 +29,19 @@ RUN mkdir -p build && cd build \
 
 ################################################################################
 # Runtime stage: lightweight image
-FROM debian:bookworm-slim
+FROM ubuntu:24.04 AS runtime
 
-RUN groupadd -r app && useradd -r -g app app
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libgrpc++1 libprotobuf32t64 \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
 
-# Copy built artifacts
 COPY --from=build /workspace/build /app
 
-# Expose engine port
 EXPOSE 777
 
 USER app
