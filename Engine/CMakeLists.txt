@@ -19,6 +19,9 @@ FetchContent_MakeAvailable(glaze)
 find_package(gRPC REQUIRED)
 find_package(Protobuf REQUIRED)
 
+find_program(PROTOC protoc REQUIRED)
+find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin REQUIRED)
+
 set(PROTO_FILE proto/engine.proto)
 set(PROTO_GEN_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${PROTO_GEN_DIR})
@@ -28,12 +31,9 @@ set(PROTO_SOURCES
   ${PROTO_GEN_DIR}/engine.grpc.pb.cc
 )
 
-get_target_property(GRPC_CPP_PLUGIN gRPC::grpc_cpp_plugin IMPORTED_LOCATION)
-get_target_property(PROTOC_EXEC protobuf::protoc IMPORTED_LOCATION)
-
 add_custom_command(
   OUTPUT ${PROTO_SOURCES}
-  COMMAND ${PROTOC_EXEC}
+  COMMAND ${PROTOC}
   ARGS --grpc_out=${PROTO_GEN_DIR}
        --cpp_out=${PROTO_GEN_DIR}
        -I ${CMAKE_SOURCE_DIR}/proto
