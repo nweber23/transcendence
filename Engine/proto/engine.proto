@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package engine;
+
+service GameEngine {
+  rpc BlackjackAction(BlackjackRequest) returns (GameResponse);
+  rpc TexasAction(TexasRequest) returns (GameResponse);
+  rpc SlotsAction(SlotsRequest) returns (GameResponse);
+}
+
+message BlackjackRequest {
+  uint64 game_id = 1;
+  uint64 player_id = 2;
+  string action = 3;
+  int64 bet = 4;
+}
+
+message TexasRequest {
+  uint64 game_id = 1;
+  uint64 player_id = 2;
+  string action = 3;
+  int64 amount = 4;
+  uint32 num_players = 5;
+  int64 small_blind = 6;
+  int64 big_blind = 7;
+}
+
+message SlotsRequest {
+  uint64 game_id = 1;
+  uint64 player_id = 2;
+  string config_name = 3;
+  uint32 line_count = 4;
+  uint32 bet_per_line = 5;
+}
+
+message GameResponse {
+  bool success = 1;
+  string game_state_json = 2;
+}
