@@ -15,19 +15,19 @@ TEST_CASE("Engine creates and tracks blackjack games", "[engine]") {
     }
 
     SECTION("create rejects duplicate game_id") {
-        e.create_blackjack("42", 100);
+        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
         auto json = e.create_blackjack("42", 200);
         REQUIRE(json.empty());
     }
 
     SECTION("hit on existing game returns valid JSON") {
-        e.create_blackjack("42", 100);
+        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
         auto json = e.blackjack_hit("42");
         REQUIRE_FALSE(json.empty());
     }
 
     SECTION("stand on existing game returns valid JSON") {
-        e.create_blackjack("42", 100);
+        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
         auto json = e.blackjack_stand("42");
         REQUIRE_FALSE(json.empty());
     }
@@ -67,14 +67,14 @@ TEST_CASE("Engine creates and tracks texas hold'em games", "[engine]") {
     }
 
     SECTION("post_blinds on existing game returns valid JSON") {
-        e.create_texas("1", 2, 1000);
+        REQUIRE_FALSE(e.create_texas("1", 2, 1000).empty());
         auto json = e.texas_post_blinds("1", 10, 20);
         REQUIRE_FALSE(json.empty());
     }
 
     SECTION("act on existing game returns valid JSON") {
-        e.create_texas("1", 2, 1000);
-        e.texas_post_blinds("1", 10, 20);
+        REQUIRE_FALSE(e.create_texas("1", 2, 1000).empty());
+        REQUIRE_FALSE(e.texas_post_blinds("1", 10, 20).empty());
         auto json = e.texas_act("1", 0, "call", 0);
         REQUIRE_FALSE(json.empty());
     }
