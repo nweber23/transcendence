@@ -327,3 +327,85 @@ TEST_CASE("serialize_game_state includes last action", "[texas][engine]") {
     REQUIRE(state.last_action_type == "raise");
     REQUIRE(state.last_action_amount == 20);
 }
+
+TEST_CASE("Pot accumulates correctly after multiple actions", "[texas][game]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    g.act(0, {ActionType::Call});
+    g.act(1, {ActionType::Check});
+    REQUIRE(g.pot().size() == 2);
+    REQUIRE(g.pot()[0] == 10);
+    REQUIRE(g.pot()[1] == 20);
+}
+
+TEST_CASE("Raise sets correct minimum raise for next action", "[texas][game]") {
+    Game g{2, 1000};
+    g.post_blinds(5, 10);
+    g.act(0, {ActionType::Raise, 50});
+    REQUIRE(g.min_raise() == 40);
+}
+
+TEST_CASE("Check action is valid when no outstanding raise", "[texas][game]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    g.act(0, {ActionType::Call});
+    REQUIRE_NOTHROW(g.act(1, {ActionType::Check}));
+}
+
+TEST_CASE("Fold from last active player resets properly", "[texas][game]") {
+    Game g{3, 1000};
+    g.post_blinds(10, 20);
+    g.act(1, {ActionType::Fold});
+    g.act(2, {ActionType::Fold});
+    REQUIRE(g.players()[0].is_folded() == false);
+}
+
+TEST_CASE("Player add_winnings increases stack correctly", "[texas][player]") {
+    Player p{500};
+    p.add_winnings(300);
+    REQUIRE(p.stack() == 800);
+}
+
+TEST_CASE("Player reset_hand preserves stack after multiple bets", "[texas][player]") {
+    Player p{1000};
+    p.place_bet(50);
+    p.place_bet(100);
+    p.reset_hand();
+    REQUIRE(p.stack() == 850);
+    REQUIRE(p.current_bet() == 0);
+}
+
+TEST_CASE("Full betting round completes without errors", "[texas][game]") {
+    Game g{3, 1000};
+    g.post_blinds(10, 20);
+    g.act(1, {ActionType::Fold});
+    g.act(2, {ActionType::Call});
+    g.act(0, {ActionType::Check});
+    REQUIRE(g.players()[0].current_bet() == 20);
+    REQUIRE(g.players()[1].is_folded());
+    REQUIRE(g.players()[2].current_bet() == 20);
+}
+
+TEST_CASE("serialize_game_state round-trips all player arrays", "[texas][engine]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    g.act(0, {ActionType::Call});
+    std::string json = serialize_game_state(g);
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    for (const auto& p : state.players) {
+        REQUIRE(p.stack >= 0);
+        REQUIRE(p.current_bet >= 0);
+    }
+}
+
+TEST_CASE("serialize_game_state round-trips community cards and pot", "[texas][engine]") {
+    Game g{2, 1000};
+    std::string json = serialize_game_state(g);
+    GameState state;
+    auto err = glz::read_json(state, json);
+    REQUIRE(!err);
+    REQUIRE(state.community_cards.empty());
+    REQUIRE(state.pot.empty());
+}

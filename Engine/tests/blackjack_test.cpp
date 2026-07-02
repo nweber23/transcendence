@@ -98,3 +98,83 @@ TEST_CASE("serialize_game_state round-trips player_value and dealer_value", "[bl
     REQUIRE(state.player_value >= 0);
     REQUIRE(state.dealer_value >= 0);
 }
+
+TEST_CASE("Stand transitions to dealer play then settled", "[blackjack][game]") {
+    Game g(1);
+    g.deal(100);
+    REQUIRE(g.phase() == Phase::PlayerTurn);
+    g.stand();
+    REQUIRE(g.phase() == Phase::Settled);
+    REQUIRE(g.outcome().has_value());
+}
+
+TEST_CASE("Dealer plays after stand and outcome is determined", "[blackjack][game]") {
+    Game g(1);
+    g.deal(100);
+    g.stand();
+    REQUIRE(g.outcome() == Outcome::PlayerWin ||
+            g.outcome() == Outcome::DealerWin ||
+            g.outcome() == Outcome::Push);
+}
+
+TEST_CASE("Hit during player turn adds a card", "[blackjack][game]") {
+    Game g(1);
+    g.deal(100);
+    auto before = g.player_hand().size();
+    g.hit();
+    REQUIRE(g.player_hand().size() == before + 1);
+}
+
+TEST_CASE("Deal requires bet > 0", "[blackjack][game]") {
+    Game g;
+    REQUIRE_THROWS_AS(g.deal(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(g.deal(-100), std::invalid_argument);
+}
+
+TEST_CASE("Cannot hit before deal", "[blackjack][game]") {
+    Game g;
+    REQUIRE_THROWS_AS(g.hit(), std::logic_error);
+}
+
+TEST_CASE("Cannot stand before deal", "[blackjack][game]") {
+    Game g;
+    REQUIRE_THROWS_AS(g.stand(), std::logic_error);
+}
+
+TEST_CASE("Cannot deal twice without reset", "[blackjack][game]") {
+    Game g;
+    g.deal(100);
+    REQUIRE_THROWS_AS(g.deal(200), std::logic_error);
+}
+
+TEST_CASE("Reset allows new deal", "[blackjack][game]") {
+    Game g;
+    g.deal(100);
+    g.reset();
+    REQUIRE(g.phase() == Phase::Betting);
+    REQUIRE_NOTHROW(g.deal(200));
+    REQUIRE(g.bet() == 200);
+}
+
+TEST_CASE("Dealer hand size at deal is always 1", "[blackjack][game]") {
+    Game g(1);
+    g.deal(50);
+    REQUIRE(g.dealer_hand().size() == 1);
+}
+
+TEST_CASE("Multiple rounds via reset produce valid games", "[blackjack][game]") {
+    Game g(1);
+    for (int i = 0; i < 5; ++i) {
+        g.deal(100);
+        g.stand();
+        REQUIRE(g.outcome().has_value());
+        g.reset();
+        REQUIRE(g.phase() == Phase::Betting);
+    }
+}
+
+TEST_CASE("Player hand contains 2 cards after deal", "[blackjack][game]") {
+    Game g(1);
+    g.deal(100);
+    REQUIRE(g.player_hand().size() == 2);
+}
