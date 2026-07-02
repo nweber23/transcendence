@@ -29,6 +29,7 @@ RUN mkdir -p build && cd build \
 
 ################################################################################
 # Runtime stage: lightweight image
+
 FROM ubuntu:24.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
