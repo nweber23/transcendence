@@ -333,9 +333,10 @@ TEST_CASE("Pot accumulates correctly after multiple actions", "[texas][game]") {
     g.post_blinds(10, 20);
     g.act(0, {ActionType::Call});
     g.act(1, {ActionType::Check});
-    REQUIRE(g.pot().size() == 2);
+    REQUIRE(g.pot().size() == 3);
     REQUIRE(g.pot()[0] == 10);
     REQUIRE(g.pot()[1] == 20);
+    REQUIRE(g.pot()[2] == 10);
 }
 
 TEST_CASE("Raise sets correct minimum raise for next action", "[texas][game]") {

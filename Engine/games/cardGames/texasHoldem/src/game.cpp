@@ -188,7 +188,9 @@ void Game::post_blinds(std::int64_t small, std::int64_t big) {
     std::size_t bbIdx = (_dealerIdx + 2) % n;
 
     _players[sbIdx].place_bet(small);
+    _pot.push_back(small);
     _players[bbIdx].place_bet(big);
+    _pot.push_back(big);
 
     _currentPlayerIdx = (_dealerIdx + 3) % n;
     _minRaise = big;
@@ -205,25 +207,35 @@ void Game::act(std::size_t playerIdx, Action a) {
             break;
         case ActionType::Call: {
             std::int64_t toCall = _lastAction.amount - p.current_bet();
-            if (toCall > 0)
+            if (toCall > 0) {
                 p.place_bet(toCall);
+                _pot.push_back(toCall);
+            }
             break;
         }
         case ActionType::Raise: {
             std::int64_t total = a.amount;
             std::int64_t already = p.current_bet();
-            std::int64_t inc = total - already;
-            if (inc < _minRaise)
-                inc = _minRaise;
-            p.place_bet(inc);
-            _lastAction.amount = already + inc;
+            std::int64_t to_add = total - already;
+            std::int64_t raise = total - _lastAction.amount;
+            if (raise < _minRaise) {
+                raise = _minRaise;
+                total = _lastAction.amount + raise;
+                to_add = total - already;
+            }
+            p.place_bet(to_add);
+            _pot.push_back(to_add);
+            _lastAction.amount = total;
             _lastAction.type = ActionType::Raise;
-            _minRaise = inc;
+            _minRaise = raise;
             break;
         }
-        case ActionType::AllIn:
-            p.place_bet(p.stack());
+        case ActionType::AllIn: {
+            std::int64_t all = p.stack();
+            p.place_bet(all);
+            _pot.push_back(all);
             break;
+        }
     }
 
     std::size_t n = _players.size();
