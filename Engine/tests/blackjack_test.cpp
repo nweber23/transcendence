@@ -112,9 +112,10 @@ TEST_CASE("Dealer plays after stand and outcome is determined", "[blackjack][gam
     Game g(1);
     g.deal(100);
     g.stand();
-    REQUIRE(g.outcome() == Outcome::PlayerWin ||
-            g.outcome() == Outcome::DealerWin ||
-            g.outcome() == Outcome::Push);
+    auto valid = g.outcome() == Outcome::PlayerWin ||
+                 g.outcome() == Outcome::DealerWin ||
+                 g.outcome() == Outcome::Push;
+    REQUIRE(valid);
 }
 
 TEST_CASE("Hit during player turn adds a card", "[blackjack][game]") {
