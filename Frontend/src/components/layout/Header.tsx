@@ -8,6 +8,11 @@ import FriendsDropdown from '@/components/layout/FriendsDropdown';
 import FriendsPanelContent from '@/components/layout/FriendsPanelContent';
 import ProfileDropdown from '@/components/layout/ProfileDropdown';
 import Avatar from '@/components/ui/Avatar';
+import NotificationsDropdown from '@/components/layout/NotificationsDropdown';
+import NotificationsPanelContent from '@/components/layout/NotificationsPanelContent';
+import { useNotifications, AppNotification } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/ToastContainer';
 
 interface HeaderProps {
   onScroll?: (section: string) => void;
@@ -18,6 +23,10 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const navigate = useNavigate();
   const { token, user, logout } = useAuth();
   const friendsState = useFriends();
+  const { toasts, showToast, removeToast } = useToast();
+  const notificationsState = useNotifications((n: AppNotification) => {
+    showToast(n.body, 'info', { head: n.head, imageUrl: n.imageUrl || undefined });
+  });
   const isHome = location.pathname === '/';
 
   const navLinks: { label: string; href: string; id: string }[] = [
@@ -115,6 +124,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               {token ? (
                 <>
                   <FriendsDropdown {...friendsState} />
+                  <NotificationsDropdown {...notificationsState} />
                   <ProfileDropdown />
                 </>
               ) : (
@@ -339,6 +349,8 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           />
         </div>
       </div>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </>
   );
 };
