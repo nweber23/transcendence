@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"net/http"
 	"strconv"
@@ -446,6 +447,21 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		status := models.FriendshipStatusActive
 		if isPending {
 			status = models.FriendshipStatusPendingSelf
+		}
+		if isPending {
+			if sender, err := uh.userService.GetUserByID(userID.(uint)); err == nil {
+				notification := models.Notification{
+					UserID:    uint(friendID),
+					Type:      models.NotificationTypeFriends,
+					Head:      "New friend request",
+					Body:      sender.Username + " has sent you a friend request",
+					ImageURL:  sender.AvatarURL,
+					ActionURL: "/friends",
+				}
+				if err := uh.wsState.PostNotification(notification); err != nil {
+					log.Printf("failed to post friend request notification: %v", err)
+				}
+			}
 		}
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
