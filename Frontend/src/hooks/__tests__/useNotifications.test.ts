@@ -49,6 +49,15 @@ const wsGamesPayload = {
   timestamp: '2026-07-06T12:30:00Z',
 };
 
+const wsSystemPayload = {
+  notification_type: 'system',
+  head: 'Deposit successful',
+  body: '$100 added to your balance. New balance: $1100',
+  image_url: '',
+  action_url: '/account',
+  timestamp: '2026-07-06T12:45:00Z',
+};
+
 const flush = () => act(async () => {
   await new Promise((r) => setTimeout(r, 0));
 });
@@ -139,6 +148,21 @@ describe('useNotifications - websocket routing', () => {
 
     expect(onGame).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'games', head: 'You won!' })
+    );
+    expect(result.current.notifications).toEqual([]);
+  });
+
+  it('routes system notifications to the callback and never stores them', async () => {
+    const onToast = vi.fn();
+    const { result } = renderHook(() => useNotifications(onToast));
+    await flush();
+
+    act(() => {
+      wsListener?.({ packet_type: 'notification', payload: wsSystemPayload });
+    });
+
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'system', head: 'Deposit successful' })
     );
     expect(result.current.notifications).toEqual([]);
   });

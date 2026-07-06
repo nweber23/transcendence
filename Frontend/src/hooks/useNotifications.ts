@@ -67,15 +67,15 @@ function fromWs(raw: RawWsNotification): AppNotification {
 }
 
 export function useNotifications(
-  onGameNotification?: (n: AppNotification) => void
+  onToastNotification?: (n: AppNotification) => void
 ): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastSeen, setLastSeen] = useState<string>(
     () => localStorage.getItem(NOTIFICATIONS_LAST_SEEN_KEY) ?? ''
   );
-  const gameCallbackRef = useRef(onGameNotification);
-  gameCallbackRef.current = onGameNotification;
+  const toastCallbackRef = useRef(onToastNotification);
+  toastCallbackRef.current = onToastNotification;
 
   const refetch = useCallback(async () => {
     const raw = await apiCall<RawRestNotification[] | null>(
@@ -96,8 +96,8 @@ export function useNotifications(
     return subscribeToWebSocket((packet: WsPacket) => {
       if (packet.packet_type !== 'notification') return;
       const notification = fromWs(packet.payload as RawWsNotification);
-      if (notification.type === 'games') {
-        gameCallbackRef.current?.(notification);
+      if (notification.type === 'games' || notification.type === 'system') {
+        toastCallbackRef.current?.(notification);
       } else if (notification.type === 'friends') {
         setNotifications((prev) => [notification, ...prev]);
       }
