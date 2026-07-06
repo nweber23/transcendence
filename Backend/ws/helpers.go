@@ -98,12 +98,19 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 		if err != nil {
 			return err
 		}
-		notification.CreatedAt = time.Now()
+		packetNotification := PacketNotification{
+			Type:      notification.Type,
+			Head:      notification.Head,
+			Body:      notification.Body,
+			ImageURL:  notification.ImageURL,
+			ActionURL: notification.ActionURL,
+			Timestamp: time.Now(),
+		}
 		if err := wsState.SendToTopic(
 			notification.UserID,
 			topic,
 			PacketTypeNotification,
-			notification,
+			packetNotification,
 		); err != nil {
 			return err
 		}
