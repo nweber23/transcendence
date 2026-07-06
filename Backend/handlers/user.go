@@ -611,7 +611,7 @@ func (uh *UserHandler) RemoveNotification(c *gin.Context) {
 		} else {
 			status = http.StatusInternalServerError
 		}
-		utils.RespondError(c, status, "remove_friend_failed", err.Error())
+		utils.RespondError(c, status, "remove_notification_failed", err.Error())
 	} else {
 		response := RemoveNotificationResponse{
 			NotificationID: uint(notificationID),
@@ -652,14 +652,5 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 		utils.RespondError(c, status, "enumerate_notifications_failed", err.Error())
 		return
 	}
-	/*notificationResponses := make([]NotificationResponse, len(notifications))
-	for responseIndex, notification := range notifications {
-		notificationResponses[responseIndex] = NotificationResponse{
-			ID:        notification.ID,
-			Type:      notification.Type,
-			Contents:  notification.Contents,
-			CreatedAt: notification.CreatedAt,
-		}
-	}*/
 	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
 }

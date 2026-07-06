@@ -70,7 +70,7 @@ func main() {
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
 		userRoutes.GET("/search", userHandler.SearchUsers)
 		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
-		//userRoutes.GET("/notifications", userHandler.E numerateNotifications)
+		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
 	}
 
 	// Game routes (protected)
