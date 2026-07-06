@@ -35,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const [activeNav, setActiveNav] = React.useState<string>('');
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [mobileFriendsOpen, setMobileFriendsOpen] = React.useState(false);
+  const [mobileNotificationsOpen, setMobileNotificationsOpen] = React.useState(false);
 
   const handleNavClick = (id: string) => {
     setActiveNav(id);
@@ -58,6 +59,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   React.useEffect(() => {
     setMenuOpen(false);
     setMobileFriendsOpen(false);
+    setMobileNotificationsOpen(false);
   }, [location.pathname]);
 
   // Prevent scroll when menu is open, restoring whatever was set before
@@ -77,6 +79,14 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
       friendsState.refetch().catch(() => {});
     }
   }, [mobileFriendsOpen, token, friendsState.refetch]);
+
+  // Refetch notifications and mark as seen each time the full-screen panel opens
+  React.useEffect(() => {
+    if (mobileNotificationsOpen && token) {
+      notificationsState.refetch().catch(() => {});
+      notificationsState.markSeen();
+    }
+  }, [mobileNotificationsOpen, token, notificationsState.refetch, notificationsState.markSeen]);
 
   return (
     <>
@@ -161,9 +171,9 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                   menuOpen ? '-translate-y-[6.5px] -rotate-45' : ''
                 }`}
               />
-              {!menuOpen && token && friendsState.incoming.length > 0 && (
+              {!menuOpen && token && friendsState.incoming.length + notificationsState.unseenCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-[9px] font-bold flex items-center justify-center">
-                  {friendsState.incoming.length}
+                  {friendsState.incoming.length + notificationsState.unseenCount}
                 </span>
               )}
             </button>
@@ -238,6 +248,24 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                 {friendsState.incoming.length > 0 && (
                   <span className="min-w-[20px] h-5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-xs font-bold flex items-center justify-center">
                     {friendsState.incoming.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setMobileNotificationsOpen(true)}
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDelay: menuOpen ? '240ms' : '0ms' }}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                Notifications
+                {notificationsState.unseenCount > 0 && (
+                  <span className="min-w-[20px] h-5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-xs font-bold flex items-center justify-center">
+                    {notificationsState.unseenCount}
                   </span>
                 )}
               </button>
@@ -346,6 +374,46 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
             searchUsers={friendsState.searchUsers}
             addFriend={friendsState.addFriend}
             removeFriend={friendsState.removeFriend}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Notifications full-screen panel */}
+      <div
+        className={`fixed inset-0 z-[101] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          mobileNotificationsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ backdropFilter: mobileNotificationsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
+        aria-hidden={!mobileNotificationsOpen}
+        // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
+        inert={!mobileNotificationsOpen ? '' : undefined}
+      >
+        <div className="flex items-center gap-3 px-5 h-14 border-b border-[rgba(212,175,55,0.12)]">
+          <button
+            onClick={() => setMobileNotificationsOpen(false)}
+            aria-label="Back to menu"
+            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[rgba(255,255,255,0.06)] active:scale-95 transition-colors duration-200 text-[var(--text)]"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <span className="font-serif text-lg font-semibold text-[var(--text)]">Notifications</span>
+        </div>
+        <div className="px-6 pt-6 pb-12">
+          <NotificationsPanelContent
+            notifications={notificationsState.notifications}
+            error={notificationsState.error}
+            onDismiss={(id) => notificationsState.dismiss(id).catch(() => {})}
+            onNotificationClick={(n) => {
+              setMobileNotificationsOpen(false);
+              if (n.type === 'friends') {
+                setMobileFriendsOpen(true);
+              } else if (n.actionUrl) {
+                navigate(n.actionUrl);
+                setMenuOpen(false);
+              }
+            }}
           />
         </div>
       </div>
