@@ -22,4 +22,5 @@ func (Notification) TableName() string {
 const (
 	NotificationTypeFriends = "friends"
 	NotificationTypeGames   = "games"
+	NotificationTypeSystem  = "system"
 )

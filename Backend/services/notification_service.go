@@ -22,6 +22,7 @@ var (
 	NotificationTypeInformations = map[string]*NotificationTypeInformation{
 		models.NotificationTypeFriends: &NotificationTypeInformation{true,  true},
 		models.NotificationTypeGames:   &NotificationTypeInformation{false, true },
+		models.NotificationTypeSystem:  &NotificationTypeInformation{false, true },
 	}
 )
 

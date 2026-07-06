@@ -128,6 +128,21 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile updates the user profile
+// postSystemNotification sends a toast-only system notification to the acting
+// user; failures must never fail the triggering request.
+func (uh *UserHandler) postSystemNotification(userID uint, head string, body string, actionURL string) {
+	notification := models.Notification{
+		UserID:    userID,
+		Type:      models.NotificationTypeSystem,
+		Head:      head,
+		Body:      body,
+		ActionURL: actionURL,
+	}
+	if err := uh.wsState.PostNotification(notification); err != nil {
+		log.Printf("failed to post system notification: %v", err)
+	}
+}
+
 func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -184,6 +199,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		AvatarURL: user.AvatarURL,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
+	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
 }
 
@@ -381,6 +397,12 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		TotalWon:     account.TotalWon.String(),
 		TotalLost:    account.TotalLost.String(),
 	}
+	uh.postSystemNotification(
+		userID.(uint),
+		"Deposit successful",
+		"$"+amount.String()+" added to your balance. New balance: $"+account.Balance.String(),
+		"/account",
+	)
 	utils.RespondSuccess(c, http.StatusOK, "Deposit successful", response)
 }
 
@@ -420,6 +442,12 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		TotalWon:     account.TotalWon.String(),
 		TotalLost:    account.TotalLost.String(),
 	}
+	uh.postSystemNotification(
+		userID.(uint),
+		"Withdrawal successful",
+		"$"+amount.String()+" withdrawn from your balance. New balance: $"+account.Balance.String(),
+		"/account",
+	)
 	utils.RespondSuccess(c, http.StatusOK, "Withdrawal successful", response)
 }
 

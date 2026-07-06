@@ -22,6 +22,7 @@ const (
 	TopicChat
 	TopicNotificationGames
 	TopicNotificationFriends
+	TopicNotificationSystem
 	TopicMax
 )
 
@@ -31,6 +32,7 @@ var topicMap = map[string]Topic{
 	"chat":                 TopicChat,
 	"notification_games":   TopicNotificationGames,   // emitted packet types: notification
 	"notification_friends": TopicNotificationFriends, // emitted packet types: notification
+	"notification_system":  TopicNotificationSystem,  // emitted packet types: notification
 }
 
 func TopicFromString(topicString string) (Topic, error) {
