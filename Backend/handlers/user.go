@@ -121,7 +121,7 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		AvatarURL: resolveAvatarURL(user.AvatarURL),
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
@@ -196,11 +196,23 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		ID:        userID.(uint),
 		Username:  username,
 		Email:     email,
-		AvatarURL: user.AvatarURL,
+		AvatarURL: resolveAvatarURL(user.AvatarURL),
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
+}
+
+// resolveAvatarURL falls back to the default avatar when the referenced file
+// no longer exists on disk (e.g. lost before the uploads volume was added).
+func resolveAvatarURL(avatarURL string) string {
+	if avatarURL == models.DefaultAvatarURL {
+		return avatarURL
+	}
+	if _, err := os.Stat(filepath.Join("./uploads/", avatarURL)); err != nil {
+		return models.DefaultAvatarURL
+	}
+	return avatarURL
 }
 
 func createRelatedURL(uploadFilePath string) (string, error) {
@@ -479,10 +491,11 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		}
 		if actor, err := uh.userService.GetUserByID(userID.(uint)); err == nil {
 			notification := models.Notification{
-				UserID:    uint(friendID),
-				Type:      models.NotificationTypeFriends,
-				ImageURL:  actor.AvatarURL,
-				ActionURL: "/friends",
+				UserID:      uint(friendID),
+				Type:        models.NotificationTypeFriends,
+				ImageURL:    resolveAvatarURL(actor.AvatarURL),
+				ActorUserID: &actor.ID,
+				ActionURL:   "/friends",
 			}
 			if isPending {
 				notification.Head = "New friend request"
@@ -609,7 +622,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
 			Username:  friendUser.Username,
-			AvatarURL: friendUser.AvatarURL,
+			AvatarURL: resolveAvatarURL(friendUser.AvatarURL),
 			Status:    status,
 			IsOnline:  status == models.FriendshipStatusActive && uh.wsState.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
@@ -635,6 +648,9 @@ func (uh *UserHandler) SearchUsers(c *gin.Context) {
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "search_failed", err.Error())
 		return
+	}
+	for i := range results {
+		results[i].AvatarURL = resolveAvatarURL(results[i].AvatarURL)
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Search results", results)
 }
@@ -699,6 +715,33 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 		}
 		utils.RespondError(c, status, "enumerate_notifications_failed", err.Error())
 		return
+	}
+	actorIDs := make([]uint, 0, len(notifications))
+	seenActorIDs := make(map[uint]bool, len(notifications))
+	for _, notification := range notifications {
+		if notification.ActorUserID != nil && !seenActorIDs[*notification.ActorUserID] {
+			seenActorIDs[*notification.ActorUserID] = true
+			actorIDs = append(actorIDs, *notification.ActorUserID)
+		}
+	}
+	var actorsByID map[uint]*models.User
+	if len(actorIDs) > 0 {
+		actorsByID, err = uh.userService.GetUsersByIDs(actorIDs)
+		if err != nil {
+			utils.RespondError(c, http.StatusInternalServerError, "get_notification_actors_failed", err.Error())
+			return
+		}
+	}
+	for i := range notifications {
+		if notifications[i].ActorUserID != nil {
+			if actor, ok := actorsByID[*notifications[i].ActorUserID]; ok {
+				notifications[i].ImageURL = resolveAvatarURL(actor.AvatarURL)
+				continue
+			}
+		}
+		if notifications[i].ImageURL != "" {
+			notifications[i].ImageURL = resolveAvatarURL(notifications[i].ImageURL)
+		}
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
 }
