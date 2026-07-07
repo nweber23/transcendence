@@ -20,19 +20,15 @@ const (
 	TopicGeneric
 	TopicGame
 	TopicChat
-	TopicNotificationGames
-	TopicNotificationFriends
-	TopicNotificationSystem
+	TopicNotification
 	TopicMax
 )
 
 var topicMap = map[string]Topic{
-	"generic":              TopicGeneric,             // emitted packet types: online
-	"game":                 TopicGame,
-	"chat":                 TopicChat,
-	"notification_games":   TopicNotificationGames,   // emitted packet types: notification
-	"notification_friends": TopicNotificationFriends, // emitted packet types: notification
-	"notification_system":  TopicNotificationSystem,  // emitted packet types: notification
+	"generic":      TopicGeneric,      // emitted packet types: online
+	"game":         TopicGame,
+	"chat":         TopicChat,
+	"notification": TopicNotification, // emitted packet types: notification
 }
 
 func TopicFromString(topicString string) (Topic, error) {
@@ -193,17 +189,20 @@ type WebSocketState struct {
 	clients             map[uint]*client
 	clientsMutex        sync.RWMutex
 	readChannel         *protectedPacketChannel
+	userService         *services.UserService
 	friendService       *services.FriendService
 	notificationService *services.NotificationService
 }
 
 func CreateWebSocketState(
+	userService         *services.UserService,
 	friendService       *services.FriendService,
 	notificationService *services.NotificationService,
 ) (*WebSocketState) {
 	return &WebSocketState{
 		clients:             make(map[uint]*client),
 		readChannel:         createProtectedPacketChannel(),
+		userService:         userService,
 		friendService:       friendService,
 		notificationService: notificationService,
 	}

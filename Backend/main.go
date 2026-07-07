@@ -37,7 +37,7 @@ func main() {
 	notificationService := services.NewNotificationService(db)
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(friendService, notificationService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
 	go wsState.Main()
 
 	// Initialize handlers

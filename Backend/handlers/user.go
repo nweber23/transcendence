@@ -178,7 +178,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 			return
 		}
 	}
-	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash, user.AvatarURL)
+	user, err = uh.userService.UpdateUser(
+		userID.(uint),
+		username,
+		email,
+		passwordHash,
+		user.AvatarURL,
+		user.NotificationTypes,
+	)
 	if err != nil {
 		var status int
 		// TODO: Perhaps create a full enum of errors for our API
@@ -278,6 +285,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		user.Email,
 		user.PasswordHash,
 		user.AvatarURL,
+		user.NotificationTypes,
 	)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())

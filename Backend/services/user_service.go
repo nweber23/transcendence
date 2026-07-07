@@ -42,11 +42,16 @@ func (s *UserService) RegisterUser(username, email, password string) (*models.Us
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
+	notificationTypes := make([]string, 0)
+	for notificationType, _ := range NotificationTypeInformations {
+		notificationTypes = append(notificationTypes, notificationType)
+	}
 	user := &models.User{
-		Username:     username,
-		Email:        email,
-		PasswordHash: passwordHash,
-		AvatarURL:    models.DefaultAvatarURL,
+		Username:          username,
+		Email:             email,
+		PasswordHash:      passwordHash,
+		AvatarURL:         models.DefaultAvatarURL,
+		NotificationTypes: strings.Join(notificationTypes, ","),
 	}
 	if err := s.db.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -108,17 +113,23 @@ func (s *UserService) GetUsersByIDs(userIDs []uint) (map[uint]*models.User, erro
 
 // UpdateUser updates a user by userID
 func (s *UserService) UpdateUser(
-	userID       uint,
-	username     string,
-	email        string,
-	passwordHash string,
-	avatarURL    string,
+	userID            uint,
+	username          string,
+	email             string,
+	passwordHash      string,
+	avatarURL         string,
+	notificationTypes []string,
 ) (*models.User, error) {
 	if err := validateUsername(username); err != nil {
 		return nil, utils.ErrInvalidUsername
 	}
 	if !utils.ValidateEmail(email) {
 		return nil, utils.ErrInvalidEmail
+	}
+	for _, notificationType := range notificationTypes {
+		if NotificationTypeInformations[notificationType] == nil {
+			return nil, utils.ErrInvalidNotificationType
+		}
 	}
 	var duplicateUser models.User
 	var err error
@@ -134,10 +145,11 @@ func (s *UserService) UpdateUser(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
-	user.Username     = username
-	user.Email        = email
-	user.PasswordHash = passwordHash
-	user.AvatarURL    = avatarURL
+	user.Username          = username
+	user.Email             = email
+	user.PasswordHash      = passwordHash
+	user.AvatarURL         = avatarURL
+	user.NotificationTypes = strings.Join(notificationTypes, ",")
 	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}

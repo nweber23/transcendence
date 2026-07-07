@@ -88,16 +88,26 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 	if !(information.ShouldAdd || information.ShouldSend) {
 		panic("Invalid notificationTypeInformation")
 	}
+	user, err := wsState.userService.GetUserByID(notification.UserID)
+	if err != nil {
+		return err
+	}
+	foundType := false
+	for _, notificationType := range user.NotificationTypes {
+		if notificationType == notification.Type {
+			foundType = true
+			break
+		} 
+	}
+	if !foundType {
+		return nil
+	}
 	if information.ShouldAdd {
 		if err := wsState.notificationService.AddNotification(notification); err != nil {
 			return err
 		}
 	}
 	if information.ShouldSend {
-		topic, err := TopicFromString("notification_" + notification.Type)
-		if err != nil {
-			return err
-		}
 		packetNotification := PacketNotification{
 			Type:      notification.Type,
 			Head:      notification.Head,
@@ -108,7 +118,7 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 		}
 		if err := wsState.SendToTopic(
 			notification.UserID,
-			topic,
+			TopicNotification,
 			PacketTypeNotification,
 			packetNotification,
 		); err != nil {
