@@ -107,20 +107,21 @@ func checkForDifferences(testInterface *testing.T, name string, expected string,
 }
 
 func updateUserExpect(
-	testInterface *testing.T,
-	userService   *UserService,
-	userID        uint,
-	username      string,
-	email         string,
-	password      string,
-	expectSuccess bool,
+	testInterface     *testing.T,
+	userService       *UserService,
+	userID            uint,
+	username          string,
+	email             string,
+	password          string,
+	notificationTypes string,
+	expectSuccess     bool,
 ) {
 	passwordHash, err := utils.HashPassword(password)
 	if err != nil {
 		testInterface.Errorf(`failed to hash password`)
 		return
 	}
-	_, err = userService.UpdateUser(userID, username, email, passwordHash, models.DefaultAvatarURL, []string{})
+	_, err = userService.UpdateUser(userID, username, email, passwordHash, models.DefaultAvatarURL, notificationTypes)
 	if (err != nil) == expectSuccess {
 		testInterface.Errorf(`update user %d with username %s and email %s did not go as expected`, userID, username, email)
 	}
@@ -409,24 +410,26 @@ func TestServices(testInterface *testing.T) {
 	loginExpect(testInterface, userService, stressTest, stressTest, false)
 
 	// Inexistent user
-	updateUserExpect(testInterface, userService, 16, "bubb",   "bubb@gatherate.net",  "blubb", false)
+	updateUserExpect(testInterface, userService, 16, "bubb",   "bubb@gatherate.net",  "blubb", JoinAllNotificationTypes(), false)
 
 	// Successful tests
-	updateUserExpect(testInterface, userService, 5,  "herold", "arbitrart@gmail.com", "jiji",  true)
-	updateUserExpect(testInterface, userService, 1,  "test0",  "test0@gatherate.net", "test0", true)
-	updateUserExpect(testInterface, userService, 2,  "illix",  "test1@gatherate.net", "test1", true)
-	updateUserExpect(testInterface, userService, 2,  "test1",  "illix@yahoo.com",     "test1", true)
-	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "illix", true)
-	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "test1", true)
+	updateUserExpect(testInterface, userService, 5,  "herold", "arbitrart@gmail.com", "jiji",  JoinAllNotificationTypes(),     true)
+	updateUserExpect(testInterface, userService, 1,  "test0",  "test0@gatherate.net", "test0", JoinAllNotificationTypes(),     true)
+	updateUserExpect(testInterface, userService, 2,  "illix",  "test1@gatherate.net", "test1", JoinAllNotificationTypes(),     true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "illix@yahoo.com",     "test1", JoinAllNotificationTypes(),     true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "illix", JoinAllNotificationTypes(),     true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "test1", models.NotificationTypeFriends, true)
+	updateUserExpect(testInterface, userService, 2,  "test1",  "test1@gatherate.net", "test1", JoinAllNotificationTypes(),     true)
 
-	// Failing username and email validation
-	updateUserExpect(testInterface, userService, 3,  "a",      "test2@gatherate.net", "test2", false)
-	updateUserExpect(testInterface, userService, 3,  "test2",  "<<<<<",               "test2", false)
-	updateUserExpect(testInterface, userService, 3,  "",       "",                    "test2", false)
+	// Failing username, email and notification type validation
+	updateUserExpect(testInterface, userService, 3,  "a",      "test2@gatherate.net", "test2", JoinAllNotificationTypes(), false)
+	updateUserExpect(testInterface, userService, 3,  "test2",  "<<<<<",               "test2", JoinAllNotificationTypes(), false)
+	updateUserExpect(testInterface, userService, 3,  "",       "",                    "test2", JoinAllNotificationTypes(), false)
+	updateUserExpect(testInterface, userService, 3,  "test2",  "test2@gatherate.net", "test2", "erfjherhfortkg",           false)
 
 	// Duplicates
-	updateUserExpect(testInterface, userService, 3,  "herold", "test2@gatherate.net", "test2", false)
-	updateUserExpect(testInterface, userService, 3,  "test2",  "test3@gatherate.net", "test2", false)
+	updateUserExpect(testInterface, userService, 3,  "herold", "test2@gatherate.net", "test2", JoinAllNotificationTypes(), false)
+	updateUserExpect(testInterface, userService, 3,  "test2",  "test3@gatherate.net", "test2", JoinAllNotificationTypes(), false)
 
 	// Vibe check
 	fetchMockUsers(testInterface, userService)

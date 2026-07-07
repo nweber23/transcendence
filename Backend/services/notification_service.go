@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"transcendence/models"
 	"transcendence/utils"
@@ -28,6 +29,14 @@ var (
 
 func NewNotificationService(db *gorm.DB) *NotificationService {
 	return &NotificationService{db: db}
+}
+
+func JoinAllNotificationTypes() (string) {
+	notificationTypes := make([]string, 0)
+	for notificationType, _ := range NotificationTypeInformations {
+		notificationTypes = append(notificationTypes, notificationType)
+	}
+	return strings.Join(notificationTypes, ",")
 }
 
 func (s *NotificationService) AddNotification(notification models.Notification) (error) {

@@ -42,16 +42,12 @@ func (s *UserService) RegisterUser(username, email, password string) (*models.Us
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
-	notificationTypes := make([]string, 0)
-	for notificationType, _ := range NotificationTypeInformations {
-		notificationTypes = append(notificationTypes, notificationType)
-	}
 	user := &models.User{
 		Username:          username,
 		Email:             email,
 		PasswordHash:      passwordHash,
 		AvatarURL:         models.DefaultAvatarURL,
-		NotificationTypes: strings.Join(notificationTypes, ","),
+		NotificationTypes: JoinAllNotificationTypes(),
 	}
 	if err := s.db.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
@@ -118,7 +114,7 @@ func (s *UserService) UpdateUser(
 	email             string,
 	passwordHash      string,
 	avatarURL         string,
-	notificationTypes []string,
+	notificationTypes string,
 ) (*models.User, error) {
 	if err := validateUsername(username); err != nil {
 		return nil, utils.ErrInvalidUsername
@@ -126,7 +122,7 @@ func (s *UserService) UpdateUser(
 	if !utils.ValidateEmail(email) {
 		return nil, utils.ErrInvalidEmail
 	}
-	for _, notificationType := range notificationTypes {
+	for _, notificationType := range strings.Split(notificationTypes, ",") {
 		if NotificationTypeInformations[notificationType] == nil {
 			return nil, utils.ErrInvalidNotificationType
 		}
@@ -149,7 +145,7 @@ func (s *UserService) UpdateUser(
 	user.Email             = email
 	user.PasswordHash      = passwordHash
 	user.AvatarURL         = avatarURL
-	user.NotificationTypes = strings.Join(notificationTypes, ",")
+	user.NotificationTypes = notificationTypes
 	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
