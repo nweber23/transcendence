@@ -14,7 +14,7 @@ export function connectWebSocket(token: string): WebSocket {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return socket;
   }
-  socket = createWebSocket(token, ['generic', 'notification_friends', 'notification_games', 'notification_system']);
+  socket = createWebSocket(token, ['generic', 'notification']);
   socket.onmessage = (e) => {
     try {
       const packet = JSON.parse(e.data) as WsPacket;

@@ -184,7 +184,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		email,
 		passwordHash,
 		user.AvatarURL,
-		user.NotificationTypes,
+		strings.Split(user.NotificationTypes, ","),
 	)
 	if err != nil {
 		var status int
@@ -297,7 +297,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		user.Email,
 		user.PasswordHash,
 		user.AvatarURL,
-		user.NotificationTypes,
+		strings.Split(user.NotificationTypes, ","),
 	)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -93,7 +94,7 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 		return err
 	}
 	foundType := false
-	for _, notificationType := range user.NotificationTypes {
+	for _, notificationType := range strings.Split(user.NotificationTypes, ",") {
 		if notificationType == notification.Type {
 			foundType = true
 			break
