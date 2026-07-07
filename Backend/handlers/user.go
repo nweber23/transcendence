@@ -290,6 +290,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		AvatarURL: user.AvatarURL,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
+	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 	if oldURL != models.DefaultAvatarURL {
 		err = os.Remove(filepath.Join("./uploads/", oldURL))
@@ -476,19 +477,22 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		if isPending {
 			status = models.FriendshipStatusPendingSelf
 		}
-		if isPending {
-			if sender, err := uh.userService.GetUserByID(userID.(uint)); err == nil {
-				notification := models.Notification{
-					UserID:    uint(friendID),
-					Type:      models.NotificationTypeFriends,
-					Head:      "New friend request",
-					Body:      sender.Username + " has sent you a friend request",
-					ImageURL:  sender.AvatarURL,
-					ActionURL: "/friends",
-				}
-				if err := uh.wsState.PostNotification(notification); err != nil {
-					log.Printf("failed to post friend request notification: %v", err)
-				}
+		if actor, err := uh.userService.GetUserByID(userID.(uint)); err == nil {
+			notification := models.Notification{
+				UserID:    uint(friendID),
+				Type:      models.NotificationTypeFriends,
+				ImageURL:  actor.AvatarURL,
+				ActionURL: "/friends",
+			}
+			if isPending {
+				notification.Head = "New friend request"
+				notification.Body = actor.Username + " has sent you a friend request"
+			} else {
+				notification.Head = "Friend request accepted"
+				notification.Body = actor.Username + " accepted your friend request"
+			}
+			if err := uh.wsState.PostNotification(notification); err != nil {
+				log.Printf("failed to post friend notification: %v", err)
 			}
 		}
 		response := UpdateFriendResponse{
