@@ -144,10 +144,14 @@ func (s *UserService) UpdateUser(
 	user.Username          = username
 	user.Email             = email
 	user.PasswordHash      = passwordHash
-	user.AvatarURL         = avatarURL
-	user.NotificationTypes = notificationTypes
+	user.AvatarURL         = avatarURL	
 	if err := s.db.Where("id = ?", userID).UpdateColumns(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+	if user.NotificationTypes != notificationTypes {
+		if err := s.db.Model(user).Select("notification_types").Updates(user).Error; err != nil {
+			return nil, fmt.Errorf("failed to update notification_types column of user: %w", err)
+		}
 	}
 	return user, nil
 }
