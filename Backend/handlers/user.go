@@ -320,6 +320,55 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	}
 }
 
+func (uh *UserHandler) GetNotificationTypes(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", strings.Split(user.NotificationTypes, ","))
+}
+
+func (uh *UserHandler) SetNotificationTypes(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	var notificationTypes []string
+	if err := c.ShouldBindJSON(&notificationTypes); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	user, err = uh.userService.UpdateUser(
+		user.ID,
+		user.Username,
+		user.Email,
+		user.PasswordHash,
+		user.AvatarURL,
+		strings.Join(notificationTypes, ","),
+	);
+	if err != nil {
+		if utils.IsErrInvalid(err) {
+			utils.RespondError(c, http.StatusBadRequest, "invalid_input", err.Error())
+		} else {
+			utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
+		}
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes updated successfully", notificationTypes)
+}
+
 // GetAccount retrieves account balance and summary
 func (uh *UserHandler) GetAccount(c *gin.Context) {
 	userID, exists := c.Get("user_id")
