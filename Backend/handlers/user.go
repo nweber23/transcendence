@@ -331,7 +331,11 @@ func (uh *UserHandler) GetNotificationTypes(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
-	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", strings.Split(user.NotificationTypes, ","))
+	notificationTypes := []string{}
+	if user.NotificationTypes != "" {
+		notificationTypes = strings.Split(user.NotificationTypes, ",")
+	}
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", notificationTypes)
 }
 
 func (uh *UserHandler) SetNotificationTypes(c *gin.Context) {
