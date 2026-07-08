@@ -16,7 +16,6 @@ const NotificationTypeToggle: React.FC<{title: string}> = ({ title }) => {
         relative
         w-12
         h-7
-        bg-neutral-quaternary
         border
         border-[rgba(212,175,55,0.12)]
         peer-focus:outline-none
@@ -26,8 +25,9 @@ const NotificationTypeToggle: React.FC<{title: string}> = ({ title }) => {
         rounded-full
         peer
         peer-checked:after:translate-x-[1.25rem]
+        peer-checked:bg-[rgba(212,175,55,0.2)]
         rtl:peer-checked:after:-translate-x-[1.25rem]
-        after:content-['']
+        after:content-[''] 
         after:absolute after:top-[5px]
         after:start-[4px]
         after:bg-[var(--gold)]
@@ -259,6 +259,9 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div>
                     <NotificationTypeToggle title={'friends'}/>
+                  </div>
+                  <div>
+                    <NotificationTypeToggle title={'system'}/>
                   </div>
                   <div className="flex justify-end">
                     <button type="submit" className={saveButtonClass}>
