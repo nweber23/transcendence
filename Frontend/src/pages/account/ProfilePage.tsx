@@ -4,6 +4,44 @@ import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/ui/Avatar';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 
+interface NotificationTypeToggleProps {
+  title: string;
+}
+
+const NotificationTypeToggle: React.FC<{title: string}> = ({ title }) => {
+  return (
+    <label className="inline-flex items-center cursor-pointer">
+      <input type="checkbox" value="" className="sr-only peer"/>
+      <div className="
+        relative
+        w-12
+        h-7
+        bg-neutral-quaternary
+        border
+        border-[rgba(212,175,55,0.12)]
+        peer-focus:outline-none
+        peer-focus:ring-4
+        peer-focus:ring-brand-soft
+        dark:peer-focus:ring-brand-soft
+        rounded-full
+        peer
+        peer-checked:after:translate-x-[1.25rem]
+        rtl:peer-checked:after:-translate-x-[1.25rem]
+        after:content-['']
+        after:absolute after:top-[5px]
+        after:start-[4px]
+        after:bg-[var(--gold)]
+        after:rounded-full
+        after:h-[1rem]
+        after:w-[1rem]
+        after:transition-all
+        peer-checked:bg-brand
+      "></div>
+      <span className="select-none ms-3">{title}</span>
+    </label>
+  );
+}
+
 const ProfilePage: React.FC = () => {
   const { user, error, updateProfile, uploadAvatar } = useProfile();
   const { refreshUser } = useAuth();
@@ -96,6 +134,8 @@ const ProfilePage: React.FC = () => {
   const labelClass = 'block text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-2';
   const saveButtonClass =
     'px-6 py-2.5 rounded-lg bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] text-[var(--gold)] font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(212,175,55,0.18)] hover:border-[rgba(212,175,55,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed';
+  const toggleClass =
+    'rounded-lg bg-[rgba(212,175,55,0.1)]'
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
@@ -206,6 +246,23 @@ const ProfilePage: React.FC = () => {
                   <div className="flex justify-end">
                     <button type="submit" disabled={passwordLoading || !newPassword} className={saveButtonClass}>
                       {passwordLoading ? 'Updating…' : 'Update password'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="rounded-2xl border border-[rgba(212,175,55,0.12)] bg-[var(--surface)] p-6">
+                <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Notification Settings</h2>
+                <form className="space-y-4">
+                  <div>
+                    <NotificationTypeToggle title={'games'}/>
+                  </div>
+                  <div>
+                    <NotificationTypeToggle title={'friends'}/>
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="submit" className={saveButtonClass}>
+                      Apply settings
                     </button>
                   </div>
                 </form>
