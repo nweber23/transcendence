@@ -41,6 +41,11 @@
       "id": "SYM_CLUB",
       "label": "♣",
       "file": "/assets/slots/lucky-sevens/sym_club.png"
+    },
+    {
+      "id": "SYM_BELL",
+      "label": "♣",
+      "file": "/assets/slots/lucky-sevens/sym_bell.png"
     }
   ],
 
