@@ -138,6 +138,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleApplyNotificationSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
     const notificationTypes = [
       hasNotificationFriends ? 'friends' : '',
       hasNotificationGames   ? 'games'   : '',
@@ -146,6 +147,7 @@ const ProfilePage: React.FC = () => {
     try {
       await profile_setNotificationTypes(notificationTypes);
       await refreshUser();
+      console.log('Successfully set notification types');
     } catch(err) {
       console.log(err instanceof Error ? err.message : 'Apply failed');
       //setNotificationSettingsError(err instanceof Error ? err.message : 'Apply failed');
