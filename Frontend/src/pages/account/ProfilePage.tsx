@@ -11,11 +11,11 @@ const NOTIFICATION_TYPE_STRINGS: string[] = [
 ]
 
 const NotificationTypeToggle: React.FC<{
-  title:          string,
-  defaultChecked: boolean,
-  setter:         (value: boolean) => void,
+  title:   string,
+  checked: boolean,
+  setter:  (value: boolean) => void,
 }> = ({
-  title, defaultChecked, setter
+  title, checked, setter
 }) => {
   return (
     <label className="inline-flex items-center cursor-pointer">
@@ -23,7 +23,7 @@ const NotificationTypeToggle: React.FC<{
         type="checkbox"
         value=""
         className="sr-only peer"
-        defaultChecked={defaultChecked}
+        checked={checked}
         onChange={(e) => {setter(e.target.checked)}}
       />
       <div className="
@@ -73,7 +73,7 @@ const ProfilePage: React.FC = () => {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   
   const [haveNotificationTypes, setHaveNotificationTypes] = useState<boolean[]>(
-    new Array(NOTIFICATION_TYPE_STRINGS.length).fill(false)
+    new Array(NOTIFICATION_TYPE_STRINGS.length).fill(true)
   );
   const setHaveNotificationTypesIndex = (index: number) => {
     return (value: boolean) => {
@@ -317,21 +317,21 @@ const ProfilePage: React.FC = () => {
                   <div>
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[0]}
-                      defaultChecked={haveNotificationTypes[0]}
+                      checked={haveNotificationTypes[0]}
                       setter={setHaveNotificationTypesIndex(0)}
                     />
                   </div>
                   <div>
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[1]}
-                      defaultChecked={haveNotificationTypes[1]}
+                      checked={haveNotificationTypes[1]}
                       setter={setHaveNotificationTypesIndex(1)}
                     />
                   </div>
                   <div>
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[2]}
-                      defaultChecked={haveNotificationTypes[2]}
+                      checked={haveNotificationTypes[2]}
                       setter={setHaveNotificationTypesIndex(2)}
                     />
                   </div>
