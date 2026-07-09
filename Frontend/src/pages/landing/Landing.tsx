@@ -4,32 +4,28 @@ import Games from './sections/Games';
 import CTA from './sections/CTA';
 import ShapeGrid from '@/components/ui/ShapeGrid';
 
-// Design system colors for ShapeGrid
 const BORDER_COLOR = '#1e2e3c';
 
 const Landing: React.FC = () => {
   return (
-    <main className="w-full">
-      <Hero />
-      {/* Unified Games + CTA section with shared background */}
-      <div className="relative bg-[var(--base)]">
-        {/* ShapeGrid Background Layer */}
-        <div className="absolute inset-0 z-0">
-          <ShapeGrid
-            direction="diagonal"
-            speed={0.4}
-            squareSize={40}
-            borderColor={BORDER_COLOR}
-            hoverFillColor="rgba(212, 175, 55, 0.5)"
-            shape="square"
-            hoverTrailAmount={6}
-          />
-        </div>
-        {/* Content Layer */}
-        <div className="relative z-10">
-          <Games />
-          <CTA />
-        </div>
+    <main className="w-full relative landing-canvas">
+      {/* ShapeGrid background layer spans the full page — one continuous canvas from hero to CTA */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <ShapeGrid
+          direction="diagonal"
+          speed={0.4}
+          squareSize={40}
+          borderColor={BORDER_COLOR}
+          hoverFillColor="rgba(212, 175, 55, 0.5)"
+          shape="square"
+          hoverTrailAmount={6}
+        />
+      </div>
+
+      <div className="relative z-10">
+        <Hero />
+        <Games />
+        <CTA />
       </div>
     </main>
   );
