@@ -10,7 +10,7 @@ const Landing: React.FC = () => {
   return (
     <main className="w-full relative landing-canvas">
       {/* ShapeGrid background layer spans the full page — one continuous canvas from hero to CTA */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="absolute inset-0 z-0">
         <ShapeGrid
           direction="diagonal"
           speed={0.4}
