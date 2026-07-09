@@ -214,11 +214,19 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               <button
                 key={link.label}
                 onClick={() => handleNavClick(link.id)}
-                className={`font-serif text-4xl font-semibold text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? `${100 + i * 60}ms` : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <rect x="4" y="4" width="16" height="16" rx="4" />
+                  <circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="15" cy="9" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" />
+                </svg>
                 {link.label}
               </button>
             ))}
@@ -320,21 +328,32 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               <Link
                 to="/signup"
                 onClick={() => setMenuOpen(false)}
-                className={`font-serif text-4xl font-semibold text-[var(--gold)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--gold)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? '220ms' : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <circle cx="10" cy="8" r="3" />
+                  <path strokeLinecap="round" d="M4 19c0-3 2.5-5 6-5s6 2 6 5" />
+                  <path strokeLinecap="round" d="M18 8v4M16 10h4" />
+                </svg>
                 Sign Up
               </Link>
+
               <Link
                 to="/login"
                 onClick={() => setMenuOpen(false)}
-                className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '280ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '260ms' : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h4a2 2 0 012 2v10a2 2 0 01-2 2h-4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 8l4 4-4 4" />
+                  <path strokeLinecap="round" d="M14 12H3" />
+                </svg>
                 Sign In
               </Link>
             </>
