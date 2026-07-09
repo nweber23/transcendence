@@ -11,10 +11,7 @@ const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) 
         type="checkbox"
         value=""
         className="sr-only peer"
-        onChange={(e) => {
-          setter(e.target.checked);
-          console.log(e.target.checked);
-        }}
+        onChange={(e) => {setter(e.target.checked)}}
       />
       <div className="
         relative
@@ -69,6 +66,10 @@ const ProfilePage: React.FC = () => {
   const [hasNotificationFriends, setHasNotificationFriends] = useState(false);
   const [hasNotificationGames,   setHasNotificationGames]   = useState(false);
   const [hasNotificationSystem,  setHasNotificationSystem]  = useState(false);
+
+  const [notificationSettingsSuccess,  setNotificationSettingsSuccess]  = useState(false);
+  const [notificationSettingsError,    setNotificationSettingsError]    = useState<string | null>(null);
+  const [notificationSettingsApplying, setNotificationSettingsApplying] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -139,6 +140,9 @@ const ProfilePage: React.FC = () => {
 
   const handleApplyNotificationSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNotificationSettingsSuccess(false);
+    setNotificationSettingsError(null);
+    setNotificationSettingsApplying(true);
     const notificationTypes = [
       hasNotificationFriends ? 'friends' : '',
       hasNotificationGames   ? 'games'   : '',
@@ -147,10 +151,13 @@ const ProfilePage: React.FC = () => {
     try {
       await profile_setNotificationTypes(notificationTypes);
       await refreshUser();
-      console.log('Successfully set notification types');
+      setNotificationSettingsSuccess(true);
+      setTimeout(() => setNotificationSettingsSuccess(false), 3000);
     } catch(err) {
       console.log(err instanceof Error ? err.message : 'Apply failed');
-      //setNotificationSettingsError(err instanceof Error ? err.message : 'Apply failed');
+      setNotificationSettingsError(err instanceof Error ? err.message : 'Apply failed');
+    } finally {
+      setNotificationSettingsApplying(false);
     }
   }
 
@@ -286,9 +293,11 @@ const ProfilePage: React.FC = () => {
                   <div>
                     <NotificationTypeToggle title={'system'}  setter={setHasNotificationSystem}/>
                   </div>
+                  {notificationSettingsError && <p className="text-sm text-red-400">{notificationSettingsError}</p>}
+                  {notificationSettingsSuccess && <p className="text-sm text-emerald-400">Settings Applied</p>}
                   <div className="flex justify-end">
-                    <button type="submit" className={saveButtonClass}>
-                      Apply settings
+                    <button type="submit" disabled={notificationSettingsApplying} className={saveButtonClass}>
+                      {notificationSettingsApplying ? 'Applying…' : 'Apply settings'}
                     </button>
                   </div>
                 </form>
