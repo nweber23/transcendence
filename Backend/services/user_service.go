@@ -122,7 +122,8 @@ func (s *UserService) UpdateUser(
 	if !utils.ValidateEmail(email) {
 		return nil, utils.ErrInvalidEmail
 	}
-	for _, notificationType := range strings.Split(notificationTypes, ",") {
+	for _, notificationType := range utils.OrdinalSplit(notificationTypes, ",") {
+		fmt.Println(notificationType)
 		if NotificationTypeInformations[notificationType] == nil {
 			return nil, utils.ErrInvalidNotificationType
 		}

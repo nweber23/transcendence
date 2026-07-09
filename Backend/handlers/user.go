@@ -196,6 +196,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		} else {
 			status = http.StatusInternalServerError
 		}
+		fmt.Println(err.Error())
 		utils.RespondError(c, status, "update_user_failed", err.Error())
 		return
 	}
@@ -331,11 +332,7 @@ func (uh *UserHandler) GetNotificationTypes(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
-	notificationTypes := []string{}
-	if user.NotificationTypes != "" {
-		notificationTypes = strings.Split(user.NotificationTypes, ",")
-	}
-	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", notificationTypes)
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", utils.OrdinalSplit(user.NotificationTypes, ","))
 }
 
 func (uh *UserHandler) SetNotificationTypes(c *gin.Context) {
@@ -637,12 +634,12 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
 		return
 	}
-	statusesString := c.Query("statuses")
+	/*statusesString := c.Query("statuses")
 	if statusesString == "" {
 		utils.RespondError(c, http.StatusBadRequest, "no_status_provided", "No status provided")
 		return
-	}
-	statuses := strings.Split(statusesString, ",")
+	}*/
+	statuses := utils.OrdinalSplit(c.Query("statuses"), ",")
 	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
 	if err != nil {
 		var status int
