@@ -15,6 +15,7 @@ export interface UseProfileReturn {
   error: string | null;
   updateProfile: (username: string, email: string, password?: string) => Promise<void>;
   uploadAvatar: (file: File) => Promise<void>;
+  profile_setNotificationTypes: (notificationTypes: string[]) => Promise<void>;
 }
 
 export function useProfile(): UseProfileReturn {
@@ -61,11 +62,26 @@ export function useProfile(): UseProfileReturn {
     }
   };
 
+  const profile_setNotificationTypes = async (notificationTypes: string[]) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiCall('PUT', '/user/notification_types', notificationTypes);
+      await fetchProfile();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Apply failed';
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (localStorage.getItem('auth_token')) {
       fetchProfile().catch(() => {});
     }
   }, [fetchProfile]);
 
-  return { user, isLoading, error, updateProfile, uploadAvatar };
+  return { user, isLoading, error, updateProfile, uploadAvatar, profile_setNotificationTypes };
 }

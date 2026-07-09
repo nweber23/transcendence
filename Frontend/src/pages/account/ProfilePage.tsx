@@ -4,14 +4,18 @@ import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/ui/Avatar';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 
-interface NotificationTypeToggleProps {
-  title: string;
-}
-
-const NotificationTypeToggle: React.FC<{title: string}> = ({ title }) => {
+const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) => void}> = ({ title, setter }) => {
   return (
     <label className="inline-flex items-center cursor-pointer">
-      <input type="checkbox" value="" className="sr-only peer"/>
+      <input
+        type="checkbox"
+        value=""
+        className="sr-only peer"
+        onChange={(e) => {
+          setter(e.target.checked);
+          console.log(e.target.checked);
+        }}
+      />
       <div className="
         relative
         w-12
@@ -43,7 +47,7 @@ const NotificationTypeToggle: React.FC<{title: string}> = ({ title }) => {
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, error, updateProfile, uploadAvatar } = useProfile();
+  const { user, error, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
   const { refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +65,10 @@ const ProfilePage: React.FC = () => {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const [hasNotificationFriends, setHasNotificationFriends] = useState(false);
+  const [hasNotificationGames,   setHasNotificationGames]   = useState(false);
+  const [hasNotificationSystem,  setHasNotificationSystem]  = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -129,13 +137,26 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleApplyNotificationSettings = async (e: React.FormEvent) => {
+    const notificationTypes = [
+      hasNotificationFriends ? 'friends' : '',
+      hasNotificationGames   ? 'games'   : '',
+      hasNotificationSystem  ? 'system'  : '',
+    ].filter(Boolean)
+    try {
+      await profile_setNotificationTypes(notificationTypes);
+      await refreshUser();
+    } catch(err) {
+      console.log(err instanceof Error ? err.message : 'Apply failed');
+      //setNotificationSettingsError(err instanceof Error ? err.message : 'Apply failed');
+    }
+  }
+
   const inputClass =
     'w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(212,175,55,0.4)] focus:ring-2 focus:ring-[rgba(212,175,55,0.1)] input-focus-transition';
   const labelClass = 'block text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-2';
   const saveButtonClass =
     'px-6 py-2.5 rounded-lg bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] text-[var(--gold)] font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(212,175,55,0.18)] hover:border-[rgba(212,175,55,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed';
-  const toggleClass =
-    'rounded-lg bg-[rgba(212,175,55,0.1)]'
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
@@ -253,15 +274,15 @@ const ProfilePage: React.FC = () => {
 
               <div className="rounded-2xl border border-[rgba(212,175,55,0.12)] bg-[var(--surface)] p-6">
                 <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Notification Settings</h2>
-                <form className="space-y-4">
+                <form onSubmit={handleApplyNotificationSettings} className="space-y-4">
                   <div>
-                    <NotificationTypeToggle title={'games'}/>
+                    <NotificationTypeToggle title={'friends'} setter={setHasNotificationFriends}/>
                   </div>
                   <div>
-                    <NotificationTypeToggle title={'friends'}/>
+                    <NotificationTypeToggle title={'games'}   setter={setHasNotificationGames}/>
                   </div>
                   <div>
-                    <NotificationTypeToggle title={'system'}/>
+                    <NotificationTypeToggle title={'system'}  setter={setHasNotificationSystem}/>
                   </div>
                   <div className="flex justify-end">
                     <button type="submit" className={saveButtonClass}>
