@@ -1,6 +1,11 @@
 import React from 'react';
+import PlayingCard, { type CardData } from '@/components/games/PlayingCard';
 
-const CARD_ROTATIONS = [-8, 0, 8];
+const CARDS: { card: CardData; rotation: number }[] = [
+  { card: { rank: 'A', suit: '♠' }, rotation: -8 },
+  { card: { rank: 'K', suit: '♥' }, rotation: 0 },
+  { card: { rank: 'Q', suit: '♦' }, rotation: 8 },
+];
 
 const HeroVisual: React.FC = () => {
   return (
@@ -9,13 +14,15 @@ const HeroVisual: React.FC = () => {
       aria-hidden="true"
     >
       <div className="relative flex items-end justify-center gap-3">
-        {CARD_ROTATIONS.map((rot, index) => (
-          <div
-            key={rot}
-            className="hero-visual-card w-16 h-24 md:w-20 md:h-28 rounded-lg bg-[var(--text)] shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        {CARDS.map(({ card, rotation }, index) => (
+          <PlayingCard
+            key={`${card.rank}${card.suit}`}
+            card={card}
+            size="lg"
+            className="hero-visual-card"
             style={
               {
-                '--card-rot': `${rot}deg`,
+                '--card-rot': `${rotation}deg`,
                 animationDelay: `${index * 180}ms`,
               } as React.CSSProperties
             }
