@@ -4,13 +4,26 @@ import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/ui/Avatar';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 
-const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) => void}> = ({ title, setter }) => {
+const NOTIFICATION_TYPE_STRINGS: string[] = [
+  'friends',
+  'games',
+  'system',
+]
+
+const NotificationTypeToggle: React.FC<{
+  title:          string,
+  defaultChecked: boolean,
+  setter:         (value: boolean) => void,
+}> = ({
+  title, defaultChecked, setter
+}) => {
   return (
     <label className="inline-flex items-center cursor-pointer">
       <input
         type="checkbox"
         value=""
         className="sr-only peer"
+        defaultChecked={defaultChecked}
         onChange={(e) => {setter(e.target.checked)}}
       />
       <div className="
@@ -19,16 +32,13 @@ const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) 
         h-7
         border
         border-[rgba(212,175,55,0.12)]
-        peer-focus:outline-none
-        peer-focus:ring-4
-        peer-focus:ring-brand-soft
         dark:peer-focus:ring-brand-soft
         rounded-full
         peer
         peer-checked:after:translate-x-[1.25rem]
         peer-checked:bg-[rgba(212,175,55,0.2)]
         rtl:peer-checked:after:-translate-x-[1.25rem]
-        after:content-[''] 
+        after:content-['']
         after:absolute after:top-[5px]
         after:start-[4px]
         after:bg-[var(--gold)]
@@ -36,7 +46,6 @@ const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) 
         after:h-[1rem]
         after:w-[1rem]
         after:transition-all
-        peer-checked:bg-brand
       "></div>
       <span className="select-none ms-3">{title}</span>
     </label>
@@ -44,7 +53,7 @@ const NotificationTypeToggle: React.FC<{title: string, setter: (value: boolean) 
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, error, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
+  const { user, notificationTypes, error, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
   const { refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,10 +71,19 @@ const ProfilePage: React.FC = () => {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-
-  const [hasNotificationFriends, setHasNotificationFriends] = useState(false);
-  const [hasNotificationGames,   setHasNotificationGames]   = useState(false);
-  const [hasNotificationSystem,  setHasNotificationSystem]  = useState(false);
+  
+  const [haveNotificationTypes, setHaveNotificationTypes] = useState<boolean[]>(
+    new Array(NOTIFICATION_TYPE_STRINGS.length).fill(false)
+  );
+  const setHaveNotificationTypesIndex = (index: number) => {
+    return (value: boolean) => {
+      var nextHaveNotificationTypes: boolean[] = structuredClone(haveNotificationTypes);
+      console.log("Before:", nextHaveNotificationTypes);
+      nextHaveNotificationTypes[index] = value;
+      console.log("After:", nextHaveNotificationTypes);
+      setHaveNotificationTypes(nextHaveNotificationTypes);
+    };
+  };
 
   const [notificationSettingsSuccess,  setNotificationSettingsSuccess]  = useState(false);
   const [notificationSettingsError,    setNotificationSettingsError]    = useState<string | null>(null);
@@ -76,7 +94,19 @@ const ProfilePage: React.FC = () => {
       setUsername(user.username);
       setEmail(user.email);
     }
-  }, [user?.id]);
+    if (notificationTypes) {
+      var nextHaveNotificationTypes: boolean[] = Array(NOTIFICATION_TYPE_STRINGS.length).fill(false);
+      notificationTypes.forEach((notificationType) => {
+        var index: number = NOTIFICATION_TYPE_STRINGS.indexOf(notificationType);
+        if(index == -1) {
+          console.error("Invalid notification type: " + notificationType);
+        } else {
+          nextHaveNotificationTypes[index] = true;
+        }
+      })
+      setHaveNotificationTypes(nextHaveNotificationTypes);
+    }
+  }, [user?.id, notificationTypes]);
 
   const handleIdentitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,13 +173,14 @@ const ProfilePage: React.FC = () => {
     setNotificationSettingsSuccess(false);
     setNotificationSettingsError(null);
     setNotificationSettingsApplying(true);
-    const notificationTypes = [
-      hasNotificationFriends ? 'friends' : '',
-      hasNotificationGames   ? 'games'   : '',
-      hasNotificationSystem  ? 'system'  : '',
-    ].filter(Boolean)
     try {
-      await profile_setNotificationTypes(notificationTypes);
+      var notificationTypesToSend: string[] = [];
+      haveNotificationTypes.forEach((haveNotificationType, notificationTypeIndex) => {
+        if(haveNotificationType) {
+          notificationTypesToSend.push(NOTIFICATION_TYPE_STRINGS[notificationTypeIndex])
+        }
+      })
+      await profile_setNotificationTypes(notificationTypesToSend);
       setNotificationSettingsSuccess(true);
       setTimeout(() => setNotificationSettingsSuccess(false), 3000);
     } catch(err) {
@@ -284,13 +315,25 @@ const ProfilePage: React.FC = () => {
                 <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Notification Settings</h2>
                 <form onSubmit={handleApplyNotificationSettings} className="space-y-4">
                   <div>
-                    <NotificationTypeToggle title={'friends'} setter={setHasNotificationFriends}/>
+                    <NotificationTypeToggle
+                      title={NOTIFICATION_TYPE_STRINGS[0]}
+                      defaultChecked={haveNotificationTypes[0]}
+                      setter={setHaveNotificationTypesIndex(0)}
+                    />
                   </div>
                   <div>
-                    <NotificationTypeToggle title={'games'}   setter={setHasNotificationGames}/>
+                    <NotificationTypeToggle
+                      title={NOTIFICATION_TYPE_STRINGS[1]}
+                      defaultChecked={haveNotificationTypes[1]}
+                      setter={setHaveNotificationTypesIndex(1)}
+                    />
                   </div>
                   <div>
-                    <NotificationTypeToggle title={'system'}  setter={setHasNotificationSystem}/>
+                    <NotificationTypeToggle
+                      title={NOTIFICATION_TYPE_STRINGS[2]}
+                      defaultChecked={haveNotificationTypes[2]}
+                      setter={setHaveNotificationTypesIndex(2)}
+                    />
                   </div>
                   {notificationSettingsError && <p className="text-sm text-red-400">{notificationSettingsError}</p>}
                   {notificationSettingsSuccess && <p className="text-sm text-emerald-400">Settings Applied</p>}
