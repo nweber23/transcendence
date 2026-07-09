@@ -22,6 +22,9 @@ const Landing: React.FC = () => {
         />
       </div>
 
+      {/* pointer-events-none lets mouse events reach the ShapeGrid canvas below;
+          any new interactive element added under Hero/Games/CTA must opt back in
+          with pointer-events-auto or it will be unclickable. */}
       <div className="relative z-10 pointer-events-none">
         <Hero />
         <Games />
