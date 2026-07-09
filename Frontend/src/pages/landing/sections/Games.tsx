@@ -9,6 +9,7 @@ interface GameRowData {
   tagline: string;
   description: string;
   icon: React.ComponentType<{ width?: number; height?: number; className?: string }>;
+  video?: string;
   visual: string;
   glow: string;
   path: string;
@@ -21,6 +22,7 @@ const GAMES: GameRowData[] = [
     tagline: 'Beat the dealer, not the house edge.',
     description: 'Practice solo or take a seat at a live table. Same rules, no pressure.',
     icon: BlackjackIcon,
+    video: '/blackjack.mp4',
     visual: 'bg-[#091a12]',
     glow: 'rgba(45,122,99,0.18)',
     path: '/games/blackjack',
@@ -52,6 +54,7 @@ const GameRow: React.FC<GameRowData & { flip: boolean }> = ({
   tagline,
   description,
   icon: Icon,
+  video,
   visual,
   glow,
   path,
@@ -62,14 +65,28 @@ const GameRow: React.FC<GameRowData & { flip: boolean }> = ({
       className={`flex flex-col md:flex-row ${flip ? 'md:flex-row-reverse' : ''} items-stretch gap-8 md:gap-10 border-b border-[rgba(212,175,55,0.08)] py-14 last:border-b-0`}
     >
       <div className={`flex-1 flex items-center justify-center relative overflow-hidden rounded-2xl ${visual} min-h-[220px]`}>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse 60% 70% at 50% 55%, ${glow} 0%, transparent 70%)` }}
-          aria-hidden="true"
-        />
-        <div className="relative z-10 card-icon">
-          <Icon width={150} height={120} />
-        </div>
+        {video ? (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={video}
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+          />
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse 60% 70% at 50% 55%, ${glow} 0%, transparent 70%)` }}
+              aria-hidden="true"
+            />
+            <div className="relative z-10 card-icon">
+              <Icon width={150} height={120} />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex-1 flex flex-col justify-center">
