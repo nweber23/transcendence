@@ -6,7 +6,7 @@ import HeroVisual from './HeroVisual';
 
 const Hero: React.FC = () => {
   return (
-    <section className="hero min-h-screen flex items-center relative overflow-hidden" aria-labelledby="hero-heading">
+    <section className="hero min-h-screen flex items-center relative overflow-hidden pointer-events-none" aria-labelledby="hero-heading">
       {/* Ambient background texture — low opacity, supporting the split layout below */}
       <div className="absolute inset-0 pointer-events-none opacity-30" aria-hidden="true">
         <Balatro
@@ -35,7 +35,7 @@ const Hero: React.FC = () => {
             Blackjack, hold&rsquo;em, and slots — against real players, right now. No chips required.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4 pointer-events-auto">
             <Link to="/login">
               <Button variant="gold" size="md">
                 Sit down at a table

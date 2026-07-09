@@ -22,7 +22,7 @@ const Landing: React.FC = () => {
         />
       </div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 pointer-events-none">
         <Hero />
         <Games />
         <CTA />
