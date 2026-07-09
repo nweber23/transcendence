@@ -10,15 +10,62 @@ const NOTIFICATION_TYPE_STRINGS: string[] = [
   'system',
 ]
 
+const NOTIFICATION_TYPE_DESCRIPTIONS: string[] = [
+  'Friend requests and acceptances.',
+  'Game invites, your turn reminders, and match results.',
+  'Deposit, Withdraw and Account Updates.',
+]
+
+const NOTIFICATION_TYPE_ICONS: React.ReactNode[] = [
+  (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="16.5" cy="9.5" r="2.25" />
+      <path strokeLinecap="round" d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+      <path strokeLinecap="round" d="M14.75 14.75c2.25.25 3.75 2 3.75 4.25" />
+    </svg>
+  ),
+  (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <rect x="4" y="4" width="16" height="16" rx="4" />
+      <circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="9" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 8a6 6 0 1112 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z" />
+      <path strokeLinecap="round" d="M10 20a2 2 0 004 0" />
+    </svg>
+  ),
+]
+
 const NotificationTypeToggle: React.FC<{
-  title:   string,
-  checked: boolean,
-  setter:  (value: boolean) => void,
+  title:       string,
+  description: string,
+  icon:        React.ReactNode,
+  checked:     boolean,
+  setter:      (value: boolean) => void,
 }> = ({
-  title, checked, setter
+  title, description, icon, checked, setter
 }) => {
   return (
-    <label className="inline-flex items-center cursor-pointer">
+    <label className="flex items-center gap-4 py-4 first:pt-0 last:pb-0 cursor-pointer">
+      <span className={
+        'flex items-center justify-center w-10 h-10 shrink-0 rounded-xl border transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] '
+        + (checked
+          ? 'bg-[rgba(212,175,55,0.12)] border-[rgba(212,175,55,0.35)] text-[var(--gold)]'
+          : 'bg-[var(--surface-2)] border-[rgba(212,175,55,0.1)] text-[var(--text-3)]')
+      }>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 select-none">
+        <span className="block text-sm font-semibold text-[var(--text)] capitalize">{title}</span>
+        <span className="block text-xs text-[var(--text-3)] mt-0.5 leading-snug">{description}</span>
+      </span>
       <input
         type="checkbox"
         value=""
@@ -28,26 +75,34 @@ const NotificationTypeToggle: React.FC<{
       />
       <div className="
         relative
-        w-12
-        h-7
-        border
-        border-[rgba(212,175,55,0.12)]
-        dark:peer-focus:ring-brand-soft
+        shrink-0
+        w-11
+        h-6
         rounded-full
-        peer
-        peer-checked:after:translate-x-[1.25rem]
-        peer-checked:bg-[rgba(212,175,55,0.2)]
-        rtl:peer-checked:after:-translate-x-[1.25rem]
+        bg-[var(--surface-2)]
+        border
+        border-[rgba(212,175,55,0.15)]
+        transition-colors
+        duration-200
+        ease-[cubic-bezier(0.23,1,0.32,1)]
+        peer-checked:bg-[var(--gold)]
+        peer-checked:border-[var(--gold)]
+        peer-focus-visible:ring-2
+        peer-focus-visible:ring-[rgba(212,175,55,0.35)]
+        active:scale-95
         after:content-['']
-        after:absolute after:top-[5px]
-        after:start-[4px]
-        after:bg-[var(--gold)]
+        after:absolute after:top-[2px]
+        after:start-[2px]
+        after:bg-white
+        after:shadow-[0_1px_2px_rgba(0,0,0,0.35)]
         after:rounded-full
-        after:h-[1rem]
-        after:w-[1rem]
-        after:transition-all
+        after:h-[1.125rem]
+        after:w-[1.125rem]
+        after:transition-transform
+        after:duration-200
+        after:ease-[cubic-bezier(0.23,1,0.32,1)]
+        peer-checked:after:translate-x-5
       "></div>
-      <span className="select-none ms-3">{title}</span>
     </label>
   );
 }
@@ -71,9 +126,15 @@ const ProfilePage: React.FC = () => {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  
+
   const [haveNotificationTypes, setHaveNotificationTypes] = useState<boolean[]>(
     new Array(NOTIFICATION_TYPE_STRINGS.length).fill(true)
+  );
+  const [savedHaveNotificationTypes, setSavedHaveNotificationTypes] = useState<boolean[]>(
+    new Array(NOTIFICATION_TYPE_STRINGS.length).fill(true)
+  );
+  const notificationSettingsChanged = haveNotificationTypes.some(
+    (haveNotificationType, index) => haveNotificationType !== savedHaveNotificationTypes[index]
   );
   const setHaveNotificationTypesIndex = (index: number) => {
     return (value: boolean) => {
@@ -105,6 +166,7 @@ const ProfilePage: React.FC = () => {
         }
       })
       setHaveNotificationTypes(nextHaveNotificationTypes);
+      setSavedHaveNotificationTypes(nextHaveNotificationTypes);
     }
   }, [user?.id, notificationTypes]);
 
@@ -181,6 +243,7 @@ const ProfilePage: React.FC = () => {
         }
       })
       await profile_setNotificationTypes(notificationTypesToSend);
+      setSavedHaveNotificationTypes(haveNotificationTypes);
       setNotificationSettingsSuccess(true);
       setTimeout(() => setNotificationSettingsSuccess(false), 3000);
     } catch(err) {
@@ -312,33 +375,36 @@ const ProfilePage: React.FC = () => {
               </div>
 
               <div className="rounded-2xl border border-[rgba(212,175,55,0.12)] bg-[var(--surface)] p-6">
-                <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Notification Settings</h2>
-                <form onSubmit={handleApplyNotificationSettings} className="space-y-4">
-                  <div>
+                <h2 className="font-serif text-xl font-semibold text-[var(--text)]">Notification Settings</h2>
+                <p className="text-sm text-[var(--text-3)] mt-1 mb-2">Choose what you want to hear about.</p>
+                <form onSubmit={handleApplyNotificationSettings}>
+                  <div className="divide-y divide-[rgba(212,175,55,0.08)]">
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[0]}
+                      description={NOTIFICATION_TYPE_DESCRIPTIONS[0]}
+                      icon={NOTIFICATION_TYPE_ICONS[0]}
                       checked={haveNotificationTypes[0]}
                       setter={setHaveNotificationTypesIndex(0)}
                     />
-                  </div>
-                  <div>
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[1]}
+                      description={NOTIFICATION_TYPE_DESCRIPTIONS[1]}
+                      icon={NOTIFICATION_TYPE_ICONS[1]}
                       checked={haveNotificationTypes[1]}
                       setter={setHaveNotificationTypesIndex(1)}
                     />
-                  </div>
-                  <div>
                     <NotificationTypeToggle
                       title={NOTIFICATION_TYPE_STRINGS[2]}
+                      description={NOTIFICATION_TYPE_DESCRIPTIONS[2]}
+                      icon={NOTIFICATION_TYPE_ICONS[2]}
                       checked={haveNotificationTypes[2]}
                       setter={setHaveNotificationTypesIndex(2)}
                     />
                   </div>
-                  {notificationSettingsError && <p className="text-sm text-red-400">{notificationSettingsError}</p>}
-                  {notificationSettingsSuccess && <p className="text-sm text-emerald-400">Settings Applied</p>}
-                  <div className="flex justify-end">
-                    <button type="submit" disabled={notificationSettingsApplying} className={saveButtonClass}>
+                  {notificationSettingsError && <p className="text-sm text-red-400 mt-4">{notificationSettingsError}</p>}
+                  {notificationSettingsSuccess && <p className="text-sm text-emerald-400 mt-4">Settings Applied</p>}
+                  <div className="flex justify-end mt-5">
+                    <button type="submit" disabled={notificationSettingsApplying || !notificationSettingsChanged} className={saveButtonClass}>
                       {notificationSettingsApplying ? 'Applying…' : 'Apply settings'}
                     </button>
                   </div>
