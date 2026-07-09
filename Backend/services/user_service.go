@@ -123,7 +123,6 @@ func (s *UserService) UpdateUser(
 		return nil, utils.ErrInvalidEmail
 	}
 	for _, notificationType := range utils.OrdinalSplit(notificationTypes, ",") {
-		fmt.Println(notificationType)
 		if NotificationTypeInformations[notificationType] == nil {
 			return nil, utils.ErrInvalidNotificationType
 		}
@@ -150,6 +149,7 @@ func (s *UserService) UpdateUser(
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 	if user.NotificationTypes != notificationTypes {
+		user.NotificationTypes = notificationTypes
 		if err := s.db.Model(user).Select("notification_types").Updates(user).Error; err != nil {
 			return nil, fmt.Errorf("failed to update notification_types column of user: %w", err)
 		}

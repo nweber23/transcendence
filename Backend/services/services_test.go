@@ -133,8 +133,9 @@ func updateUserExpect(
 		testInterface.Errorf(`couldn't find user`)
 		return
 	}
-	checkForDifferences(testInterface, "username", username, user.Username)
-	checkForDifferences(testInterface, "email",    email,    user.Email)
+	checkForDifferences(testInterface, "username",           username,          user.Username)
+	checkForDifferences(testInterface, "email",              email,             user.Email)
+	checkForDifferences(testInterface, "notification_types", notificationTypes, user.NotificationTypes)
 	if !utils.VerifyPassword(user.PasswordHash, password) {
 		testInterface.Errorf(`password %s wasn't successfully updated`, password)
 	}

@@ -150,7 +150,6 @@ const ProfilePage: React.FC = () => {
     ].filter(Boolean)
     try {
       await profile_setNotificationTypes(notificationTypes);
-      await refreshUser();
       setNotificationSettingsSuccess(true);
       setTimeout(() => setNotificationSettingsSuccess(false), 3000);
     } catch(err) {

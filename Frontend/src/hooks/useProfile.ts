@@ -67,7 +67,6 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     try {
       await apiCall('PUT', '/user/notification_types', notificationTypes);
-      await fetchProfile();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Apply failed';
       setError(msg);

@@ -100,8 +100,10 @@ func (wsState *WebSocketState) PostNotification(notification models.Notification
 		} 
 	}
 	if !foundType {
+		fmt.Println("Ignoring", notification.Type, "notification. Not in", user.NotificationTypes)
 		return nil
 	}
+	fmt.Println("Posting ", notification.Type, " notification")
 	if information.ShouldAdd {
 		if err := wsState.notificationService.AddNotification(notification); err != nil {
 			return err
