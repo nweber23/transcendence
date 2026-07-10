@@ -23,7 +23,7 @@ const Hero: React.FC = () => {
           into Games on scroll instead of cutting hard at the section boundary. */}
       <div
         className="absolute inset-x-0 bottom-0 h-64 md:h-80 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, transparent 0%, var(--surface) 55%, var(--base) 100%)' }}
+        style={{ background: 'linear-gradient(to bottom, transparent 0%, var(--base) 100%)' }}
         aria-hidden="true"
       />
 
