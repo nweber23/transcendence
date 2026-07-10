@@ -1,5 +1,5 @@
 
-# Multi-stage Dockerfile to build and run a C++26 engine (exposes port 777)
+# Multi-stage Dockerfile to build and run a C++26 engine (gRPC, port set via ENGINE_PORT)
 
 ################################################################################
 # Build stage: modern GCC toolchain for C++26
@@ -35,7 +35,7 @@ FROM ubuntu:24.04 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libgrpc++1 libprotobuf32t64 \
+ && apt-get install -y --no-install-recommends libgrpc++1.51t64 libprotobuf32t64 \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -r app && useradd -r -g app app
 
@@ -43,7 +43,7 @@ WORKDIR /app
 
 COPY --from=build /workspace/build /app
 
-EXPOSE 777
+EXPOSE 9090
 
 USER app
 CMD ["/bin/sh", "-c", "[ -x /app/engine ] && /app/engine || sleep infinity"]
