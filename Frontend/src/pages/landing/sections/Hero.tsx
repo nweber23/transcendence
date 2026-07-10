@@ -7,8 +7,14 @@ import HeroVisual from './HeroVisual';
 const Hero: React.FC = () => {
   return (
     <section className="hero min-h-screen flex items-center relative overflow-hidden" aria-labelledby="hero-heading">
-      {/* Ambient background texture — low opacity, supporting the split layout below */}
-      <div className="absolute inset-0 pointer-events-none opacity-30" aria-hidden="true">
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          maskImage: 'linear-gradient(to bottom, black 0%, black 55%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 55%, transparent 100%)',
+        }}
+        aria-hidden="true"
+      >
         <Balatro
           isRotate={false}
           mouseInteraction
@@ -18,14 +24,6 @@ const Hero: React.FC = () => {
           color3="#162325"
         />
       </div>
-
-      {/* Fades Balatro out into the shared page background so the hero dissolves
-          into Games on scroll instead of cutting hard at the section boundary. */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-64 md:h-80 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, transparent 0%, var(--base) 100%)' }}
-        aria-hidden="true"
-      />
 
       <div className="relative z-10 w-full max-w-6xl mx-auto px-8 py-32 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         {/* Left column — copy */}

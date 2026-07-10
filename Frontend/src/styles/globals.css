@@ -525,6 +525,14 @@
     var(--base);
 }
 
+.galaxy-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ─── HERO VISUAL (looping cards/chips) ─── */
 @keyframes heroCardDeal {
   0% { opacity: 0; transform: translateY(-16px) rotate(var(--card-rot, 0deg)) scale(0.94); }
