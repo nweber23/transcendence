@@ -61,6 +61,7 @@ describe('useProfile - updateProfile', () => {
     localStorage.setItem('auth_token', 'mock-token');
     mockApiCall
       .mockResolvedValueOnce(mockProfile)
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce({ ...mockProfile, username: 'newname' });
 
@@ -79,6 +80,7 @@ describe('useProfile - updateProfile', () => {
     localStorage.setItem('auth_token', 'mock-token');
     mockApiCall
       .mockResolvedValueOnce(mockProfile)
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce(mockProfile);
 
@@ -100,6 +102,7 @@ describe('useProfile - updateProfile', () => {
     localStorage.setItem('auth_token', 'mock-token');
     mockApiCall
       .mockResolvedValueOnce(mockProfile)
+      .mockResolvedValueOnce([])
       .mockRejectedValueOnce(new Error('Username taken'));
 
     const { result } = renderHook(() => useProfile());
@@ -120,6 +123,7 @@ describe('useProfile - uploadAvatar', () => {
     localStorage.setItem('auth_token', 'mock-token');
     mockApiCall
       .mockResolvedValueOnce(mockProfile)
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce({ ...mockProfile, avatarURL: 'abc123.jpg' });
     mockApiUpload.mockResolvedValueOnce(undefined);
 
