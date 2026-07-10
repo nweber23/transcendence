@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"transcendence/config"
 	"transcendence/handlers"
@@ -35,14 +34,15 @@ func main() {
 	friendService := services.NewFriendService(db)
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
+	notificationService := services.NewNotificationService(db)
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(friendService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
 	go wsState.Main()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService, friendService, wsState)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
 	wsHandler   := handlers.NewWebSocketHandler(wsState)
 
@@ -69,6 +69,10 @@ func main() {
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
 		userRoutes.GET("/search", userHandler.SearchUsers)
+		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
+		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
+		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 	}
 
 	// Game routes (protected)
@@ -84,13 +88,8 @@ func main() {
 	// WebSocket route
 	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), wsHandler.UpgradeConnection)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
+	log.Printf("Starting server on port %s", cfg.Port)
+	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

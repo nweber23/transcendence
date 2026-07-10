@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"net/http"
 	"strconv"
@@ -21,23 +22,26 @@ import (
 )
 
 type UserHandler struct {
-	userService    *services.UserService
-	accountService *services.AccountService
-	friendService  *services.FriendService
-	wsState        *ws.WebSocketState
+	userService         *services.UserService
+	accountService      *services.AccountService
+	friendService       *services.FriendService
+	notificationService *services.NotificationService
+	wsState             *ws.WebSocketState
 }
 
 func NewUserHandler(
-	userService    *services.UserService,
-	accountService *services.AccountService,
-	friendService  *services.FriendService,
-	wsState        *ws.WebSocketState,
+	userService         *services.UserService,
+	accountService      *services.AccountService,
+	friendService       *services.FriendService,
+	notificationService *services.NotificationService,
+	wsState             *ws.WebSocketState,
 ) *UserHandler {
 	return &UserHandler{
-		userService:    userService,
-		accountService: accountService,
-		friendService:  friendService,
-		wsState:        wsState,
+		userService:         userService,
+		accountService:      accountService,
+		friendService:       friendService,
+		notificationService: notificationService,
+		wsState:             wsState,
 	}
 }
 
@@ -83,6 +87,10 @@ type FriendResponse struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type RemoveNotificationResponse struct {
+	NotificationID uint `json:"notification_id"`
+}
+
 type UserProfileRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -113,13 +121,28 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		AvatarURL: resolveAvatarURL(user.AvatarURL),
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
 
 // UpdateProfile updates the user profile
+// postSystemNotification sends a toast-only system notification to the acting
+// user; failures must never fail the triggering request.
+func (uh *UserHandler) postSystemNotification(userID uint, head string, body string, actionURL string) {
+	notification := models.Notification{
+		UserID:    userID,
+		Type:      models.NotificationTypeSystem,
+		Head:      head,
+		Body:      body,
+		ActionURL: actionURL,
+	}
+	if err := uh.wsState.PostNotification(notification); err != nil {
+		log.Printf("failed to post system notification: %v", err)
+	}
+}
+
 func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -155,7 +178,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 			return
 		}
 	}
-	user, err = uh.userService.UpdateUser(userID.(uint), username, email, passwordHash, user.AvatarURL)
+	user, err = uh.userService.UpdateUser(
+		userID.(uint),
+		username,
+		email,
+		passwordHash,
+		user.AvatarURL,
+		user.NotificationTypes,
+	)
 	if err != nil {
 		var status int
 		// TODO: Perhaps create a full enum of errors for our API
@@ -166,6 +196,7 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		} else {
 			status = http.StatusInternalServerError
 		}
+		fmt.Println(err.Error())
 		utils.RespondError(c, status, "update_user_failed", err.Error())
 		return
 	}
@@ -173,10 +204,23 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		ID:        userID.(uint),
 		Username:  username,
 		Email:     email,
-		AvatarURL: user.AvatarURL,
+		AvatarURL: resolveAvatarURL(user.AvatarURL),
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
+	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
+}
+
+// resolveAvatarURL falls back to the default avatar when the referenced file
+// no longer exists on disk (e.g. lost before the uploads volume was added).
+func resolveAvatarURL(avatarURL string) string {
+	if avatarURL == models.DefaultAvatarURL {
+		return avatarURL
+	}
+	if _, err := os.Stat(filepath.Join("./uploads/", avatarURL)); err != nil {
+		return models.DefaultAvatarURL
+	}
+	return avatarURL
 }
 
 func createRelatedURL(uploadFilePath string) (string, error) {
@@ -254,6 +298,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		user.Email,
 		user.PasswordHash,
 		user.AvatarURL,
+		user.NotificationTypes,
 	)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
@@ -266,6 +311,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		AvatarURL: user.AvatarURL,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
+	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 	if oldURL != models.DefaultAvatarURL {
 		err = os.Remove(filepath.Join("./uploads/", oldURL))
@@ -273,6 +319,55 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
 		}
 	}
+}
+
+func (uh *UserHandler) GetNotificationTypes(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes retrieved successfully", utils.OrdinalSplit(user.NotificationTypes, ","))
+}
+
+func (uh *UserHandler) SetNotificationTypes(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	var notificationTypes []string
+	if err := c.ShouldBindJSON(&notificationTypes); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
+		return
+	}
+	user, err = uh.userService.UpdateUser(
+		user.ID,
+		user.Username,
+		user.Email,
+		user.PasswordHash,
+		user.AvatarURL,
+		strings.Join(notificationTypes, ","),
+	);
+	if err != nil {
+		if utils.IsErrInvalid(err) {
+			utils.RespondError(c, http.StatusBadRequest, "invalid_input", err.Error())
+		} else {
+			utils.RespondError(c, http.StatusInternalServerError, "update_user_failed", err.Error())
+		}
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "NotificationTypes updated successfully", notificationTypes)
 }
 
 // GetAccount retrieves account balance and summary
@@ -373,6 +468,12 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		TotalWon:     account.TotalWon.String(),
 		TotalLost:    account.TotalLost.String(),
 	}
+	uh.postSystemNotification(
+		userID.(uint),
+		"Deposit successful",
+		"$"+amount.String()+" added to your balance. New balance: $"+account.Balance.String(),
+		"/account",
+	)
 	utils.RespondSuccess(c, http.StatusOK, "Deposit successful", response)
 }
 
@@ -412,6 +513,12 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		TotalWon:     account.TotalWon.String(),
 		TotalLost:    account.TotalLost.String(),
 	}
+	uh.postSystemNotification(
+		userID.(uint),
+		"Withdrawal successful",
+		"$"+amount.String()+" withdrawn from your balance. New balance: $"+account.Balance.String(),
+		"/account",
+	)
 	utils.RespondSuccess(c, http.StatusOK, "Withdrawal successful", response)
 }
 
@@ -439,6 +546,25 @@ func (uh *UserHandler) AddFriend(c *gin.Context) {
 		status := models.FriendshipStatusActive
 		if isPending {
 			status = models.FriendshipStatusPendingSelf
+		}
+		if actor, err := uh.userService.GetUserByID(userID.(uint)); err == nil {
+			notification := models.Notification{
+				UserID:      uint(friendID),
+				Type:        models.NotificationTypeFriends,
+				ImageURL:    resolveAvatarURL(actor.AvatarURL),
+				ActorUserID: &actor.ID,
+				ActionURL:   "/friends",
+			}
+			if isPending {
+				notification.Head = "New friend request"
+				notification.Body = actor.Username + " has sent you a friend request"
+			} else {
+				notification.Head = "Friend request accepted"
+				notification.Body = actor.Username + " accepted your friend request"
+			}
+			if err := uh.wsState.PostNotification(notification); err != nil {
+				log.Printf("failed to post friend notification: %v", err)
+			}
 		}
 		response := UpdateFriendResponse{
 			FriendID: uint(friendID),
@@ -508,12 +634,12 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
 		return
 	}
-	statusesString := c.Query("statuses")
+	/*statusesString := c.Query("statuses")
 	if statusesString == "" {
 		utils.RespondError(c, http.StatusBadRequest, "no_status_provided", "No status provided")
 		return
-	}
-	statuses := strings.Split(statusesString, ",")
+	}*/
+	statuses := utils.OrdinalSplit(c.Query("statuses"), ",")
 	friendships, err := uh.friendService.EnumerateFriends(userID.(uint), statuses, limit)
 	if err != nil {
 		var status int
@@ -554,7 +680,7 @@ func (uh *UserHandler) EnumerateFriends(c *gin.Context) {
 		friendResponses[responseIndex] = FriendResponse{
 			FriendID:  friendID,
 			Username:  friendUser.Username,
-			AvatarURL: friendUser.AvatarURL,
+			AvatarURL: resolveAvatarURL(friendUser.AvatarURL),
 			Status:    status,
 			IsOnline:  status == models.FriendshipStatusActive && uh.wsState.IsOnline(friendID),
 			// TODO: Reconsider in the future if we want online status to only be advertised to friends
@@ -581,5 +707,99 @@ func (uh *UserHandler) SearchUsers(c *gin.Context) {
 		utils.RespondError(c, http.StatusInternalServerError, "search_failed", err.Error())
 		return
 	}
+	for i := range results {
+		results[i].AvatarURL = resolveAvatarURL(results[i].AvatarURL)
+	}
 	utils.RespondSuccess(c, http.StatusOK, "Search results", results)
+}
+
+func (uh *UserHandler) RemoveNotification(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	notificationID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "get_notification_id_failed", err.Error())
+		return
+	}
+	if err := uh.notificationService.RemoveNotification(uint(notificationID), userID.(uint)); err != nil {
+		var status int
+		if errors.Is(err, utils.ErrNotificationIsNotYours) {
+			status = http.StatusForbidden
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "remove_notification_failed", err.Error())
+	} else {
+		response := RemoveNotificationResponse{
+			NotificationID: uint(notificationID),
+		}
+		utils.RespondSuccess(c, http.StatusOK, "Notification removed successfully", &response)
+	}
+}
+
+func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", err.Error())
+		return
+	}
+	if limit < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_limit", "Limit must not be negative")
+		return
+	}
+	TypesString := c.Query("types")
+	if TypesString == "" {
+		utils.RespondError(c, http.StatusBadRequest, "no_type_provided", "No status provided")
+		return
+	}
+	Types := strings.Split(TypesString, ",")
+	notifications, err := uh.notificationService.EnumerateNotifications(userID.(uint), Types, limit)
+	if err != nil {
+		var status int
+		if errors.Is(err, utils.ErrInvalidNotificationType) {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "enumerate_notifications_failed", err.Error())
+		return
+	}
+	actorIDs := make([]uint, 0, len(notifications))
+	seenActorIDs := make(map[uint]bool, len(notifications))
+	for _, notification := range notifications {
+		if notification.ActorUserID != nil && !seenActorIDs[*notification.ActorUserID] {
+			seenActorIDs[*notification.ActorUserID] = true
+			actorIDs = append(actorIDs, *notification.ActorUserID)
+		}
+	}
+	var actorsByID map[uint]*models.User
+	if len(actorIDs) > 0 {
+		actorsByID, err = uh.userService.GetUsersByIDs(actorIDs)
+		if err != nil {
+			utils.RespondError(c, http.StatusInternalServerError, "get_notification_actors_failed", err.Error())
+			return
+		}
+	}
+	for i := range notifications {
+		if notifications[i].ActorUserID != nil {
+			if actor, ok := actorsByID[*notifications[i].ActorUserID]; ok {
+				notifications[i].ImageURL = resolveAvatarURL(actor.AvatarURL)
+				continue
+			}
+		}
+		if notifications[i].ImageURL != "" {
+			notifications[i].ImageURL = resolveAvatarURL(notifications[i].ImageURL)
+		}
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
 }

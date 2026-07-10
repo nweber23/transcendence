@@ -8,6 +8,11 @@ import FriendsDropdown from '@/components/layout/FriendsDropdown';
 import FriendsPanelContent from '@/components/layout/FriendsPanelContent';
 import ProfileDropdown from '@/components/layout/ProfileDropdown';
 import Avatar from '@/components/ui/Avatar';
+import NotificationsDropdown from '@/components/layout/NotificationsDropdown';
+import NotificationsPanelContent from '@/components/layout/NotificationsPanelContent';
+import { useNotifications, AppNotification } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/ToastContainer';
 
 interface HeaderProps {
   onScroll?: (section: string) => void;
@@ -18,6 +23,10 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const navigate = useNavigate();
   const { token, user, logout } = useAuth();
   const friendsState = useFriends();
+  const { toasts, showToast, removeToast } = useToast();
+  const notificationsState = useNotifications((n: AppNotification) => {
+    showToast(n.body, 'info', { head: n.head, imageUrl: n.imageUrl || undefined });
+  });
   const isHome = location.pathname === '/';
 
   const navLinks: { label: string; href: string; id: string }[] = [
@@ -26,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   const [activeNav, setActiveNav] = React.useState<string>('');
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [mobileFriendsOpen, setMobileFriendsOpen] = React.useState(false);
+  const [mobileNotificationsOpen, setMobileNotificationsOpen] = React.useState(false);
 
   const handleNavClick = (id: string) => {
     setActiveNav(id);
@@ -49,6 +59,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
   React.useEffect(() => {
     setMenuOpen(false);
     setMobileFriendsOpen(false);
+    setMobileNotificationsOpen(false);
   }, [location.pathname]);
 
   // Prevent scroll when menu is open, restoring whatever was set before
@@ -68,6 +79,14 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
       friendsState.refetch().catch(() => {});
     }
   }, [mobileFriendsOpen, token, friendsState.refetch]);
+
+  // Refetch notifications and mark as seen each time the full-screen panel opens
+  React.useEffect(() => {
+    if (mobileNotificationsOpen && token) {
+      notificationsState.refetch().catch(() => {});
+      notificationsState.markSeen();
+    }
+  }, [mobileNotificationsOpen, token, notificationsState.refetch, notificationsState.markSeen]);
 
   return (
     <>
@@ -115,6 +134,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               {token ? (
                 <>
                   <FriendsDropdown {...friendsState} />
+                  <NotificationsDropdown {...notificationsState} />
                   <ProfileDropdown />
                 </>
               ) : (
@@ -151,9 +171,9 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                   menuOpen ? '-translate-y-[6.5px] -rotate-45' : ''
                 }`}
               />
-              {!menuOpen && token && friendsState.incoming.length > 0 && (
+              {!menuOpen && token && friendsState.incoming.length + notificationsState.unseenCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-[9px] font-bold flex items-center justify-center">
-                  {friendsState.incoming.length}
+                  {friendsState.incoming.length + notificationsState.unseenCount}
                 </span>
               )}
             </button>
@@ -194,11 +214,19 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               <button
                 key={link.label}
                 onClick={() => handleNavClick(link.id)}
-                className={`font-serif text-4xl font-semibold text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? `${100 + i * 60}ms` : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <rect x="4" y="4" width="16" height="16" rx="4" />
+                  <circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="15" cy="9" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" />
+                  <circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" />
+                </svg>
                 {link.label}
               </button>
             ))}
@@ -228,6 +256,24 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
                 {friendsState.incoming.length > 0 && (
                   <span className="min-w-[20px] h-5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-xs font-bold flex items-center justify-center">
                     {friendsState.incoming.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setMobileNotificationsOpen(true)}
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDelay: menuOpen ? '240ms' : '0ms' }}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                Notifications
+                {notificationsState.unseenCount > 0 && (
+                  <span className="min-w-[20px] h-5 px-1 rounded-full bg-[var(--gold)] text-[#0a0e12] text-xs font-bold flex items-center justify-center">
+                    {notificationsState.unseenCount}
                   </span>
                 )}
               </button>
@@ -282,21 +328,32 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
               <Link
                 to="/signup"
                 onClick={() => setMenuOpen(false)}
-                className={`font-serif text-4xl font-semibold text-[var(--gold)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--gold)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDelay: menuOpen ? '220ms' : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <circle cx="10" cy="8" r="3" />
+                  <path strokeLinecap="round" d="M4 19c0-3 2.5-5 6-5s6 2 6 5" />
+                  <path strokeLinecap="round" d="M18 8v4M16 10h4" />
+                </svg>
                 Sign Up
               </Link>
+
               <Link
                 to="/login"
                 onClick={() => setMenuOpen(false)}
-                className={`text-lg text-[var(--text-2)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                className={`inline-flex items-center gap-2 text-lg font-medium text-[var(--text-2)] hover:text-[var(--text)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
-                style={{ transitionDelay: menuOpen ? '280ms' : '0ms' }}
+                style={{ transitionDelay: menuOpen ? '260ms' : '0ms' }}
               >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h4a2 2 0 012 2v10a2 2 0 01-2 2h-4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 8l4 4-4 4" />
+                  <path strokeLinecap="round" d="M14 12H3" />
+                </svg>
                 Sign In
               </Link>
             </>
@@ -339,6 +396,48 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
           />
         </div>
       </div>
+
+      {/* Mobile Notifications full-screen panel */}
+      <div
+        className={`fixed inset-0 z-[101] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          mobileNotificationsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ backdropFilter: mobileNotificationsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
+        aria-hidden={!mobileNotificationsOpen}
+        // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
+        inert={!mobileNotificationsOpen ? '' : undefined}
+      >
+        <div className="flex items-center gap-3 px-5 h-14 border-b border-[rgba(212,175,55,0.12)]">
+          <button
+            onClick={() => setMobileNotificationsOpen(false)}
+            aria-label="Back to menu"
+            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[rgba(255,255,255,0.06)] active:scale-95 transition-colors duration-200 text-[var(--text)]"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <span className="font-serif text-lg font-semibold text-[var(--text)]">Notifications</span>
+        </div>
+        <div className="px-6 pt-6 pb-12">
+          <NotificationsPanelContent
+            notifications={notificationsState.notifications}
+            error={notificationsState.error}
+            onDismiss={(id) => notificationsState.dismiss(id).catch(() => {})}
+            onNotificationClick={(n) => {
+              setMobileNotificationsOpen(false);
+              if (n.type === 'friends') {
+                setMobileFriendsOpen(true);
+              } else if (n.actionUrl) {
+                navigate(n.actionUrl);
+                setMenuOpen(false);
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </>
   );
 };

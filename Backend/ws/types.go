@@ -2,9 +2,11 @@ package ws
 
 import (
 	"sync"
+	"time"
 
 	"encoding/json"
 	"transcendence/services"
+	"transcendence/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -14,29 +16,55 @@ import (
 type Topic int
 
 const (
-	TopicGeneric Topic = iota
+	TopicInvalid Topic = iota
+	TopicGeneric
 	TopicGame
 	TopicChat
+	TopicNotification
 	TopicMax
 )
 
-var TopicMap = map[string]Topic{
-	"generic": TopicGeneric,
-	"game":    TopicGame,
-	"chat":    TopicChat,
+var topicMap = map[string]Topic{
+	"generic":      TopicGeneric,      // emitted packet types: online
+	"game":         TopicGame,
+	"chat":         TopicChat,
+	"notification": TopicNotification, // emitted packet types: notification
 }
 
-// MARK: packet
+func TopicFromString(topicString string) (Topic, error) {
+	topic := topicMap[topicString]
+	if topic == Topic(0) && topicString != "generic" {
+		return Topic(0), utils.ErrInvalidTopicString
+	} else {
+		return topic, nil
+	}
+}
+
+// MARK: Packets
+
+type PacketOnline struct {
+	UserID   uint `json:"user_id"`
+	IsOnline bool `json:"is_online"`
+}
+
+type PacketNotification struct {
+	Type      string    `json:"notification_type"`
+	Head      string    `json:"head"`
+	Body      string    `json:"body"`
+	ImageURL  string    `json:"image_url"`
+	ActionURL string    `json:"action_url"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+const (
+	PacketTypeOnline       = "online"
+	PacketTypeNotification = "notification"
+)
 
 type packet struct {
 	userID     uint            `json:"-"`
 	PacketType string          `json:"packet_type"`
 	Payload    json.RawMessage `json:"payload"`
-}
-
-type packetOnline struct {
-	UserID   uint `json:"user_id"`
-	IsOnline bool `json:"is_online"`
 }
 
 // MARK: protectedPacketChannel
@@ -158,16 +186,24 @@ type client struct {
 // This is the root datatype of the websocket system
 
 type WebSocketState struct {
-	clients       map[uint]*client
-	clientsMutex  sync.RWMutex
-	readChannel   *protectedPacketChannel
-	friendService *services.FriendService
+	clients             map[uint]*client
+	clientsMutex        sync.RWMutex
+	readChannel         *protectedPacketChannel
+	userService         *services.UserService
+	friendService       *services.FriendService
+	notificationService *services.NotificationService
 }
 
-func CreateWebSocketState(friendService *services.FriendService) (*WebSocketState) {
+func CreateWebSocketState(
+	userService         *services.UserService,
+	friendService       *services.FriendService,
+	notificationService *services.NotificationService,
+) (*WebSocketState) {
 	return &WebSocketState{
-		clients:       make(map[uint]*client),
-		readChannel:   createProtectedPacketChannel(),
-		friendService: friendService,
+		clients:             make(map[uint]*client),
+		readChannel:         createProtectedPacketChannel(),
+		userService:         userService,
+		friendService:       friendService,
+		notificationService: notificationService,
 	}
 }

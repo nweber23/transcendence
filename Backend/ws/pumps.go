@@ -18,11 +18,11 @@ func (wsState *WebSocketState) timeoutClient(userID uint) {
 		}
 		iteration++
 	}
-	payload := packetOnline{
+	payload := PacketOnline{
 		UserID:   userID,
 		IsOnline: false,
 	}
-	wsState.SendToAll(TopicGeneric, "online", payload)
+	wsState.SendToAll(TopicGeneric, PacketTypeOnline, payload)
 }
 
 func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websocket.Conn) {

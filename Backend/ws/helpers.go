@@ -2,8 +2,12 @@ package ws
 
 import (
 	"fmt"
+	"time"
 
 	"encoding/json"
+	"transcendence/models"
+	"transcendence/services"
+	"transcendence/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -61,11 +65,11 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 	go pumpToConnection(context)
 	fmt.Printf("Connection added for user %d\n", userID)
 	if sendOnline {
-		payload := packetOnline{
+		payload := PacketOnline{
 			UserID:   userID,
 			IsOnline: true,
 		}
-		wsState.SendToAll(TopicGeneric, "online", payload)
+		wsState.SendToAll(TopicGeneric, PacketTypeOnline, payload)
 	}
 }
 
@@ -74,4 +78,54 @@ func (wsState *WebSocketState) IsOnline(userID uint) (bool) {
 	isOnline := (wsState.clients[userID] != nil)
 	wsState.clientsMutex.RUnlock()
 	return isOnline
+}
+
+func (wsState *WebSocketState) PostNotification(notification models.Notification) (error) {
+	information := services.NotificationTypeInformations[notification.Type]
+	if information == nil {
+		return utils.ErrInvalidNotificationType
+	}
+	if !(information.ShouldAdd || information.ShouldSend) {
+		panic("Invalid notificationTypeInformation")
+	}
+	user, err := wsState.userService.GetUserByID(notification.UserID)
+	if err != nil {
+		return err
+	}
+	foundType := false
+	for _, notificationType := range utils.OrdinalSplit(user.NotificationTypes, ",") {
+		if notificationType == notification.Type {
+			foundType = true
+			break
+		} 
+	}
+	if !foundType {
+		fmt.Println("Ignoring", notification.Type, "notification. Not in", user.NotificationTypes)
+		return nil
+	}
+	fmt.Println("Posting ", notification.Type, " notification")
+	if information.ShouldAdd {
+		if err := wsState.notificationService.AddNotification(notification); err != nil {
+			return err
+		}
+	}
+	if information.ShouldSend {
+		packetNotification := PacketNotification{
+			Type:      notification.Type,
+			Head:      notification.Head,
+			Body:      notification.Body,
+			ImageURL:  notification.ImageURL,
+			ActionURL: notification.ActionURL,
+			Timestamp: time.Now(),
+		}
+		if err := wsState.SendToTopic(
+			notification.UserID,
+			TopicNotification,
+			PacketTypeNotification,
+			packetNotification,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
