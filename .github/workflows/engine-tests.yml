@@ -1,0 +1,40 @@
+name: Engine C++ tests
+
+on:
+  pull_request:
+    paths:
+      - 'Engine/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools and a newer GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git gcc-14 g++-14 \
+            libgrpc++-dev protobuf-compiler protobuf-compiler-grpc libprotobuf-dev
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
+      - name: Configure CMake (use GCC-14)
+        working-directory: Engine
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/gcc-14 -DCMAKE_CXX_COMPILER=/usr/bin/g++-14 -DCMAKE_CXX_STANDARD=26 -DCMAKE_CXX_FLAGS='-std=gnu++2b'
+
+      - name: Build
+        working-directory: Engine
+        run: |
+          cmake --build build --config Release -- -j$(nproc)
+
+      - name: Run CTest
+        working-directory: Engine
+        run: |
+          ctest --test-dir build --output-on-failure
+
