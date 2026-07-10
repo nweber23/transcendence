@@ -97,7 +97,7 @@ const GameRow: React.FC<GameRowData & { flip: boolean }> = ({
         <p className="text-base leading-relaxed mb-6" style={{ color: 'var(--text-2)' }}>
           {description}
         </p>
-        <Link to={path} className="pointer-events-auto self-start">
+        <Link to={path} className="self-start">
           <Button variant="ghost" size="sm" className="self-start">
             Play Now
           </Button>
@@ -130,7 +130,7 @@ const Games: React.FC = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} id="games" className="py-16 px-8 pointer-events-none" aria-labelledby="games-heading">
+    <section ref={sectionRef} id="games" className="py-16 px-8" aria-labelledby="games-heading">
       <div className="max-w-5xl mx-auto">
         <h2
           id="games-heading"

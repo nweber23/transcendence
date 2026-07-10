@@ -22,7 +22,7 @@ const CTA: React.FC = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-24 px-8 relative pointer-events-none" aria-labelledby="cta-heading">
+    <section ref={sectionRef} className="py-24 px-8 relative" aria-labelledby="cta-heading">
       <div className="relative z-10 max-w-lg mx-auto text-center">
         <h2
           id="cta-heading"
@@ -49,7 +49,7 @@ const CTA: React.FC = () => {
           }`}
           style={{ transitionDelay: '160ms' }}
         >
-          <Link to="/signup" className="pointer-events-auto">
+          <Link to="/signup">
             <Button variant="gold" size="md" className="mb-5">
               Create free account
               <span className="w-6 h-6 rounded-full bg-black/15 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-px transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
@@ -62,7 +62,7 @@ const CTA: React.FC = () => {
 
           <p className="text-sm text-[var(--text-3)] leading-relaxed">
             Already playing?{' '}
-            <Link to="/login" className="pointer-events-auto text-[var(--gold)] underline underline-offset-[3px] hover:opacity-85 transition-opacity duration-200">
+            <Link to="/login" className="text-[var(--gold)] underline underline-offset-[3px] hover:opacity-85 transition-opacity duration-200">
               Sign in
             </Link>
           </p>
