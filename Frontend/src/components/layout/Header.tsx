@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Logo from '@/components/ui/Logo';
+import GlassSurface from '@/components/ui/GlassSurface';
 import { useAuth } from '@/hooks/useAuth';
 import { useFriends } from '@/hooks/useFriends';
 import FriendsDropdown from '@/components/layout/FriendsDropdown';
@@ -92,11 +93,20 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
     <>
       {/* Floating pill wrapper */}
       <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pt-4 px-4 pointer-events-none nav-entrance">
-        <nav
-          className="pointer-events-auto w-full max-w-5xl bg-[rgba(13,17,23,0.88)] backdrop-blur-3xl border border-[rgba(212,175,55,0.12)] rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-          aria-label="Main navigation"
-        >
-          <div className="flex items-center justify-between h-14 px-5">
+        <nav className="pointer-events-auto relative w-full max-w-5xl h-14 rounded-full" aria-label="Main navigation">
+          <div className="absolute inset-0 rounded-full overflow-hidden">
+            <GlassSurface
+              width="100%"
+              height="100%"
+              borderRadius={9999}
+              backgroundOpacity={0.35}
+              blur={20}
+              displace={2}
+              distortionScale={-140}
+              className="w-full h-full"
+            />
+          </div>
+          <div className="relative z-10 flex items-center justify-between h-14 px-5">
             {/* Brand */}
             <Link
               to="/"
