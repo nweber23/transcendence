@@ -525,12 +525,17 @@
     var(--base);
 }
 
-.galaxy-wrap {
+.grid-field {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+  background-image: radial-gradient(circle, rgba(var(--gold-rgb), 0.6) 1.5px, transparent 1.5px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  opacity: 0.4;
 }
 
 /* ─── HERO VISUAL (looping cards/chips) ─── */
