@@ -167,7 +167,9 @@ TEST_CASE("Multiple rounds via reset produce valid games", "[blackjack][game]") 
     Game g(1);
     for (int i = 0; i < 5; ++i) {
         g.deal(100);
-        g.stand();
+        if (g.phase() == Phase::PlayerTurn) {
+            g.stand();
+        }
         REQUIRE(g.outcome().has_value());
         g.reset();
         REQUIRE(g.phase() == Phase::Betting);
