@@ -52,8 +52,7 @@ const Account: React.FC = () => {
       setWithdrawLoading(false);
     }
   };
-
-  if (isLoading) {
+  if (isLoading && !account) {
     return (
       <div className="min-h-screen bg-[var(--base)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -63,8 +62,7 @@ const Account: React.FC = () => {
       </div>
     );
   }
-
-  if (error) {
+  if (error && !account) {
     return (
       <div className="min-h-screen bg-[var(--base)] flex items-center justify-center px-8">
         <div className="max-w-sm w-full bg-[var(--surface)] border border-red-500/20 rounded-2xl p-8 text-center">
