@@ -1,0 +1,16 @@
+# Production overlay: removes the host port mapping on Grafana so the
+# monitoring stack has zero externally reachable ports.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# To view dashboards in production, use an SSH tunnel instead of a public
+# port, e.g.:
+#   ssh -L 3000:localhost:3000 user@server
+# then open http://localhost:3000 locally. Or front Grafana with the
+# frontend/nginx reverse proxy under an authenticated path if you want it
+# reachable without a tunnel.
+
+services:
+  grafana:
+    ports: []
