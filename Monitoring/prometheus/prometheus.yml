@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Backend Go service - exposes /metrics via prometheus/client_golang
+  - job_name: 'transcendence-backend'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['backend:8080']
+        labels:
+          service: 'backend'
+
+  # Prometheus scraping itself (useful for confirming the server is alive)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
