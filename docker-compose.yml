@@ -32,6 +32,9 @@ services:
       - "8080:8080"
     networks:
       - transcendence-network
+      # also on the monitoring network so Prometheus can scrape /metrics
+      # without the backend's app-network exposure being affected
+      - monitoring-network
 
   frontend:
     build:
@@ -46,9 +49,53 @@ services:
     networks:
       - transcendence-network
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: transcendence-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    # No ports: mapping -> not reachable from the host or internet, only
+    # from other containers on monitoring-network (i.e. Grafana).
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: transcendence-grafana
+    depends_on:
+      - prometheus
+    env_file: ./.env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      # Dev-only: lets you open http://localhost:3000 to view dashboards.
+      # docker-compose.prod.yml removes this mapping entirely for defense/
+      # production so no monitoring port is exposed publicly.
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   transcendence-network:
     driver: bridge
+  monitoring-network:
+    driver: bridge
+    internal: true
