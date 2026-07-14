@@ -88,14 +88,32 @@ services:
     networks:
       - monitoring-network
 
+  caddy:
+    image: caddy:2.11.4-alpine
+    container_name: transcendence-caddy
+    ports:
+      - "3333:80"
+      - "3334:81"
+    volumes:
+      - ./caddy/conf:/etc/caddy
+      - ./caddy/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - transcendence-network
+
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   transcendence-network:
     driver: bridge
   monitoring-network:
     driver: bridge
-    internal: true
+    #internal: true

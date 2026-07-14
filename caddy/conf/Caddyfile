@@ -1,0 +1,28 @@
+{
+	# Bind admin API to all interfaces so Prometheus (another container) can reach it
+	admin 0.0.0.0:2019
+
+	# Enables the /metrics endpoint on the admin API (localhost:2019/metrics)
+	servers {
+		metrics
+	}
+}
+
+:80 {
+	reverse_proxy frontend:5173
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# srv1 — backend API
+:81 {
+	reverse_proxy backend:8080
+
+	log {
+		output stdout
+		format json
+	}
+}
