@@ -36,11 +36,12 @@ func (wsHandler *WebSocketHandler) UpgradeConnection(c *gin.Context) {
 	topicStrings := strings.Split(topicListString, ",")
 	topics := make([]ws.Topic, len(topicStrings))
 	for topicIndex, topicString := range topicStrings {
-		topics[topicIndex] = ws.TopicMap[topicString]
-		if topics[topicIndex] == ws.TopicGeneric && topicString != "generic" {
-			utils.RespondError(c, http.StatusBadRequest, "invalid_topics", "Unknown topic: " + topicString)
+		topic, err := ws.TopicFromString(topicString)
+		if err != nil {
+			utils.RespondError(c, http.StatusBadRequest, "invalid_topics", err.Error())
 			return
 		}
+		topics[topicIndex] = topic
 	}
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,

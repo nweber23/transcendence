@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getAvatarSrc } from '@/components/ui/Avatar';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -7,6 +8,8 @@ export interface ToastMessage {
   message: string;
   type: ToastType;
   duration?: number;
+  head?: string;
+  imageUrl?: string;
 }
 
 interface ToastProps extends ToastMessage {
@@ -18,6 +21,8 @@ const Toast: React.FC<ToastProps> = ({
   message,
   type,
   duration = 4000,
+  head,
+  imageUrl,
   onClose,
 }) => {
   const [isExiting, setIsExiting] = useState(false);
@@ -69,10 +74,22 @@ const Toast: React.FC<ToastProps> = ({
       role="alert"
       aria-live="polite"
     >
-      <span className="text-lg font-bold flex-shrink-0 w-5 h-5 flex items-center justify-center">
-        {icons[type]}
-      </span>
-      <p className="text-sm font-medium">{message}</p>
+      {imageUrl ? (
+        <img
+          src={getAvatarSrc(imageUrl)}
+          alt=""
+          className="w-9 h-9 rounded-full object-cover border border-[rgba(10,14,18,0.3)] flex-shrink-0"
+          draggable={false}
+        />
+      ) : (
+        <span className="text-lg font-bold flex-shrink-0 w-5 h-5 flex items-center justify-center">
+          {icons[type]}
+        </span>
+      )}
+      <div className="min-w-0">
+        {head && <p className="text-sm font-bold leading-tight">{head}</p>}
+        <p className="text-sm font-medium">{message}</p>
+      </div>
     </div>
   );
 };

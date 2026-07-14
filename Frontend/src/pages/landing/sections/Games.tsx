@@ -1,105 +1,109 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
 
-interface GameCardData {
+interface GameRowData {
   id: string;
   name: string;
+  tagline: string;
   description: string;
   icon: React.ComponentType<{ width?: number; height?: number; className?: string }>;
-  badge: {
-    text: string;
-    type: 'live' | 'ai' | 'new';
-  };
+  video?: string;
   visual: string;
   glow: string;
   path: string;
 }
 
-const GAMES: GameCardData[] = [
+const GAMES: GameRowData[] = [
   {
     id: 'blackjack',
     name: 'Blackjack',
-    description: 'Classic 21 against the dealer. Go solo, train with AI, or take a seat at a live multiplayer table.',
+    tagline: 'Beat the dealer, not the house edge.',
+    description: 'Practice solo or take a seat at a live table. Same rules, no pressure.',
     icon: BlackjackIcon,
-    badge: { text: 'Live', type: 'live' },
+    video: '/blackjack.mp4',
     visual: 'bg-[#091a12]',
     glow: 'rgba(45,122,99,0.18)',
     path: '/games/blackjack',
   },
   {
     id: 'poker',
-    name: 'Texas Hold\'em',
-    description: 'Full-table poker with adaptive AI opponents and real-time remote multiplayer across sessions.',
+    name: "Hold'em",
+    tagline: 'Read the table, not just your cards.',
+    description: 'Full ring games, real opponents, whenever you want in.',
     icon: PokerIcon,
-    badge: { text: 'AI', type: 'ai' },
+    video: '/poker.mp4',
     visual: 'bg-[#08131e]',
     glow: 'rgba(212,175,55,0.14)',
     path: '/games/poker',
   },
   {
     id: 'slots',
-    name: 'Slot Machines',
-    description: 'Multiple machines with unique paylines and bonus rounds. Spin solo or watch the leaderboard live.',
+    name: 'Slots',
+    tagline: 'Some machines just feel lucky.',
+    description: 'Spin solo, or watch the leaderboard shift while you play.',
     icon: SlotsIcon,
-    badge: { text: 'New', type: 'new' },
+    video: '/slots.mp4',
     visual: 'bg-[#140910]',
     glow: 'rgba(139,38,53,0.18)',
     path: '/games/slots',
   },
 ];
 
-const badgeStyles = {
-  live: 'bg-[rgba(45,122,99,0.24)] text-[#5CCBA9] border border-[rgba(45,122,99,0.48)]',
-  ai: 'bg-[rgba(212,175,55,0.2)] text-[var(--gold)] border border-[rgba(212,175,55,0.36)]',
-  new: 'bg-[rgba(139,38,53,0.26)] text-[#E07A8A] border border-[rgba(139,38,53,0.48)]',
-};
-
-const GameCard: React.FC<GameCardData> = ({ name, description, icon: Icon, badge, visual, glow, path }) => {
+const GameRow: React.FC<GameRowData & { flip: boolean }> = ({
+  name,
+  tagline,
+  description,
+  icon: Icon,
+  video,
+  visual,
+  glow,
+  path,
+  flip,
+}) => {
   return (
-    <Link to={path}>
-      <Card hoverable tabIndex={0} aria-label={`${name} — Play Now`} className="h-full flex flex-col">
-        {/* Visual area */}
-        <div className={`h-52 flex items-center justify-center relative overflow-hidden ${visual} flex-shrink-0`}>
-          {/* Atmospheric glow behind icon */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse 60% 70% at 50% 55%, ${glow} 0%, transparent 70%)`,
-            }}
+    <div
+      className={`flex flex-col md:flex-row ${flip ? 'md:flex-row-reverse' : ''} items-stretch gap-8 md:gap-10 border-b border-[rgba(212,175,55,0.08)] py-14 last:border-b-0`}
+    >
+      <div className={`flex-1 flex items-center justify-center relative overflow-hidden rounded-2xl ${visual} min-h-[220px]`}>
+        {video ? (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={video}
+            autoPlay
+            loop
+            muted
+            playsInline
             aria-hidden="true"
           />
-          {/* Subtle bottom gradient fade into card body */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none"
-            style={{ background: 'linear-gradient(to bottom, transparent, var(--surface))' }}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 card-icon">
-            <Icon width={150} height={120} />
-          </div>
-        </div>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse 60% 70% at 50% 55%, ${glow} 0%, transparent 70%)` }}
+              aria-hidden="true"
+            />
+            <div className="relative z-10 card-icon">
+              <Icon width={150} height={120} />
+            </div>
+          </>
+        )}
+      </div>
 
-        {/* Body */}
-        <div className="p-6 flex flex-col flex-1">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.09em] px-2.5 py-1 rounded-full mb-4 self-start ${badgeStyles[badge.type]}`}>
-            {badge.type === 'live' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-            )}
-            {badge.text}
-          </span>
-
-          <h3 className="font-serif text-2xl font-semibold leading-tight mb-2">{name}</h3>
-          <p className="text-base leading-relaxed mb-6 flex-1" style={{ color: 'var(--text-2)' }}>{description}</p>
-
-          <Button variant="ghost" size="sm" className="mt-auto self-start">
+      <div className="flex-1 flex flex-col justify-center">
+        <h3 className="font-serif text-3xl font-semibold leading-tight mb-2">{name}</h3>
+        <p className="text-lg text-[var(--gold)] font-medium mb-3">{tagline}</p>
+        <p className="text-base leading-relaxed mb-6" style={{ color: 'var(--text-2)' }}>
+          {description}
+        </p>
+        <Link to={path} className="self-start">
+          <Button variant="ghost" size="sm" className="self-start">
             Play Now
           </Button>
-        </div>
-      </Card>
-    </Link>
+        </Link>
+      </div>
+    </div>
   );
 };
 
@@ -126,38 +130,18 @@ const Games: React.FC = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} id="games" className="py-24 px-8" aria-labelledby="games-heading">
+    <section ref={sectionRef} id="games" className="py-16 px-8" aria-labelledby="games-heading">
       <div className="max-w-5xl mx-auto">
-        {/* Section header */}
-        <div className="text-center mb-14">
-          <p
-            className={`eyebrow mb-3.5 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-          >
-            Featured Games
-          </p>
-          <h2
-            id="games-heading"
-            className={`font-serif text-4xl md:text-5xl font-semibold leading-tight mb-3.5 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-            style={{ transitionDelay: '80ms' }}
-          >
-            Choose Your Game
-          </h2>
-          <p
-            className={`text-base text-[var(--text-2)] max-w-sm mx-auto leading-relaxed transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-              hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-            style={{ transitionDelay: '160ms' }}
-          >
-            Three classic casino experiences, each with its own depth.
-          </p>
-        </div>
+        <h2
+          id="games-heading"
+          className={`font-serif text-2xl md:text-3xl font-semibold mb-4 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          Three tables. Pick one.
+        </h2>
 
-        {/* Games grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="list">
+        <div role="list">
           {GAMES.map((game, index) => (
             <div
               key={game.id}
@@ -165,9 +149,9 @@ const Games: React.FC = () => {
               className={`transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 hasEntered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               }`}
-              style={{ transitionDelay: `${280 + index * 100}ms` }}
+              style={{ transitionDelay: `${index * 100}ms` }}
             >
-              <GameCard {...game} />
+              <GameRow {...game} flip={index % 2 === 1} />
             </div>
           ))}
         </div>

@@ -109,14 +109,18 @@ func (s *AccountService) Withdraw_f(userID uint, amount float64) error {
 	return s.Withdraw(userID, decimal.NewFromFloat(amount))
 }
 
-// GetTransactionHistory retrieves users transaction history
-func (s *AccountService) GetTransactionHistory(userID uint, limit, offset int) ([]models.Transaction, error) {
+// GetTransactionHistory retrieves users transaction history, optionally filtered by transaction type
+func (s *AccountService) GetTransactionHistory(userID uint, limit, offset int, types []string) ([]models.Transaction, error) {
 	var transactions []models.Transaction
 	account, err := s.GetAccount(userID)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.db.Where("account_id = ?", account.ID).Order("created_at DESC").Offset(offset).Limit(limit).Find(&transactions).Error; err != nil {
+	query := s.db.Where("account_id = ?", account.ID)
+	if len(types) > 0 {
+		query = query.Where("type IN ?", types)
+	}
+	if err := query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&transactions).Error; err != nil {
 		return nil, fmt.Errorf("failed to find transactions: %w", err)
 	}
 	return transactions, nil

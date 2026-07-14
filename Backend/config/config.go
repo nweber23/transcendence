@@ -12,6 +12,7 @@ type Config struct {
 	DatabaseUser     string
 	DatabasePassword string
 	DatabaseName     string
+	Port             string
 	JWTSecret        string
 	JWTExpiration    int64
 	EngineHost       string
@@ -26,6 +27,7 @@ func LoadConfig() *Config {
 		DatabaseUser:     getEnv("DATABASE_USER", "admin"),
 		DatabasePassword: getEnv("DATABASE_PASSWORD", "admin123"),
 		DatabaseName:     getEnv("DATABASE_NAME", "postgres"),
+		Port:             getEnv("PORT", "8080"),
 		JWTSecret:        getEnv("JWT_SECRET", "secret"),
 		JWTExpiration:    getEnvInt("JWT_EXPIRATION", 86400),
 		EngineHost:       getEnv("ENGINE_HOST", "engine"),

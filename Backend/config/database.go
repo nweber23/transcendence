@@ -20,6 +20,7 @@ func PrepareDB(db *gorm.DB) (error) {
 		&models.SlotsGame{},
 		&models.GameStatistics{},
 		&models.Friendship{},
+		&models.Notification{},
 	)
 }
 

@@ -220,16 +220,16 @@ describe('useAccount - getTransactions', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('passes limit and offset to the API', async () => {
+  it('passes the category filter to the API', async () => {
     mockApiCall.mockResolvedValueOnce({ transactions: [] });
 
     const { result } = renderHook(() => useAccount(false));
 
     await act(async () => {
-      await result.current.getTransactions(10, 5);
+      await result.current.getTransactions('wallet');
     });
 
-    expect(mockApiCall).toHaveBeenCalledWith('GET', '/user/account/transactions?limit=10&offset=5');
+    expect(mockApiCall).toHaveBeenCalledWith('GET', '/user/account/transactions?limit=20&offset=0&category=wallet');
   });
 
   it('sets error when getTransactions fails', async () => {

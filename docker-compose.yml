@@ -19,6 +19,19 @@ services:
     networks:
       - transcendence-network
 
+  engine:
+    build:
+      context: ./Engine
+      dockerfile: Dockerfile
+    container_name: transcendence-engine
+    env_file: .env
+    environment:
+      ENGINE_PORT: ${ENGINE_PORT}
+    ports:
+      - "${ENGINE_PORT}:9090"
+    networks:
+      - transcendence-network
+
   backend:
     build:
       context: ./Backend
@@ -27,9 +40,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      engine:
+        condition: service_started
     env_file: ./.env
     ports:
       - "8080:8080"
+    volumes:
+      - backend_uploads:/root/uploads
     networks:
       - transcendence-network
       # also on the monitoring network so Prometheus can scrape /metrics
@@ -110,6 +127,7 @@ volumes:
   grafana_data:
   caddy_data:
   caddy_config:
+  backend_uploads:
 
 networks:
   transcendence-network:
