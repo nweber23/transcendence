@@ -410,7 +410,14 @@ func (uh *UserHandler) GetTransactionHistory(c *gin.Context) {
 			offset = parsed
 		}
 	}
-	transactions, err := uh.accountService.GetTransactionHistory(userID.(uint), limit, offset)
+	var types []string
+	switch c.Query("category") {
+	case "wallet":
+		types = []string{models.TransactionTypeDeposit, models.TransactionTypeWithdraw}
+	case "game":
+		types = []string{models.TransactionTypeBet, models.TransactionTypeWin, models.TransactionTypeCashout, models.TransactionTypeRefund}
+	}
+	transactions, err := uh.accountService.GetTransactionHistory(userID.(uint), limit, offset, types)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
