@@ -11,6 +11,9 @@ import Spinner from '@/components/ui/Spinner';
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
 
+const CREDIT_TRANSACTION_TYPES = new Set(['deposit', 'win', 'cashout', 'refund']);
+const isCreditTransaction = (type: string) => CREDIT_TRANSACTION_TYPES.has(type);
+
 const Account: React.FC = () => {
   const { user } = useAuth();
   const { account, transactions, isLoading, error, deposit, withdraw } = useAccount();
@@ -274,10 +277,10 @@ const Account: React.FC = () => {
                       <div className="flex items-center justify-between pb-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            tx.type === 'deposit' ? 'bg-emerald-400/10' : 'bg-red-400/10'
+                            isCreditTransaction(tx.type) ? 'bg-emerald-400/10' : 'bg-red-400/10'
                           }`}>
-                            <svg className={`w-3.5 h-3.5 ${tx.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              {tx.type === 'deposit'
+                            <svg className={`w-3.5 h-3.5 ${isCreditTransaction(tx.type) ? 'text-emerald-400' : 'text-red-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              {isCreditTransaction(tx.type)
                                 ? <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                                 : <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
                               }
@@ -292,8 +295,8 @@ const Account: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        <span className={`font-serif text-lg font-bold ${tx.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {tx.type === 'deposit' ? '+' : '−'}${tx.amount}
+                        <span className={`font-serif text-lg font-bold ${isCreditTransaction(tx.type) ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {isCreditTransaction(tx.type) ? '+' : '−'}${tx.amount}
                         </span>
                       </div>
 
