@@ -23,6 +23,7 @@ WORKDIR /workspace
 
 # Copy project and build. Adjust CMake usage as needed for your project layout.
 COPY . /workspace
+
 RUN mkdir -p build && cd build \
  && cmake -DCMAKE_BUILD_TYPE=Release .. \
  && cmake --build . -- -j$(nproc)

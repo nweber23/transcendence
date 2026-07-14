@@ -24,10 +24,14 @@ down:
 	docker compose down
 
 rebuild:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose down
 	docker compose up -d --build
 
 build:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose build
 
 logs:

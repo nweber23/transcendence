@@ -42,3 +42,8 @@ _*
 
 # Incase of local test builds
 Backend/backend
+Backend/grpc
+
+# Copied protobufs
+*/*.proto
+*/proto
