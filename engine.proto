@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package engine;
-option go_package = "transcendence/grpc";
+option go_package = "transcendence/engine_proto";
 
 service GameEngine {
   rpc BlackjackAction(BlackjackRequest) returns (GameResponse);
