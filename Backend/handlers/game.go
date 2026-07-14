@@ -14,14 +14,14 @@ import (
 type GameHandler struct {
 	gameService    *services.GameService
 	accountService *services.AccountService
-	engineClient   *services.EngineClient
+	engineService  *services.EngineService
 }
 
-func NewGameHandler(gameService *services.GameService, accountService *services.AccountService, engineClient *services.EngineClient) *GameHandler {
+func NewGameHandler(gameService *services.GameService, accountService *services.AccountService, engineService *services.EngineService) *GameHandler {
 	return &GameHandler{
 		gameService:    gameService,
 		accountService: accountService,
-		engineClient:   engineClient,
+		engineService:  engineService,
 	}
 }
 
