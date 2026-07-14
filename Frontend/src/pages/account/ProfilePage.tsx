@@ -108,7 +108,7 @@ const NotificationTypeToggle: React.FC<{
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, notificationTypes, error, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
+  const { user, notificationTypes, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
   const { refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -271,10 +271,6 @@ const ProfilePage: React.FC = () => {
               Your <span className="text-[var(--gold)] italic">Profile</span>
             </h1>
           </div>
-
-          {error && (
-            <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">{error}</div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8">
             <div className="flex flex-col items-center gap-3">
