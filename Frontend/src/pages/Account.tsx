@@ -4,8 +4,7 @@ import { createWebSocket } from '@/utils/ws';
 
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useAccount } from '@/hooks/useAccount';
-import Button from '@/components/ui/Button';
+import { useAccount, TransactionCategory } from '@/hooks/useAccount';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
 
@@ -14,17 +13,63 @@ const MAX_TRANSACTION_AMOUNT = 1_000_000;
 const CREDIT_TRANSACTION_TYPES = new Set(['deposit', 'win', 'cashout', 'refund']);
 const isCreditTransaction = (type: string) => CREDIT_TRANSACTION_TYPES.has(type);
 
+const CATEGORY_FILTERS: { label: string; value: TransactionCategory }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Wallet', value: 'wallet' },
+  { label: 'Game', value: 'game' },
+];
+
 const Account: React.FC = () => {
   const { user } = useAuth();
-  const { account, transactions, isLoading, error, deposit, withdraw } = useAccount();
+  const {
+    account,
+    transactions,
+    hasMoreTransactions,
+    isLoading,
+    isLoadingMoreTransactions,
+    error,
+    deposit,
+    withdraw,
+    getTransactions,
+    loadMoreTransactions,
+  } = useAccount();
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [operationError, setOperationError] = useState<string | null>(null);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState<TransactionCategory>('all');
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const depositExceedsLimit = Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+
+  const handleCategoryChange = (nextCategory: TransactionCategory) => {
+    if (nextCategory === activeCategory) return;
+    setActiveCategory(nextCategory);
+    getTransactions(nextCategory).catch(() => {
+      // Error is already surfaced via the `error` state
+    });
+  };
+
+  // Infinite scroll: fetch the next page once the sentinel below the list scrolls into view
+  useEffect(() => {
+    if (!hasMoreTransactions) return;
+    const node = loadMoreSentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMoreTransactions) {
+          loadMoreTransactions().catch(() => {
+            // Error is already surfaced via the `error` state
+          });
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreTransactions, isLoadingMoreTransactions, loadMoreTransactions]);
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,6 +295,23 @@ const Account: React.FC = () => {
               )}
             </div>
 
+            <div className="flex gap-2 mb-5">
+              {CATEGORY_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => handleCategoryChange(filter.value)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest border transition-all duration-200 ${
+                    activeCategory === filter.value
+                      ? 'border-[rgba(212,175,55,0.6)] bg-[var(--surface-2)] text-[var(--text)]'
+                      : 'border-[rgba(212,175,55,0.08)] text-[var(--text-3)] hover:border-[rgba(212,175,55,0.3)] hover:text-[var(--text-2)]'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
             {transactions.length === 0 ? (
               <div className="rounded-2xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)] p-10 text-center">
                 <p className="font-medium text-[var(--text-2)] mb-1">No transactions yet</p>
@@ -321,6 +383,11 @@ const Account: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {hasMoreTransactions && (
+                  <div ref={loadMoreSentinelRef} className="pt-4 flex justify-center h-10 items-center">
+                    {isLoadingMoreTransactions && <Spinner size="sm" />}
+                  </div>
+                )}
               </div>
             )}
           </div>
