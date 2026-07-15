@@ -83,6 +83,76 @@
         "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
         "overrides": []
       }
+    },
+    {
+      "id": 5,
+      "title": "Account Creations & Logins (rate/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "60 * rate(accounts_created_total[5m])",
+          "legendFormat": "accounts created",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * sum(rate(logins_total{result=\"success\"}[5m]))",
+          "legendFormat": "successful logins",
+          "refId": "B"
+        },
+        {
+          "expr": "60 * sum(rate(logins_total{result=\"failure\"}[5m]))",
+          "legendFormat": "failed logins",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Deposits vs Withdrawals ($/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "60 * rate(deposit_amount_total[5m])",
+          "legendFormat": "deposited",
+          "refId": "A"
+        },
+        {
+          "expr": "60 * rate(withdrawal_amount_total[5m])",
+          "legendFormat": "withdrawn",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Totals (all time)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "accounts_created_total", "legendFormat": "Accounts Created", "refId": "A" },
+        { "expr": "sum(logins_total{result=\"success\"})", "legendFormat": "Total Logins", "refId": "B" },
+        { "expr": "deposits_total", "legendFormat": "Deposits Count", "refId": "C" },
+        { "expr": "deposit_amount_total", "legendFormat": "Total Deposited ($)", "refId": "D" },
+        { "expr": "withdrawals_total", "legendFormat": "Withdrawals Count", "refId": "E" },
+        { "expr": "withdrawal_amount_total", "legendFormat": "Total Withdrawn ($)", "refId": "F" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      }
     }
   ]
 }
