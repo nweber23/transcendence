@@ -23,7 +23,7 @@ func main() {
 	router := gin.Default()
 
 	// CORS middleware
-	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
 
 	// Serve uploaded avatar files publicly (no auth required for <img> tags)
 	router.Static("/uploads", "./uploads")
