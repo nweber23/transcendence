@@ -123,6 +123,21 @@ services:
       - monitoring-network
       - transcendence-network
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    command:
+    - --port=1337
+    volumes:
+      - /run/user/${UID}/docker.sock:/var/run/docker.sock:ro   # UID anpassen!
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - monitoring-network
+
 volumes:
   postgres_data:
   prometheus_data:
