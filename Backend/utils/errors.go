@@ -18,6 +18,7 @@ var (
 	ErrInvalidFriendshipStatus = errors.New("invalid friendship status")
 	ErrInvalidNotificationType = errors.New("invalid notification type")
 	ErrInvalidTopicString      = errors.New("invalid topic string")
+	ErrInvalidPlayAction       = errors.New("invalid play action")
 
 	ErrRandomStringGenFailed   = errors.New("failed to generate random string")
 	ErrAmountNotPositive       = errors.New("amount must be greater than zero")
@@ -41,5 +42,6 @@ func IsErrInvalid(err error) (bool) {
 		   errors.Is(err, ErrInvalidToken)            ||
 		   errors.Is(err, ErrInvalidFriendshipStatus) ||
 		   errors.Is(err, ErrInvalidNotificationType) ||
-		   errors.Is(err, ErrInvalidTopicString)
+		   errors.Is(err, ErrInvalidTopicString)      ||
+		   errors.Is(err, ErrInvalidPlayAction)
 }
