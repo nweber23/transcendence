@@ -57,6 +57,8 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     container_name: frontend
     ports:
       - "5173:5173"

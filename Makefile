@@ -1,4 +1,4 @@
-.PHONY: help up down logs logs-frontend logs-backend build rebuild clean ps frontend-shell backend-shell db-shell dev-up dev-down test retest
+.PHONY: help up down logs logs-frontend logs-backend build rebuild clean ps frontend-shell backend-shell db-shell dev-up dev-down test retest prod-up prod-down prod-rebuild prod-logs
 
 help:
 	@echo "Transcendence Docker Commands"
@@ -15,6 +15,10 @@ help:
 	@echo "make frontend-shell - Opens frontend container shell"
 	@echo "make backend-shell  - Opens backend container shell"
 	@echo "make db-shell       - Opens database shell"
+	@echo "make prod-up        - Start production stack (transcendence.nweber.me)"
+	@echo "make prod-down      - Stop production stack"
+	@echo "make prod-rebuild   - Rebuild images and start production stack"
+	@echo "make prod-logs      - View logs from production stack"
 	@echo "make help           - Show this help message"
 
 up:
@@ -64,3 +68,21 @@ test:
 	docker exec transcendence-backend /app/test.sh
 
 retest: rebuild test
+
+# nginx on the VPS host terminates public TLS and forwards to caddy's
+# loopback ports; caddy stays in the stack behind it for access logs and
+# the Prometheus metrics Grafana's dashboards use.
+PROD_SERVICES := postgres engine backend frontend prometheus grafana caddy
+
+prod-up:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
+
+prod-down:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+prod-rebuild:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
+
+prod-logs:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f

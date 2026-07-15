@@ -1,16 +1,54 @@
-# Production overlay: removes the host port mapping on Grafana so the
-# monitoring stack has zero externally reachable ports.
+# Production overlay for transcendence.nweber.me.
+#
+# TLS termination on the public internet is handled by nginx running
+# directly on the VPS host (outside Docker) with its own Let's Encrypt
+# certs. Caddy stays in the loop behind it, purely for JSON access logging
+# and the Prometheus metrics Grafana's dashboards are built on — it is not
+# reachable from the internet and does not manage certs for the public
+# domains.
+#
+# Request path:
+#   https://transcendence.nweber.me      -> nginx(host) -> 127.0.0.1:5000 -> caddy -> frontend:5173
+#   https://api.transcendence.nweber.me  -> nginx(host) -> 127.0.0.1:5001 -> caddy -> backend:8080
+#
+# caddy/conf/Caddyfile (shared with dev) already reverse-proxies :80/:81 to
+# frontend/backend with JSON stdout logs and a Prometheus metrics endpoint
+# on the admin API — only the published host ports change here, from the
+# dev-only 3333/3334 to loopback-only 5000/5001 for nginx to reach.
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   cp .env.prod.example .env.prod   # fill in real secrets/domain values
+#   make prod-up
 #
-# To view dashboards in production, use an SSH tunnel instead of a public
-# port, e.g.:
+# To view Grafana dashboards in production, use an SSH tunnel instead of a
+# public port, e.g.:
 #   ssh -L 3000:localhost:3000 user@server
-# then open http://localhost:3000 locally. Or front Grafana with the
-# frontend/nginx reverse proxy under an authenticated path if you want it
-# reachable without a tunnel.
+# then open http://localhost:3000 locally.
 
+# Note: Compose merges list-valued fields (ports, volumes, ...) across
+# -f files by concatenation, not replacement. The `!reset`/`!override` tags
+# below are required to actually drop/replace the base file's entries
+# instead of silently keeping them alongside the new ones.
 services:
+  postgres:
+    ports: !reset []
+
+  engine:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+
+  frontend:
+    build:
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    ports: !reset []
+
   grafana:
-    ports: []
+    ports: !reset []
+
+  caddy:
+    ports: !override
+      - "127.0.0.1:5000:80"
+      - "127.0.0.1:5001:81"
