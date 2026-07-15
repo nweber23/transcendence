@@ -56,9 +56,24 @@ type PacketNotification struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type PacketJoinLeave struct {
+	GameID uint `json:"game_id"`
+	UserID uint `json:"user_id"`
+}
+
+type PacketPlay struct {
+	GameID uint   `json:"game_id"`
+	UserID uint   `json:"user_id"`
+	Action string `json:"action"`
+	Amount int64  `json:"amount"`
+}
+
 const (
 	PacketTypeOnline       = "online"
 	PacketTypeNotification = "notification"
+	PacketTypeJoin         = "join"
+	PacketTypeLeave        = "leave"
+	PacketTypePlay         = "play"
 )
 
 type packet struct {

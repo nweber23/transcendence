@@ -64,7 +64,7 @@ func (engineService *EngineService) CreateBlackjackGame(bet int64) (*BlackjackEn
 	request := engine_proto.BlackjackRequest{
 		GameId: gameIDCounter,
 		Action: "create",
-		Bet:    int64,
+		Bet:    bet,
 	}
 	response, err := engineService.client.BlackjackAction(context.Background(), &request)
 	if err != nil {
@@ -91,7 +91,7 @@ func (game *BlackjackEngineGame) Play(playAction string) (error) {
 		return err
 	}
 	var state BlackjackEngineGameState
-	err = json.Unmarshal([]bye(response.GameStateJson), &state)
+	err = json.Unmarshal([]byte(response.GameStateJson), &state)
 	if err != nil {
 		return err
 	}
