@@ -14,6 +14,8 @@ var (
 	gameIDCounter uint64 = 0
 )
 
+// MARK: EngineService
+
 type EngineService struct {
 	connection *grpc.ClientConn
 	client     engine_proto.GameEngineClient
@@ -39,17 +41,65 @@ func (engineService *EngineService) Remove() {
 	engineService.connection.Close()
 }
 
+// MARK: Blackjack
+
+// Taken from engine.hpp file for Blackjack
+type BlackjackEngineGameState struct {
+	Bet         int64
+	Phase       string
+	Outcome     string
+	PlayerValue int8
+	DealerValue int8
+	PlayerCards []string
+	DealerCards []string
+}
+
+type BlackjackEngineGame struct {
+	service *EngineService
+	ID      uint64
+	state   BlackjackEngineGameState
+}
+
+func (engineService *EngineService) CreateBlackjackGame(bet int64) (*BlackjackEngineGame, error) {
+	request := engine_proto.BlackjackRequest{
+		GameId: gameIDCounter,
+		Action: "create",
+		Bet:    int64,
+	}
+	response, err := engineService.client.BlackjackAction(context.Background(), &request)
+	if err != nil {
+		return nil, err
+	}
+	var game BlackjackEngineGame
+	game.service = engineService
+	game.ID      = gameIDCounter
+	err = json.Unmarshal([]byte(response.GameStateJson), &game.state)
+	if err != nil {
+		return nil, err
+	}
+	gameIDCounter++
+	return &game, nil
+}
+
+func (game *BlackjackEngineGame) Play(playAction string) (error) {
+	request := engine_proto.BlackjackRequest{
+		GameId: game.ID,
+		Action: playAction,
+	}
+	response, err := game.service.client.BlackjackAction(context.Background(), &request)
+	if err != nil {
+		return err
+	}
+	var state BlackjackEngineGameState
+	err = json.Unmarshal([]bye(response.GameStateJson), &state)
+	if err != nil {
+		return err
+	}
+	game.state = state
+	return nil
+}
+
 // MARK: Texas hold'em
-
-type TexasPlayAction string
-
-const (
-	TexasPlayActionFold  = TexasPlayAction("fold")
-	TexasPlayActionCheck = TexasPlayAction("check")
-	TexasPlayActionCall  = TexasPlayAction("call")
-	TexasPlayActionRaise = TexasPlayAction("raise")
-	TexasPlayActionAllIn = TexasPlayAction("all_in")
-)
 
 // Taken from engine.hpp file for Texas Hold'em
 type TexasEnginePlayerState struct {
@@ -78,7 +128,6 @@ type TexasEngineGame struct {
 	ID      uint64
 	state   TexasEngineGameState
 }
-
 
 func (engineService *EngineService) CreateTexasGame(numPlayers uint32, amount int64) (*TexasEngineGame, error) {
 	request := engine_proto.TexasRequest{
@@ -150,3 +199,5 @@ func (game *TexasEngineGame) Play(playerID uint64, playAction string, amount int
 	game.state = state
 	return nil
 }
+
+// TODO: Inquire about relevance of game ids in slots
