@@ -22,7 +22,7 @@ help:
 	@echo "make help           - Show this help message"
 
 up:
-	docker compose up -d
+	UID=$$(id -u) docker compose up -d
 
 down:
 	docker compose down
@@ -59,7 +59,7 @@ db-shell:
 	@. ./.env && docker compose exec postgres psql -U $$DATABASE_USER -d $$DATABASE_NAME
 
 dev-up:
-	docker compose up
+	UID=$$(id -u) docker compose up
 
 dev-down:
 	docker compose down
