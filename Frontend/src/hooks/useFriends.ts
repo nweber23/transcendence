@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiCall } from '@/utils/api';
 import { subscribeToWebSocket, WsPacket } from '@/utils/wsClient';
+import { getAuthToken } from '@/utils/authStorage';
 
 export interface Friend {
   friendId: number;
@@ -110,7 +111,7 @@ export function useFriends(): UseFriendsReturn {
   };
 
   useEffect(() => {
-    if (localStorage.getItem('auth_token')) {
+    if (getAuthToken()) {
       fetchFriends().catch(() => {});
     }
   }, [fetchFriends]);
