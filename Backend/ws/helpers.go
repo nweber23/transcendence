@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"encoding/json"
+	"transcendence/middleware"
 	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
@@ -61,6 +62,7 @@ func (wsState *WebSocketState) AddConnection(userID uint, connection *websocket.
 		Client.topicLists[topic].append(context)
 	}
 	wsState.clientsMutex.Unlock()
+	middleware.ActiveConnections.Inc()
 	go wsState.pumpFromConnection(userID, context.connection)
 	go pumpToConnection(context)
 	fmt.Printf("Connection added for user %d\n", userID)
