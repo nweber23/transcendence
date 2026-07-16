@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiCall } from '@/utils/api';
+import { getAuthToken } from '@/utils/authStorage';
 
 export interface Account {
   id: number;
@@ -135,7 +136,7 @@ export function useAccount(autoFetch = true): UseAccountReturn {
 
   // Auto-fetch on mount if token exists and autoFetch is true
   useEffect(() => {
-    if (autoFetch && localStorage.getItem('auth_token')) {
+    if (autoFetch && getAuthToken()) {
       Promise.all([getAccount(), getTransactions()]).catch(() => {
         // Silently fail auto-fetch on mount
       });
