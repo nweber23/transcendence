@@ -15,6 +15,11 @@ RUN pnpm install
 # Copy source code
 COPY . .
 
+# Baked into the static bundle at build time — Vite only reads
+# import.meta.env.VITE_* at build, not at container runtime.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Build the application
 RUN pnpm run build
 
