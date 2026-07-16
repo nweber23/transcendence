@@ -12,7 +12,7 @@
       "title": "Request Rate (req/s)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total[1m])) by (method)",
@@ -30,7 +30,7 @@
       "title": "Error Rate (5xx %)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "100 * sum(rate(http_requests_total{status=~\"5..\"}[1m])) / sum(rate(http_requests_total[1m]))",
@@ -48,7 +48,7 @@
       "title": "Response Latency p50 / p95",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
@@ -71,7 +71,7 @@
       "title": "Active WebSocket Connections",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "active_connections",
@@ -89,7 +89,7 @@
       "title": "Account Creations & Logins (rate/min)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "60 * rate(accounts_created_total[5m])",
@@ -117,7 +117,7 @@
       "title": "Deposits vs Withdrawals ($/min)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         {
           "expr": "60 * rate(deposit_amount_total[5m])",
@@ -140,7 +140,7 @@
       "title": "Totals (all time)",
       "type": "stat",
       "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
       "targets": [
         { "expr": "accounts_created_total", "legendFormat": "Accounts Created", "refId": "A" },
         { "expr": "sum(logins_total{result=\"success\"})", "legendFormat": "Total Logins", "refId": "B" },
