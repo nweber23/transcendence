@@ -34,10 +34,9 @@ func main() {
 	router.Static("/uploads", "./uploads")
 
 	// Initialize database services
-	userService         := services.NewUserService(db)
-	accountService      := services.NewAccountService(db)
-	friendService       := services.NewFriendService(db)
-	gameService         := services.NewGameService(db)
+	userService := services.NewUserService(db)
+	accountService := services.NewAccountService(db)
+	friendService := services.NewFriendService(db)
 	notificationService := services.NewNotificationService(db)
 
 	// Intialize engine service
@@ -47,17 +46,17 @@ func main() {
 	} else {
 		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
 	}
-	_ = engineService
+	gameService := services.NewGameService(db, engineService)
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
 	go wsState.Main()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
-	gameHandler := handlers.NewGameHandler(gameService, accountService, engineService)
-	wsHandler   := handlers.NewWebSocketHandler(wsState)
+	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")
