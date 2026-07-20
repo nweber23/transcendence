@@ -130,6 +130,11 @@ services:
     privileged: true
     command:
     - --port=1337
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:1337/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     volumes:
       - /run/user/${UID}/docker.sock:/var/run/docker.sock:ro   # UID anpassen!
       - /:/rootfs:ro
