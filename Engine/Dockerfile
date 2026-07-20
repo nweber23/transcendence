@@ -43,6 +43,9 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=build /workspace/build /app
+# Machine::config_directory() resolves slot configs relative to the working
+# directory at runtime — the build dir above doesn't contain them.
+COPY --from=build --chown=app:app /workspace/games/slotMachine/configs /app/games/slotMachine/configs
 
 EXPOSE 9090
 
