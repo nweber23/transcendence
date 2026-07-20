@@ -107,10 +107,35 @@ Game::Game(std::size_t numPlayers, std::int64_t startingStack, std::size_t numDe
     , _currentPlayerIdx(0)
     , _minRaise(0)
     , _lastAction{ActionType::Check, 0}
+    , _playersToAct(0)
 {
     _players.reserve(numPlayers);
     for (std::size_t i = 0; i < numPlayers; ++i) {
         _players.emplace_back(startingStack);
+    }
+}
+
+Game::Game(const std::vector<std::int64_t>& stacks, std::size_t numDecks)
+    : _deck(numDecks)
+    , _phase(Phase::PreFlop)
+    , _dealerIdx(0)
+    , _currentPlayerIdx(0)
+    , _minRaise(0)
+    , _lastAction{ActionType::Check, 0}
+    , _playersToAct(0)
+{
+    _players.reserve(stacks.size());
+    for (auto stack : stacks) {
+        _players.emplace_back(stack);
+    }
+}
+
+void Game::start_new_hand() {
+    _communityCards.clear();
+    _pot.clear();
+    _phase = Phase::PreFlop;
+    for (auto& p : _players) {
+        p.reset_hand();
     }
 }
 
@@ -181,7 +206,42 @@ void Game::advance_phase() {
     }
 }
 
+std::size_t Game::active_player_count() const noexcept {
+    std::size_t count = 0;
+    for (const auto& p : _players) {
+        if (!p.is_folded()) ++count;
+    }
+    return count;
+}
+
+std::size_t Game::eligible_player_count() const noexcept {
+    std::size_t count = 0;
+    for (const auto& p : _players) {
+        if (!p.is_folded() && !p.is_all_in()) ++count;
+    }
+    return count;
+}
+
+void Game::advance_to_next_actor() {
+    std::size_t n = _players.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        _currentPlayerIdx = (_currentPlayerIdx + 1) % n;
+        if (!_players[_currentPlayerIdx].is_folded() && !_players[_currentPlayerIdx].is_all_in())
+            return;
+    }
+}
+
+void Game::start_betting_round() {
+    _playersToAct = eligible_player_count();
+    _currentPlayerIdx = _dealerIdx;
+    advance_to_next_actor();
+}
+
 void Game::post_blinds(std::int64_t small, std::int64_t big) {
+    if (_phase == Phase::Showdown) {
+        start_new_hand();
+    }
+
     std::size_t n = _players.size();
     _dealerIdx = (_dealerIdx + 1) % n;
     std::size_t sbIdx = (_dealerIdx + 1) % n;
@@ -195,10 +255,15 @@ void Game::post_blinds(std::int64_t small, std::int64_t big) {
     _currentPlayerIdx = (_dealerIdx + 3) % n;
     _minRaise = big;
     _lastAction = {ActionType::Raise, big};
+
+    deal_hole_cards();
+    _playersToAct = eligible_player_count();
 }
 
 void Game::act(std::size_t playerIdx, Action a) {
     auto& p = _players[playerIdx];
+    bool reopened = false;
+
     switch (a.type) {
         case ActionType::Fold:
             p.fold();
@@ -228,21 +293,68 @@ void Game::act(std::size_t playerIdx, Action a) {
             _lastAction.amount = total;
             _lastAction.type = ActionType::Raise;
             _minRaise = raise;
+            reopened = true;
             break;
         }
         case ActionType::AllIn: {
             std::int64_t all = p.stack();
+            std::int64_t newTotal = p.current_bet() + all;
             p.place_bet(all);
             _pot.push_back(all);
+            if (newTotal > _lastAction.amount) {
+                std::int64_t raiseAmount = newTotal - _lastAction.amount;
+                if (raiseAmount > _minRaise) {
+                    _minRaise = raiseAmount;
+                }
+                _lastAction = {ActionType::AllIn, newTotal};
+                reopened = true;
+            }
             break;
         }
     }
 
-    std::size_t n = _players.size();
-    for (std::size_t i = 0; i < n; ++i) {
-        _currentPlayerIdx = (_currentPlayerIdx + 1) % n;
-        if (!_players[_currentPlayerIdx].is_folded() && !_players[_currentPlayerIdx].is_all_in())
+    advance_to_next_actor();
+
+    if (active_player_count() <= 1) {
+        settle_pots();
+        _phase = Phase::Showdown;
+        return;
+    }
+
+    std::size_t eligible = eligible_player_count();
+    if (reopened) {
+        // A raiser who is still eligible to act again only reopens the action
+        // for everyone else; an all-in raiser has left the eligible pool
+        // already (eligible_player_count no longer counts them), so everyone
+        // still eligible owes a response.
+        bool actorStillEligible = !p.is_folded() && !p.is_all_in();
+        _playersToAct = actorStillEligible ? (eligible > 0 ? eligible - 1 : 0) : eligible;
+    } else if (_playersToAct > 0) {
+        --_playersToAct;
+    }
+
+    while (_playersToAct == 0 && _phase != Phase::Showdown) {
+        if (eligible <= 1) {
+            while (_phase != Phase::Showdown) {
+                advance_phase();
+                if (_phase != Phase::Showdown) {
+                    deal_community(_phase == Phase::Flop ? 3 : 1);
+                }
+            }
+            settle_pots();
             return;
+        }
+
+        if (_phase == Phase::River) {
+            settle_pots();
+            _phase = Phase::Showdown;
+            return;
+        }
+
+        advance_phase();
+        deal_community(_phase == Phase::Flop ? 3 : 1);
+        start_betting_round();
+        eligible = eligible_player_count();
     }
 }
 
@@ -277,34 +389,47 @@ EvaluatedHand Game::evaluate(const Player& p) const {
 }
 
 void Game::settle_pots() {
-    struct Contestant {
-        std::size_t idx;
-        std::uint64_t score;
-    };
-
-    std::vector<Contestant> active;
+    std::vector<std::size_t> active;
     for (std::size_t i = 0; i < _players.size(); ++i) {
         if (!_players[i].is_folded()) {
-            auto hand = evaluate(_players[i]);
-            active.push_back({i, score_5(hand.cards)});
+            active.push_back(i);
         }
     }
 
     if (active.empty()) return;
 
-    std::uint64_t bestScore = 0;
-    for (auto& c : active)
-        if (c.score > bestScore) bestScore = c.score;
-
     std::int64_t total = 0;
     for (auto& p : _pot) total += p;
 
+    // Everyone else folded — award the pot without a showdown; community cards
+    // may not have been dealt out yet, so evaluate() cannot run here.
+    if (active.size() == 1) {
+        _players[active[0]].add_winnings(total);
+        _pot.clear();
+        return;
+    }
+
+    struct Contestant {
+        std::size_t idx;
+        std::uint64_t score;
+    };
+
+    std::vector<Contestant> contestants;
+    for (auto idx : active) {
+        auto hand = evaluate(_players[idx]);
+        contestants.push_back({idx, score_5(hand.cards)});
+    }
+
+    std::uint64_t bestScore = 0;
+    for (auto& c : contestants)
+        if (c.score > bestScore) bestScore = c.score;
+
     int winnerCount = 0;
-    for (auto& c : active)
+    for (auto& c : contestants)
         if (c.score == bestScore) ++winnerCount;
 
     std::int64_t share = total / winnerCount;
-    for (auto& c : active) {
+    for (auto& c : contestants) {
         if (c.score == bestScore) {
             _players[c.idx].add_winnings(share);
         }

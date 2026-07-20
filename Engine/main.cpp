@@ -43,11 +43,29 @@ public:
                              engine::GameResponse* res) override {
         auto game_id = std::to_string(req->game_id());
         auto player_idx = static_cast<std::size_t>(req->player_id());
+
+        if (req->action() == "close") {
+            bool closed = false;
+            try {
+                closed = engine_.texas_close(game_id);
+            } catch (...) {
+                closed = false;
+            }
+            res->set_success(closed);
+            res->set_game_state_json("");
+            return grpc::Status::OK;
+        }
+
         std::string json;
 
         try {
             if (req->action() == "create") {
-                json = engine_.create_texas(game_id, req->num_players(), req->amount());
+                if (req->stacks_size() > 0) {
+                    std::vector<std::int64_t> stacks(req->stacks().begin(), req->stacks().end());
+                    json = engine_.create_texas(game_id, stacks);
+                } else {
+                    json = engine_.create_texas(game_id, req->num_players(), req->amount());
+                }
             } else if (req->action() == "post_blinds") {
                 json = engine_.texas_post_blinds(game_id, req->small_blind(), req->big_blind());
             } else if (req->action() == "fold" || req->action() == "check" ||

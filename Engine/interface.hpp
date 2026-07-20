@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 class Engine {
 private:
@@ -42,6 +43,15 @@ public:
     std::string create_texas(std::string_view game_id,
                              std::size_t num_players,
                              std::int64_t starting_stack);
+
+    [[nodiscard]]
+    std::string create_texas(std::string_view game_id,
+                             const std::vector<std::int64_t>& stacks);
+
+    // Discards a texas game — unlike blackjack, it isn't cleaned up
+    // automatically once a hand ends, since it's meant to keep playing
+    // more hands. Returns false if game_id wasn't found.
+    bool texas_close(std::string_view game_id);
 
     [[nodiscard]]
     std::string texas_post_blinds(std::string_view game_id,

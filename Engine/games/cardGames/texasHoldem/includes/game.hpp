@@ -78,15 +78,29 @@ private:
     std::size_t _currentPlayerIdx;
     std::int64_t _minRaise;
     Action _lastAction;
+    std::size_t _playersToAct;
 
     void deal_hole_cards();
     void deal_community(std::size_t count);
     void advance_phase();
     EvaluatedHand evaluate(const Player& p) const;
     void settle_pots();
+    void advance_to_next_actor();
+    void start_betting_round();
+    // Clears community cards/pot and every player's hand-only state (hole
+    // cards, current bet, folded/all-in flags) while leaving stacks
+    // untouched, so the same Game can play many hands in a row. Called
+    // automatically from post_blinds() when the previous hand reached
+    // Showdown — every player still in this Game is assumed to have a
+    // positive stack; a caller who wants to remove a busted player must
+    // construct a new Game with the remaining stacks instead.
+    void start_new_hand();
+    [[nodiscard]] std::size_t active_player_count() const noexcept;
+    [[nodiscard]] std::size_t eligible_player_count() const noexcept;
 
 public:
     explicit Game(std::size_t numPlayers, std::int64_t startingStack, std::size_t numDecks = 1);
+    explicit Game(const std::vector<std::int64_t>& stacks, std::size_t numDecks = 1);
 
     void post_blinds(std::int64_t small, std::int64_t big);
     void act(std::size_t playerIdx, Action a);

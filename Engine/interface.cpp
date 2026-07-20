@@ -33,7 +33,13 @@ std::string Engine::create_blackjack(std::string_view game_id, std::int64_t bet)
         blackjack_games.erase(it);
         return {};
     }
-    return blackjack::serialize_game_state(it->second);
+    auto json = blackjack::serialize_game_state(it->second);
+    // A natural blackjack settles immediately on the deal — nothing left to
+    // do with this game, so drop it instead of leaking it forever.
+    if (it->second.phase() == blackjack::Phase::Settled) {
+        blackjack_games.erase(it);
+    }
+    return json;
 }
 
 std::string Engine::blackjack_hit(std::string_view game_id) {
@@ -46,7 +52,11 @@ std::string Engine::blackjack_hit(std::string_view game_id) {
     } catch (...) {
         return {};
     }
-    return blackjack::serialize_game_state(it->second);
+    auto json = blackjack::serialize_game_state(it->second);
+    if (it->second.phase() == blackjack::Phase::Settled) {
+        blackjack_games.erase(it);
+    }
+    return json;
 }
 
 std::string Engine::blackjack_stand(std::string_view game_id) {
@@ -59,7 +69,9 @@ std::string Engine::blackjack_stand(std::string_view game_id) {
     } catch (...) {
         return {};
     }
-    return blackjack::serialize_game_state(it->second);
+    auto json = blackjack::serialize_game_state(it->second);
+    blackjack_games.erase(it);
+    return json;
 }
 
 bool Engine::texas_exists(std::string_view game_id) const {
@@ -75,6 +87,24 @@ std::string Engine::create_texas(std::string_view game_id,
     }
     auto [it, inserted] = texas_games.emplace(key, texas::Game{num_players, starting_stack});
     return texas::serialize_game_state(it->second);
+}
+
+std::string Engine::create_texas(std::string_view game_id,
+                                 const std::vector<std::int64_t>& stacks) {
+    auto key = std::string(game_id);
+    if (texas_games.contains(key)) {
+        return {};
+    }
+    auto [it, inserted] = texas_games.emplace(key, texas::Game{stacks});
+    return texas::serialize_game_state(it->second);
+}
+
+// A texas game deliberately survives past Showdown (see texas_act) so the
+// same table can play many hands in a row — the caller must explicitly
+// close it once it's done with that game_id (e.g. the seat composition
+// changed, or the table emptied out) or it leaks.
+bool Engine::texas_close(std::string_view game_id) {
+    return texas_games.erase(std::string(game_id)) > 0;
 }
 
 std::string Engine::texas_post_blinds(std::string_view game_id,
@@ -120,5 +150,9 @@ std::string Engine::texas_act(std::string_view game_id,
     } catch (...) {
         return {};
     }
+    // Unlike blackjack, a texas game is expected to keep playing hand after
+    // hand past Showdown — post_blinds() resets it for the next one. The
+    // caller must call texas_close() explicitly when it's really done with
+    // this game_id.
     return texas::serialize_game_state(it->second);
 }
