@@ -19,29 +19,31 @@ var (
 	ErrInvalidNotificationType = errors.New("invalid notification type")
 	ErrInvalidTopicString      = errors.New("invalid topic string")
 	ErrInvalidPlayAction       = errors.New("invalid play action")
+	ErrInvalidLineCount        = errors.New("invalid line count")
 
-	ErrRandomStringGenFailed   = errors.New("failed to generate random string")
-	ErrAmountNotPositive       = errors.New("amount must be greater than zero")
-	ErrAmountTooLarge          = fmt.Errorf("amount must be less than %d", MaxTransactionAmount + 1)
-	ErrInsufficientBalance     = errors.New("insufficient balance")
-	ErrSelfLove                = errors.New("self love only works irl")
-	ErrAlreadyBefriended       = errors.New("friend already added")
-	ErrAlreadyDefriended       = errors.New("no friend to remove")
-	ErrAccountNotFound         = errors.New("account not found")
-	ErrGameNotFound            = errors.New("game not found")
-	ErrUsernameWrongLength     = errors.New("username must be between 3 and 32 characters")
-	ErrEntryExists             = errors.New("matching entry already exists")
-	ErrNotificationIsNotYours  = errors.New("notification is not yours")
+	ErrRandomStringGenFailed  = errors.New("failed to generate random string")
+	ErrAmountNotPositive      = errors.New("amount must be greater than zero")
+	ErrAmountTooLarge         = fmt.Errorf("amount must be less than %d", MaxTransactionAmount+1)
+	ErrInsufficientBalance    = errors.New("insufficient balance")
+	ErrSelfLove               = errors.New("self love only works irl")
+	ErrAlreadyBefriended      = errors.New("friend already added")
+	ErrAlreadyDefriended      = errors.New("no friend to remove")
+	ErrAccountNotFound        = errors.New("account not found")
+	ErrGameNotFound           = errors.New("game not found")
+	ErrUsernameWrongLength    = errors.New("username must be between 3 and 32 characters")
+	ErrEntryExists            = errors.New("matching entry already exists")
+	ErrNotificationIsNotYours = errors.New("notification is not yours")
 )
 
-func IsErrInvalid(err error) (bool) {
-	return errors.Is(err, ErrInvalidFilename)         ||
-		   errors.Is(err, ErrInvalidUsername)         ||
-		   errors.Is(err, ErrInvalidPassword)         ||
-		   errors.Is(err, ErrInvalidEmail)            ||
-		   errors.Is(err, ErrInvalidToken)            ||
-		   errors.Is(err, ErrInvalidFriendshipStatus) ||
-		   errors.Is(err, ErrInvalidNotificationType) ||
-		   errors.Is(err, ErrInvalidTopicString)      ||
-		   errors.Is(err, ErrInvalidPlayAction)
+func IsErrInvalid(err error) bool {
+	return errors.Is(err, ErrInvalidFilename) ||
+		errors.Is(err, ErrInvalidUsername) ||
+		errors.Is(err, ErrInvalidPassword) ||
+		errors.Is(err, ErrInvalidEmail) ||
+		errors.Is(err, ErrInvalidToken) ||
+		errors.Is(err, ErrInvalidFriendshipStatus) ||
+		errors.Is(err, ErrInvalidNotificationType) ||
+		errors.Is(err, ErrInvalidTopicString) ||
+		errors.Is(err, ErrInvalidPlayAction) ||
+		errors.Is(err, ErrInvalidLineCount)
 }
