@@ -68,7 +68,7 @@ const Login: React.FC = () => {
     }
 
     try {
-      await login(formData.username, formData.password);
+      await login(formData.username, formData.password, formData.rememberMe);
       navigate('/account');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';

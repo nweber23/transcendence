@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"transcendence/middleware"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -37,6 +39,7 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	if context == nil {
 		return
 	}
+	middleware.ActiveConnections.Dec()
 	for topic := TopicGeneric; topic < TopicMax; {
 		_ = Client.topicLists[topic].swapPopByConnection(connection)
 		topic++

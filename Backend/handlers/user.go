@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"path/filepath"
 
+	"transcendence/middleware"
 	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
@@ -410,7 +411,14 @@ func (uh *UserHandler) GetTransactionHistory(c *gin.Context) {
 			offset = parsed
 		}
 	}
-	transactions, err := uh.accountService.GetTransactionHistory(userID.(uint), limit, offset)
+	var types []string
+	switch c.Query("category") {
+	case "wallet":
+		types = []string{models.TransactionTypeDeposit, models.TransactionTypeWithdraw}
+	case "game":
+		types = []string{models.TransactionTypeBet, models.TransactionTypeWin, models.TransactionTypeCashout, models.TransactionTypeRefund}
+	}
+	transactions, err := uh.accountService.GetTransactionHistory(userID.(uint), limit, offset, types)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
@@ -457,6 +465,7 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "deposit_failed", err.Error())
 		return
 	}
+	middleware.RecordDeposit(amount)
 	account, err := uh.accountService.GetAccount(userID.(uint))
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", "Failed to retrieve updated account")
@@ -502,6 +511,7 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "withdrawal_failed", err.Error())
 		return
 	}
+	middleware.RecordWithdrawal(amount)
 	account, err := uh.accountService.GetAccount(userID.(uint))
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", "Failed to retrieve updated account")

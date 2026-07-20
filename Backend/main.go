@@ -10,6 +10,7 @@ import (
 	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -23,7 +24,11 @@ func main() {
 	router := gin.Default()
 
 	// CORS middleware
-	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
+
+	// Prometheus request metrics + scrape endpoint
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Serve uploaded avatar files publicly (no auth required for <img> tags)
 	router.Static("/uploads", "./uploads")

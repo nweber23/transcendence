@@ -169,7 +169,7 @@ func getTransactionHistoryExpect(
 	offset               int,
 ) {
 	var length int = len(expectedTransactions)
-	actualTransactions, err := accountService.GetTransactionHistory(userID, limit, offset)
+	actualTransactions, err := accountService.GetTransactionHistory(userID, limit, offset, nil)
 	if err != nil {
 		testInterface.Errorf("Getting transaction history should not fail")
 		testInterface.FailNow()
