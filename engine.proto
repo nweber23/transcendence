@@ -24,6 +24,10 @@ message TexasRequest {
   uint32 num_players = 5;
   int64 small_blind = 6;
   int64 big_blind = 7;
+  // Per-player starting stacks. When non-empty, "create" uses these instead
+  // of num_players/amount so a table can be recreated with each surviving
+  // player's actual current stack across hands.
+  repeated int64 stacks = 8;
 }
 
 message SlotsRequest {
