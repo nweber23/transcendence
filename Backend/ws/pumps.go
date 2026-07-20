@@ -10,11 +10,11 @@ import (
 )
 
 func (wsState *WebSocketState) timeoutClient(userID uint) {
-	const timeout        int = 3000
+	const timeout int = 3000
 	const iterationCount int = 1000
 
 	for iteration := 0; iteration < iterationCount; {
-		time.Sleep(time.Millisecond * time.Duration(timeout / iterationCount))
+		time.Sleep(time.Millisecond * time.Duration(timeout/iterationCount))
 		if wsState.IsOnline(userID) {
 			return
 		}
@@ -34,6 +34,7 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	if Client.contextList.length() == 0 {
 		delete(wsState.clients, userID)
 		go wsState.timeoutClient(userID)
+		go wsState.pokerHandleDisconnect(userID)
 	}
 	wsState.clientsMutex.Unlock()
 	if context == nil {
@@ -64,7 +65,7 @@ func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *webso
 
 func pumpToConnection(context *connectionContext) {
 	for {
-		packet, ok := <- context.channel
+		packet, ok := <-context.channel
 		if !ok {
 			return
 		}

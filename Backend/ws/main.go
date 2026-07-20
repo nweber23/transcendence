@@ -1,16 +1,40 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
 func (wsState *WebSocketState) Main() {
 	for {
-		packet, ok := <- wsState.readChannel.channel
+		packet, ok := <-wsState.readChannel.channel
 		if !ok {
 			return
 		}
-		fmt.Printf("Received packet from %d\n", packet.userID)
+		wsState.handlePacket(packet)
+	}
+}
+
+func (wsState *WebSocketState) handlePacket(packet packet) {
+	switch packet.PacketType {
+	case PacketTypeJoin:
+		var payload PacketJoinLeave
+		if err := json.Unmarshal(packet.Payload, &payload); err != nil {
+			return
+		}
+		wsState.pokerJoin(packet.userID, payload.Seat)
+	case PacketTypeLeave:
+		wsState.pokerLeave(packet.userID)
+	case PacketTypeSync:
+		wsState.pokerSync(packet.userID)
+	case PacketTypePlay:
+		var payload PacketPlay
+		if err := json.Unmarshal(packet.Payload, &payload); err != nil {
+			return
+		}
+		wsState.pokerPlay(packet.userID, payload.Action, payload.Amount)
+	default:
+		fmt.Printf("Received unknown packet type %q from %d\n", packet.PacketType, packet.userID)
 	}
 }
 
