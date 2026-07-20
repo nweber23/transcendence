@@ -1,15 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import PlayingCard, { CardData, CardSlot } from '@/components/games/PlayingCard';
+import PlayingCard, { CardData, CardSlot, Rank, Suit } from '@/components/games/PlayingCard';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import GameTopBar from '@/components/games/GameTopBar';
+import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import { useAccount } from '@/hooks/useAccount';
+import { apiCall, ApiError } from '@/utils/api';
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+/* Engine cards look like "A♠" / "10♥" — suit is always the last character */
+const parseCard = (card: string): CardData => ({
+  rank: card.slice(0, -1) as Rank,
+  suit: card.slice(-1) as Suit,
+});
+
+interface BlackjackDetail {
+  player_cards: string[];
+  dealer_cards: string[];
+  player_value: number;
+  dealer_value: number;
+  outcome: string;
+}
+
+interface GameResponse {
+  id: number;
+  game_type: string;
+  status: string;
+  initial_bet: string;
+  winnings: string;
+  created_at: string;
+  blackjack?: BlackjackDetail;
+}
+
+const OUTCOME_MESSAGES: Record<string, string> = {
+  player_blackjack: 'Blackjack! You win',
+  player_win: 'You win',
+  push: 'Push — bet returned',
+  dealer_win: 'Dealer wins',
+};
 
 const Blackjack: React.FC = () => {
   /* autoFetch=false: only the account is needed here, not the transaction history */
   const { account, getAccount } = useAccount(false);
-  useEffect(() => {
+  React.useEffect(() => {
     getAccount().catch(() => {});
   }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
@@ -17,45 +50,90 @@ const Blackjack: React.FC = () => {
   /* Bet is staged as a stack of chips so the engine receives a single amount on deal */
   const [stagedChips, setStagedChips] = useState<number[]>([]);
 
-  /* TODO: all game state below comes from the game engine */
-  const [playerHand] = useState<CardData[]>([]);
-  const [dealerHand] = useState<CardData[]>([]);
-  const [gameActive] = useState(false);
-  const [dealerRevealed] = useState(false);
+  const [gameId, setGameId] = useState<number | null>(null);
+  const [playerHand, setPlayerHand] = useState<CardData[]>([]);
+  const [dealerHand, setDealerHand] = useState<CardData[]>([]);
+  const [playerValue, setPlayerValue] = useState(0);
+  const [dealerValue, setDealerValue] = useState(0);
+  const [outcome, setOutcome] = useState<string | null>(null);
+  const [gameActive, setGameActive] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const bet = sum(stagedChips);
-  const canDeal = bet > 0 && bet <= balance;
-
-  /* Display-only helper — authoritative totals come from the engine */
-  const calculateHandValue = (hand: CardData[]): number => {
-    let value = 0;
-    let aces = 0;
-    hand.forEach((card) => {
-      if (card.rank === 'A') {
-        aces += 1;
-        value += 11;
-      } else if (['K', 'Q', 'J'].includes(card.rank)) {
-        value += 10;
-      } else {
-        value += parseInt(card.rank);
-      }
-    });
-    while (value > 21 && aces > 0) {
-      value -= 10;
-      aces -= 1;
-    }
-    return value;
-  };
+  const canDeal = bet > 0 && bet <= balance && !isBusy;
 
   const addChip = (value: number) => {
     if (bet + value <= balance) setStagedChips((c) => [...c, value]);
   };
   const undoChip = () => setStagedChips((c) => c.slice(0, -1));
   const clearChips = () => setStagedChips([]);
+  const maxBet = () => {
+    const denoms = [...CHIP_VALUES].sort((a, b) => b - a);
+    const chips: number[] = [];
+    let remaining = balance;
+    for (const d of denoms) {
+      while (remaining >= d) {
+        chips.push(d);
+        remaining -= d;
+      }
+    }
+    setStagedChips(chips);
+  };
 
-  const dealerTotal = dealerRevealed
-    ? calculateHandValue(dealerHand)
-    : calculateHandValue(dealerHand.slice(0, 1));
+  const applyResponse = (response: GameResponse) => {
+    const detail = response.blackjack;
+    setGameId(response.id);
+    setPlayerHand((detail?.player_cards ?? []).map(parseCard));
+    setDealerHand((detail?.dealer_cards ?? []).map(parseCard));
+    setPlayerValue(detail?.player_value ?? 0);
+    setDealerValue(detail?.dealer_value ?? 0);
+    setOutcome(detail?.outcome || null);
+    setGameActive(response.status === 'in_progress');
+    if (response.status !== 'in_progress') {
+      getAccount().catch(() => {});
+    }
+  };
+
+  const deal = async () => {
+    if (!canDeal) return;
+    setIsBusy(true);
+    setError(null);
+    try {
+      const response = await apiCall<GameResponse>('POST', '/games', {
+        game_type: 'blackjack',
+        bet_amount: String(bet),
+      });
+      applyResponse(response);
+      setStagedChips([]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to deal');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const act = async (action: 'hit' | 'stand') => {
+    if (!gameId || isBusy) return;
+    setIsBusy(true);
+    setError(null);
+    try {
+      const response = await apiCall<GameResponse>('POST', `/games/${gameId}/action`, { action });
+      applyResponse(response);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Action failed');
+    } finally {
+      setIsBusy(false);
+    }
+  };
 
   const ghostButton =
     'px-4 py-2.5 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-sm font-semibold hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
@@ -69,6 +147,13 @@ const Blackjack: React.FC = () => {
       className="mt-[4.75rem] flex flex-col bg-[var(--base)]"
       style={{ height: 'calc(100dvh - 4.75rem)' }}
     >
+      {isSmallScreen ? (
+        <UnsupportedScreenSize
+          title="Screen Too Small"
+          subtitle="This game is best enjoyed on a larger display. Please use a tablet or desktop to play."
+        />
+      ) : (
+        <>
       <GameTopBar title="Blackjack" subtitle="Single Deck · Pays 3 to 2" balance={balance} />
 
       {/* ── Table felt ─────────────────────────────────────────────────────── */}
@@ -117,7 +202,7 @@ const Blackjack: React.FC = () => {
               <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgba(212,175,55,0.55)]">
                 Dealer
               </span>
-              {dealerHand.length > 0 && <TotalBadge value={dealerTotal} />}
+              {dealerHand.length > 0 && <TotalBadge value={dealerValue} />}
             </div>
             <div className="flex gap-2 min-h-[7.7rem]">
               {dealerHand.length === 0 ? (
@@ -127,15 +212,13 @@ const Blackjack: React.FC = () => {
                 </>
               ) : (
                 dealerHand.map((card, i) => (
-                  <div key={i} className={dealerRevealed && i === 1 ? 'card-flip-in' : ''}>
-                    <PlayingCard
-                      card={card}
-                      faceDown={i === 1 && !dealerRevealed}
-                      size="xl"
-                      className="card-deal"
-                      style={{ animationDelay: `${i < 2 ? i * 160 + 80 : 0}ms` }}
-                    />
-                  </div>
+                  <PlayingCard
+                    key={i}
+                    card={card}
+                    size="xl"
+                    className="card-deal"
+                    style={{ animationDelay: `${i * 220}ms` }}
+                  />
                 ))
               )}
             </div>
@@ -167,6 +250,16 @@ const Blackjack: React.FC = () => {
             {bet > 0 && (
               <span className="font-serif text-xl text-[var(--gold)]">${bet.toLocaleString()}</span>
             )}
+            {!gameActive && outcome && (
+              <span
+                className={`text-xs font-semibold uppercase tracking-[0.15em] ${
+                  outcome === 'dealer_win' ? 'text-[#e8a5ae]' : 'text-[var(--gold)]'
+                }`}
+              >
+                {OUTCOME_MESSAGES[outcome] ?? outcome}
+              </span>
+            )}
+            {error && <span className="text-xs text-[#e8a5ae]">{error}</span>}
           </div>
 
           {/* Player */}
@@ -193,7 +286,7 @@ const Blackjack: React.FC = () => {
               <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgba(212,175,55,0.55)]">
                 Your Hand
               </span>
-              {playerHand.length > 0 && <TotalBadge value={calculateHandValue(playerHand)} />}
+              {playerHand.length > 0 && <TotalBadge value={playerValue} />}
             </div>
           </div>
         </div>
@@ -209,19 +302,23 @@ const Blackjack: React.FC = () => {
                   key={value}
                   value={value}
                   onClick={() => addChip(value)}
-                  disabled={bet + value > balance}
+                  disabled={isBusy || bet + value > balance}
                 />
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={undoChip} disabled={stagedChips.length === 0} className={ghostButton}>
+              <button onClick={undoChip} disabled={isBusy || stagedChips.length === 0} className={ghostButton}>
                 Undo
               </button>
-              <button onClick={clearChips} disabled={stagedChips.length === 0} className={ghostButton}>
+              <button onClick={clearChips} disabled={isBusy || stagedChips.length === 0} className={ghostButton}>
                 Clear
+              </button>
+              <button onClick={maxBet} disabled={isBusy || balance === 0} className={ghostButton}>
+                Max
               </button>
             </div>
             <button
+              onClick={deal}
               disabled={!canDeal}
               className={`ml-auto px-12 py-3.5 rounded-xl font-semibold text-base tracking-[0.22em] uppercase transition-all duration-150 ${
                 canDeal
@@ -229,29 +326,34 @@ const Blackjack: React.FC = () => {
                   : 'bg-[var(--surface-2)] text-[var(--text-3)] border border-[rgba(212,175,55,0.08)] cursor-not-allowed'
               }`}
             >
-              {/* TODO: wire up to game engine */}
-              Deal
+              {isBusy ? 'Dealing…' : 'Deal'}
             </button>
           </div>
         ) : (
-          /* In-game actions — TODO: wire up to game engine */
           <div className="w-full flex items-center gap-3">
             <div className="hidden sm:block mr-2 leading-tight">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Wager</p>
               <p className="font-serif text-lg text-[var(--gold)]">${bet.toLocaleString()}</p>
             </div>
-            <button className={`${actionButton} text-[#e9f5ef] bg-[#1e5a45] hover:bg-[#247052]`}>
+            <button
+              onClick={() => act('hit')}
+              disabled={isBusy}
+              className={`${actionButton} text-[#e9f5ef] bg-[#1e5a45] hover:bg-[#247052]`}
+            >
               Hit
             </button>
-            <button className={`${actionButton} text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]`}>
+            <button
+              onClick={() => act('stand')}
+              disabled={isBusy}
+              className={`${actionButton} text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]`}
+            >
               Stand
-            </button>
-            <button className={`${actionButton} text-[#0a0e12] bg-[var(--gold)] hover:opacity-90 border-none`}>
-              Double
             </button>
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

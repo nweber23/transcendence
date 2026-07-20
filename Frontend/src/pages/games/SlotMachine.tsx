@@ -3,24 +3,65 @@ import GameTopBar from '@/components/games/GameTopBar';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import { useAccount } from '@/hooks/useAccount';
+import { apiCall, ApiError } from '@/utils/api';
 
 const ICONS = [
-  'apple', 'apricot', 'banana', 'big_win', 'cherry', 'grapes',
+  'apple', 'apricot', 'banana', 'cherry', 'grapes',
   'lemon', 'lucky_seven', 'orange', 'pear', 'strawberry', 'watermelon',
 ];
 
+/* The engine's only configured machine ("lucky-sevens") is a 3x3 grid — its
+   own symbol set (cards/bars/bells) doesn't have matching art here, so each
+   resolved engine symbol id is mapped onto one of this machine's fruit icons.
+   The mapping is fixed, so a real engine match always renders as a visual
+   match too. */
+const SYMBOL_ICON_MAP: Record<string, string> = {
+  SYM_7: 'lucky_seven',
+  SYM_WILD: 'big_win',
+  SYM_DIAMOND: 'watermelon',
+  SYM_BAR: 'banana',
+  SYM_BELL: 'apple',
+  SYM_HEART: 'cherry',
+  SYM_SPADE: 'grapes',
+  SYM_CLUB: 'orange',
+};
+
+/* The engine's only configured machine ("lucky-sevens") only accepts these line counts */
+const LINE_OPTIONS = [1, 3, 5, 10] as const;
+
 const BASE_SPINNING_DURATION = 2.7;
 const COLUMN_SPINNING_DURATION = 0.3;
-const NUM_REELS = 5;
+const NUM_REELS = 3;
+const NUM_ROWS = 3;
+/* How long the win/lose message stays on screen before auto spin fires the next spin */
+const RESULT_PAUSE_MS = 1200;
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 function getRandomIcon() {
   return ICONS[Math.floor(Math.random() * ICONS.length)];
 }
 
+function iconFor(symbol: string) {
+  return SYMBOL_ICON_MAP[symbol] ?? getRandomIcon();
+}
+
 function randomDuration() {
   return Math.floor(Math.random() * 10) / 100;
+}
+
+interface GameResponse {
+  id: number;
+  game_type: string;
+  status: string;
+  initial_bet: string;
+  winnings: string;
+  created_at: string;
+  slots?: { grid: string[][] }; // [row][col], row-major, from the engine
 }
 
 const SlotMachine: React.FC = () => {
@@ -30,15 +71,26 @@ const SlotMachine: React.FC = () => {
 
   const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
   const [stagedChips, setStagedChips] = useState<number[]>([]);
-  const [lines, setLines] = useState(9);
+  const [lines, setLines] = useState<number>(LINE_OPTIONS[0]);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isAutoSpinning, setIsAutoSpinning] = useState(false);
   const [itemHeight, setItemHeight] = useState(100);
+  const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  /* Auto spin loops faster than React state settles, so it tracks the live
+     "should keep going" flag and the optimistic balance in refs rather than
+     relying on stale closures over state. */
+  const autoSpinRef = useRef(false);
+  const balanceRef = useRef(0);
+  useEffect(() => { balanceRef.current = balance; }, [balance]);
+  useEffect(() => () => { autoSpinRef.current = false; }, []);
 
   useEffect(() => {
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768);
       if (windowRef.current) {
-        const measured = Math.floor(windowRef.current.clientHeight / 3);
+        const measured = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
         if (measured > 0) setItemHeight(measured);
       }
     };
@@ -51,18 +103,21 @@ const SlotMachine: React.FC = () => {
   const colRefs = useRef<(HTMLDivElement | null)[]>(Array(NUM_REELS).fill(null));
   const spinningContainerRef = useRef<HTMLDivElement>(null);
 
-  const bet = sum(stagedChips);
-  const canSpin = bet > 0 && bet <= balance && !isSpinning;
+  /* Staged chips are the bet per line; the engine is wagered betPerLine * lines */
+  const betPerLine = sum(stagedChips);
+  const totalBet = betPerLine * lines;
+  const controlsLocked = isSpinning || isAutoSpinning;
+  const canSpin = betPerLine > 0 && totalBet <= balance && !controlsLocked;
 
   const addChip = (value: number) => {
-    if (bet + value <= balance) setStagedChips((c) => [...c, value]);
+    if ((betPerLine + value) * lines <= balance) setStagedChips((c) => [...c, value]);
   };
   const undoChip = () => setStagedChips((c) => c.slice(0, -1));
   const clearChips = () => setStagedChips([]);
   const maxBet = () => {
     const denoms = [...CHIP_VALUES].sort((a, b) => b - a);
     const chips: number[] = [];
-    let remaining = balance;
+    let remaining = Math.floor(balance / lines);
     for (const d of denoms) {
       while (remaining >= d) {
         chips.push(d);
@@ -75,7 +130,7 @@ const SlotMachine: React.FC = () => {
   // Measure actual rendered window height to derive item height
   useLayoutEffect(() => {
     if (!windowRef.current) return;
-    const measured = Math.floor(windowRef.current.clientHeight / 3);
+    const measured = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
     if (measured > 0) setItemHeight(measured);
   }, [isSmallScreen]);
 
@@ -103,10 +158,15 @@ const SlotMachine: React.FC = () => {
     });
   }, [itemHeight]);
 
-  const setResult = useCallback(() => {
-    colRefs.current.forEach((col) => {
+  /* grid is the engine's actual [row][col] result for this spin — null while
+     still spinning cosmetically, so the reels show random icons until the
+     real result is known. */
+  const setResult = useCallback((grid: string[][] | null) => {
+    colRefs.current.forEach((col, colIdx) => {
       if (!col) return;
-      const results = [getRandomIcon(), getRandomIcon(), getRandomIcon()];
+      const results = grid
+        ? [iconFor(grid[0][colIdx]), iconFor(grid[1][colIdx]), iconFor(grid[2][colIdx])]
+        : [getRandomIcon(), getRandomIcon(), getRandomIcon()];
       const imgs = col.querySelectorAll<HTMLImageElement>('.slot-icon img');
       if (imgs.length < 6) return;
       for (let x = 0; x < 3; x++) {
@@ -119,26 +179,80 @@ const SlotMachine: React.FC = () => {
     });
   }, []);
 
+  const runSpinAnimation = useCallback((grid: string[][] | null, payout: number) => {
+    return new Promise<void>((resolve) => {
+      spinningContainerRef.current?.classList.add('spinning');
+
+      let duration = BASE_SPINNING_DURATION + randomDuration();
+      colRefs.current.forEach((col, i) => {
+        if (!col) return;
+        duration += COLUMN_SPINNING_DURATION + randomDuration();
+        col.style.animationDuration = `${duration}s`;
+        col.style.animationDelay = `${i * 0.01}s`;
+      });
+
+      setTimeout(() => setResult(grid), (BASE_SPINNING_DURATION * 1000) / 2);
+
+      setTimeout(() => {
+        spinningContainerRef.current?.classList.remove('spinning');
+        setIsSpinning(false);
+        setResultMessage(payout > 0 ? `You win $${payout.toLocaleString()}` : 'No win this spin');
+        getAccount().catch(() => {});
+        resolve();
+      }, duration * 1000 + NUM_REELS * 10);
+    });
+  }, [setResult, getAccount]);
+
+  /* Spins once for the given bet/lines and reports whether it succeeded, so
+     auto spin knows whether to keep going. */
+  const spinOnce = useCallback(async (bet: number, lineCount: number): Promise<boolean> => {
+    setError(null);
+    setResultMessage(null);
+    setIsSpinning(true);
+    try {
+      const response = await apiCall<GameResponse>('POST', '/games', {
+        game_type: 'slots',
+        bet_amount: String(bet),
+        lines: lineCount,
+      });
+      const payout = Number(response.winnings);
+      balanceRef.current = balanceRef.current - bet * lineCount + payout;
+      await runSpinAnimation(response.slots?.grid ?? null, payout);
+      return true;
+    } catch (err) {
+      setIsSpinning(false);
+      setError(err instanceof ApiError ? err.message : 'Spin failed');
+      return false;
+    }
+  }, [runSpinAnimation]);
+
   const spin = useCallback(() => {
     if (!canSpin) return;
-    setIsSpinning(true);
-    spinningContainerRef.current?.classList.add('spinning');
+    spinOnce(betPerLine, lines);
+  }, [canSpin, betPerLine, lines, spinOnce]);
 
-    let duration = BASE_SPINNING_DURATION + randomDuration();
-    colRefs.current.forEach((col, i) => {
-      if (!col) return;
-      duration += COLUMN_SPINNING_DURATION + randomDuration();
-      col.style.animationDuration = `${duration}s`;
-      col.style.animationDelay = `${i * 0.01}s`;
-    });
+  const stopAutoSpin = useCallback(() => {
+    autoSpinRef.current = false;
+    setIsAutoSpinning(false);
+  }, []);
 
-    setTimeout(setResult, (BASE_SPINNING_DURATION * 1000) / 2);
-
-    setTimeout(() => {
-      spinningContainerRef.current?.classList.remove('spinning');
-      setIsSpinning(false);
-    }, duration * 1000 + NUM_REELS * 10);
-  }, [canSpin, setResult]);
+  const startAutoSpin = useCallback(async () => {
+    if (!canSpin || isAutoSpinning) return;
+    autoSpinRef.current = true;
+    setIsAutoSpinning(true);
+    while (autoSpinRef.current) {
+      const bet = betPerLine * lines;
+      if (bet <= 0 || bet > balanceRef.current) break;
+      const ok = await spinOnce(betPerLine, lines);
+      if (!ok) break;
+      // spinOnce clears the result message as soon as the next spin starts —
+      // without this pause the win/lose message from this spin would never
+      // actually get painted before being wiped by the next one.
+      if (autoSpinRef.current) await delay(RESULT_PAUSE_MS);
+    }
+    autoSpinRef.current = false;
+    setIsAutoSpinning(false);
+  }, [canSpin, isAutoSpinning, betPerLine, lines, spinOnce]);
 
   const ghostButton = 'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.12)] text-[var(--text-3)] text-[9px] font-semibold uppercase tracking-[0.12em] hover:border-[rgba(212,175,55,0.3)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
 
@@ -157,7 +271,7 @@ const SlotMachine: React.FC = () => {
         <style>{`
         .slot-col {
           padding: 0 10px;
-          transform: translateY(calc(-100% + ${itemHeight * 3}px));
+          transform: translateY(calc(-100% + ${itemHeight * NUM_ROWS}px));
           will-change: transform;
         }
         .slot-icon {
@@ -197,7 +311,7 @@ const SlotMachine: React.FC = () => {
           to { transform: translateY(0); }
         }
       `}</style>
-        <GameTopBar title="Lucky Fruits" subtitle={`5-Reel · ${lines} Lines`} balance={balance} />
+        <GameTopBar title="Lucky Fruits" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
         <div
@@ -219,7 +333,7 @@ const SlotMachine: React.FC = () => {
               ◆ Lucky Fruits ◆
             </p>
             <p className="text-[9px] uppercase tracking-[0.2em] text-[rgba(212,175,55,0.35)] mt-0.5">
-              5 Reels · {lines} Lines
+              3 Reels · {lines} Lines
             </p>
           </div>
 
@@ -295,22 +409,32 @@ const SlotMachine: React.FC = () => {
             </div>
           </div>
 
-          {/* Payline pips — click pip N to play N+1 lines */}
-          <div className="relative z-10 flex gap-1.5 justify-center">
-            {Array.from({ length: 9 }, (_, i) => (
+          {/* Line count — the engine only supports these exact counts */}
+          <div className="relative z-10 flex gap-2 justify-center">
+            {LINE_OPTIONS.map((value) => (
               <button
-                key={i}
-                onClick={() => !isSpinning && setLines(i + 1)}
-                disabled={isSpinning}
-                aria-label={`Play ${i + 1} line${i > 0 ? 's' : ''}`}
-                className="flex-1 max-w-[28px] h-2 rounded-full transition-all duration-150 cursor-pointer disabled:cursor-not-allowed hover:opacity-80"
-                style={{
-                  background: i < lines ? 'rgba(212,175,55,0.55)' : 'rgba(212,175,55,0.14)',
-                  border: `1px solid ${i < lines ? 'rgba(212,175,55,0.35)' : 'rgba(212,175,55,0.08)'}`,
-                  boxShadow: i < lines ? '0 0 4px rgba(212,175,55,0.2)' : 'none',
-                }}
-              />
+                key={value}
+                onClick={() => !controlsLocked && setLines(value)}
+                disabled={controlsLocked}
+                aria-label={`Play ${value} line${value > 1 ? 's' : ''}`}
+                className={`px-3.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-150 cursor-pointer disabled:cursor-not-allowed ${
+                  value === lines
+                    ? 'text-[var(--gold)] border border-[rgba(212,175,55,0.6)] bg-[rgba(212,175,55,0.15)] shadow-[0_0_6px_rgba(212,175,55,0.25)]'
+                    : 'text-[var(--text-3)] border border-[rgba(212,175,55,0.14)] hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)]'
+                }`}
+              >
+                {value} {value === 1 ? 'Line' : 'Lines'}
+              </button>
             ))}
+          </div>
+
+          {/* Result message — its own row so it never reflows the console below */}
+          <div className="relative z-10 h-4 flex items-center justify-center">
+            {(resultMessage || error) && (
+              <span className={`text-[10px] font-semibold uppercase tracking-[0.1em] ${error ? 'text-[#e8a5ae]' : 'text-[var(--gold)]'}`}>
+                {error ?? resultMessage}
+              </span>
+            )}
           </div>
         </div>
 
@@ -325,7 +449,7 @@ const SlotMachine: React.FC = () => {
             >
               {stagedChips.length === 0 ? (
                 <span className="absolute inset-0 flex items-center justify-center text-[9px] tracking-[0.25em] text-[rgba(212,175,55,0.45)] uppercase">
-                  Bet
+                  Bet/Line
                 </span>
               ) : (
                 <div
@@ -340,8 +464,8 @@ const SlotMachine: React.FC = () => {
                 </div>
               )}
             </div>
-            {bet > 0 && (
-              <span className="font-serif text-lg text-[var(--gold)]">${bet.toLocaleString()}</span>
+            {betPerLine > 0 && (
+              <span className="font-serif text-lg text-[var(--gold)]">${totalBet.toLocaleString()}</span>
             )}
           </div>
 
@@ -352,17 +476,30 @@ const SlotMachine: React.FC = () => {
                 key={value}
                 value={value}
                 onClick={() => addChip(value)}
-                disabled={isSpinning || bet + value > balance}
+                disabled={controlsLocked || (betPerLine + value) * lines > balance}
               />
             ))}
           </div>
 
           {/* Undo / Clear / Max */}
           <div className="flex items-center gap-2">
-            <button onClick={undoChip} disabled={stagedChips.length === 0 || isSpinning} className={ghostButton}>Undo</button>
-            <button onClick={clearChips} disabled={stagedChips.length === 0 || isSpinning} className={ghostButton}>Clear</button>
-            <button onClick={maxBet} disabled={balance === 0 || isSpinning} className={ghostButton}>Max</button>
+            <button onClick={undoChip} disabled={stagedChips.length === 0 || controlsLocked} className={ghostButton}>Undo</button>
+            <button onClick={clearChips} disabled={stagedChips.length === 0 || controlsLocked} className={ghostButton}>Clear</button>
+            <button onClick={maxBet} disabled={balance === 0 || controlsLocked} className={ghostButton}>Max</button>
           </div>
+
+          {/* Auto spin */}
+          <button
+            onClick={isAutoSpinning ? stopAutoSpin : startAutoSpin}
+            disabled={!isAutoSpinning && !canSpin}
+            className={`px-6 py-3.5 rounded-xl font-semibold text-sm tracking-[0.18em] uppercase transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${
+              isAutoSpinning
+                ? 'text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]'
+                : 'text-[var(--text-2)] border border-[rgba(212,175,55,0.3)] hover:border-[rgba(212,175,55,0.6)] hover:text-[var(--gold)]'
+            }`}
+          >
+            {isAutoSpinning ? 'Stop' : 'Auto Spin'}
+          </button>
 
           {/* Spin */}
           <button
@@ -375,7 +512,7 @@ const SlotMachine: React.FC = () => {
             }`}
             aria-label="Spin the reels"
           >
-            {isSpinning ? 'Spinning…' : 'Spin'}
+            {isAutoSpinning ? 'Auto…' : isSpinning ? 'Spinning…' : 'Spin'}
           </button>
 
         </div>
