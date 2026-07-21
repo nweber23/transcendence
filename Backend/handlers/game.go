@@ -43,10 +43,16 @@ type BlackjackDetailResponse struct {
 	Outcome     string   `json:"outcome"`
 }
 
-// Grid is the engine's actual resolved [row][col] symbols (e.g. "SYM_7") for
-// the base spin — the frontend maps these ids onto its own icon set.
+// SlotsDetailResponse carries the full spin timeline — the base spin plus
+// one entry per free spin awarded — so the frontend can play out the whole
+// bonus round instead of only showing the base grid and the lump-sum payout.
 type SlotsDetailResponse struct {
-	Grid [][]string `json:"grid"`
+	// Grid is the engine's actual resolved [row][col] symbols (e.g. "SYM_7")
+	// for the base spin — the frontend maps these ids onto its own icon set.
+	Grid           [][]string                     `json:"grid"`
+	BonusTriggered bool                           `json:"bonus_triggered"`
+	FreeSpinCount  int                            `json:"free_spin_count"`
+	Timeline       []services.SlotsEngineSpinStep `json:"timeline"`
 }
 
 type GameResponse struct {
@@ -129,15 +135,23 @@ func (gh *GameHandler) withSlotsDetail(response GameResponse, gameID uint) (Game
 	if err != nil {
 		return response, err
 	}
-	var timeline []struct {
-		Grid [][]string `json:"grid"`
-	}
+	var timeline []services.SlotsEngineSpinStep
 	if err := json.Unmarshal(detail.Reels, &timeline); err != nil {
 		return response, err
 	}
-	if len(timeline) > 0 {
-		response.Slots = &SlotsDetailResponse{Grid: timeline[0].Grid}
+	slots := &SlotsDetailResponse{
+		BonusTriggered: detail.IsBonusTriggered,
+		Timeline:       timeline,
 	}
+	if len(timeline) > 0 {
+		slots.Grid = timeline[0].Grid
+	}
+	// timeline[0] is always the base spin — everything after it is one
+	// awarded free spin.
+	if detail.IsBonusTriggered && len(timeline) > 1 {
+		slots.FreeSpinCount = len(timeline) - 1
+	}
+	response.Slots = slots
 	return response, nil
 }
 

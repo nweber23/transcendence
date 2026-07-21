@@ -30,6 +30,12 @@ const NUM_REELS = 3;
 const NUM_ROWS = 3;
 /* How long the win/lose message stays on screen before auto spin fires the next spin */
 const RESULT_PAUSE_MS = 1200;
+/* Free spins replay each awarded step at a brisker pace than the base spin —
+   there can be up to FREE_SPIN_COUNT (15) of them, so a full base-length
+   animation per step would drag the bonus round out too long. */
+const FREE_SPIN_SPINNING_DURATION = 0.9;
+const FREE_SPIN_STEP_PAUSE_MS = 500;
+const FREE_SPIN_BANNER_MS = 2000;
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
@@ -49,6 +55,18 @@ function randomDuration() {
   return Math.floor(Math.random() * 10) / 100;
 }
 
+/* One entry per spin the engine actually resolved for this round — index 0 is
+   the base spin, every entry after it is one awarded free spin. */
+interface SlotSpinStep {
+  step: number;
+  is_free_spin: boolean;
+  free_spins_remaining: number;
+  multiplier: number;
+  step_win: number;
+  accumulated_free_win: number;
+  grid: string[][]; // [row][col], row-major, from the engine
+}
+
 interface GameResponse {
   id: number;
   game_type: string;
@@ -56,7 +74,20 @@ interface GameResponse {
   initial_bet: string;
   winnings: string;
   created_at: string;
-  slots?: { grid: string[][] }; // [row][col], row-major, from the engine
+  slots?: {
+    grid: string[][];
+    bonus_triggered: boolean;
+    free_spin_count: number;
+    timeline: SlotSpinStep[];
+  };
+}
+
+/* Progress HUD shown while a free-spin bonus round is playing out. */
+interface FreeSpinProgress {
+  index: number; // 1-based, within the free-spin steps only
+  total: number;
+  multiplier: number;
+  accumulated: number; // total won from free spins so far
 }
 
 const SlotMachine: React.FC = () => {
@@ -76,6 +107,9 @@ const SlotMachine: React.FC = () => {
   const [winningLines, setWinningLines] = useState<WinningLine[]>([]);
   const [scatterWin, setScatterWin] = useState<ScatterWin | null>(null);
   const [showPaytable, setShowPaytable] = useState(false);
+  const [isBonusSequence, setIsBonusSequence] = useState(false);
+  const [freeSpinAnnounce, setFreeSpinAnnounce] = useState<number | null>(null);
+  const [freeSpinProgress, setFreeSpinProgress] = useState<FreeSpinProgress | null>(null);
 
   /* Auto spin loops faster than React state settles, so it tracks the live
      "should keep going" flag and the optimistic balance in refs rather than
@@ -107,7 +141,7 @@ const SlotMachine: React.FC = () => {
   /* Staged chips are the bet per line; the engine is wagered betPerLine * lines */
   const betPerLine = sum(stagedChips);
   const totalBet = betPerLine * lines;
-  const controlsLocked = isSpinning || isAutoSpinning;
+  const controlsLocked = isSpinning || isAutoSpinning || isBonusSequence;
   const canSpin = betPerLine > 0 && totalBet <= balance && !controlsLocked;
 
   const addChip = (value: number) => {
@@ -187,11 +221,13 @@ const SlotMachine: React.FC = () => {
     payout: number,
     lineWins: WinningLine[],
     scatter: ScatterWin | null,
+    spinDuration: number = BASE_SPINNING_DURATION,
   ) => {
     return new Promise<void>((resolve) => {
+      setIsSpinning(true);
       spinningContainerRef.current?.classList.add('spinning');
 
-      let duration = BASE_SPINNING_DURATION + randomDuration();
+      let duration = spinDuration + randomDuration();
       colRefs.current.forEach((col, i) => {
         if (!col) return;
         duration += COLUMN_SPINNING_DURATION + randomDuration();
@@ -199,7 +235,7 @@ const SlotMachine: React.FC = () => {
         col.style.animationDelay = `${i * 0.01}s`;
       });
 
-      setTimeout(() => setResult(grid), (BASE_SPINNING_DURATION * 1000) / 2);
+      setTimeout(() => setResult(grid), (spinDuration * 1000) / 2);
 
       setTimeout(() => {
         spinningContainerRef.current?.classList.remove('spinning');
@@ -207,19 +243,22 @@ const SlotMachine: React.FC = () => {
         setResultMessage(payout > 0 ? `You win $${payout.toLocaleString()}` : 'No win this spin');
         setWinningLines(lineWins);
         setScatterWin(scatter);
-        getAccount().catch(() => {});
         resolve();
       }, duration * 1000 + NUM_REELS * 10);
     });
-  }, [setResult, getAccount]);
+  }, [setResult]);
 
   /* Spins once for the given bet/lines and reports whether it succeeded, so
-     auto spin knows whether to keep going. */
+     auto spin knows whether to keep going. If the base spin triggers the
+     bonus, this plays out every awarded free spin in sequence — the engine
+     already resolved the whole round server-side, so this is purely replay/
+     reveal pacing over the timeline it returned. */
   const spinOnce = useCallback(async (bet: number, lineCount: number): Promise<boolean> => {
     setError(null);
     setResultMessage(null);
     setWinningLines([]);
     setScatterWin(null);
+    setFreeSpinProgress(null);
     setIsSpinning(true);
     try {
       const response = await apiCall<GameResponse>('POST', '/games', {
@@ -228,18 +267,52 @@ const SlotMachine: React.FC = () => {
         lines: lineCount,
       });
       const payout = Number(response.winnings);
-      const grid = response.slots?.grid ?? null;
+      const timeline = response.slots?.timeline ?? [];
+      const baseStep = timeline[0];
+      const grid = baseStep?.grid ?? response.slots?.grid ?? null;
       const lineWins = grid ? evaluateWinningLines(grid, lineCount) : [];
       const scatter = grid ? evaluateScatterWin(grid) : null;
       balanceRef.current = balanceRef.current - bet * lineCount + payout;
-      await runSpinAnimation(grid, payout, lineWins, scatter);
+      await runSpinAnimation(grid, baseStep?.step_win ?? payout, lineWins, scatter);
+
+      const freeSteps = timeline.slice(1);
+      if (response.slots?.bonus_triggered && freeSteps.length > 0) {
+        setIsBonusSequence(true);
+        setFreeSpinAnnounce(freeSteps.length);
+        await delay(FREE_SPIN_BANNER_MS);
+        setFreeSpinAnnounce(null);
+
+        for (const step of freeSteps) {
+          setFreeSpinProgress({
+            index: step.step - 1,
+            total: freeSteps.length,
+            multiplier: step.multiplier,
+            accumulated: step.accumulated_free_win,
+          });
+          const stepLineWins = evaluateWinningLines(step.grid, lineCount)
+            .map((w) => ({ ...w, multiplier: w.multiplier * step.multiplier }));
+          const stepScatter = evaluateScatterWin(step.grid);
+          // Real retriggers aren't supported engine-side during free spins —
+          // suppress the "Free Spins!" tag here so it doesn't look like one.
+          const stepScatterWin = stepScatter ? { ...stepScatter, multiplier: stepScatter.multiplier * step.multiplier, bonusTriggered: false } : null;
+          await runSpinAnimation(step.grid, step.step_win, stepLineWins, stepScatterWin, FREE_SPIN_SPINNING_DURATION);
+          await delay(FREE_SPIN_STEP_PAUSE_MS);
+        }
+
+        setFreeSpinProgress(null);
+        setIsBonusSequence(false);
+        setResultMessage(`Free Spins complete — total win $${payout.toLocaleString()}`);
+      }
+
+      getAccount().catch(() => {});
       return true;
     } catch (err) {
       setIsSpinning(false);
+      setIsBonusSequence(false);
       setError(err instanceof ApiError ? err.message : 'Spin failed');
       return false;
     }
-  }, [runSpinAnimation]);
+  }, [runSpinAnimation, getAccount]);
 
   const spin = useCallback(() => {
     if (!canSpin) return;
@@ -332,6 +405,11 @@ const SlotMachine: React.FC = () => {
         @keyframes slot-scroll {
           to { transform: translateY(0); }
         }
+        @keyframes freespin-pop {
+          0% { opacity: 0; transform: scale(0.8); }
+          60% { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
+        }
       `}</style>
         <GameTopBar title="Lucky Fruits" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
 
@@ -367,6 +445,21 @@ const SlotMachine: React.FC = () => {
               3 Reels · {lines} Lines
             </p>
           </div>
+
+          {/* Free spin progress HUD — visible for the whole bonus round */}
+          {freeSpinProgress && (
+            <div className="relative z-10 flex items-center justify-center gap-2.5 flex-wrap">
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-[0.12em] border border-[var(--gold)] text-[var(--gold)] bg-[rgba(212,175,55,0.1)]">
+                Free Spin {freeSpinProgress.index}/{freeSpinProgress.total}
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-[0.12em] border border-[rgba(212,175,55,0.3)] text-[var(--text-2)]">
+                {freeSpinProgress.multiplier}× Multiplier
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-[0.12em] border border-[rgba(212,175,55,0.3)] text-[var(--text-2)]">
+                Won ${freeSpinProgress.accumulated.toLocaleString()}
+              </span>
+            </div>
+          )}
 
           {/* Reel window — gold-gradient border frame */}
           <div
@@ -565,6 +658,23 @@ const SlotMachine: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Free spins awarded — on-screen notification over the felt stage */}
+          {freeSpinAnnounce != null && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60">
+              <div className="text-center" style={{ animation: 'freespin-pop 0.4s ease-out' }}>
+                <p
+                  className="uppercase tracking-[0.4em] text-[var(--gold)]"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22 }}
+                >
+                  Free Spins Awarded
+                </p>
+                <p className="font-serif text-[var(--gold)]" style={{ fontSize: 52, lineHeight: 1.1 }}>
+                  ×{freeSpinAnnounce}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {showPaytable && <SlotPaytableModal onClose={() => setShowPaytable(false)} />}
@@ -643,7 +753,7 @@ const SlotMachine: React.FC = () => {
             }`}
             aria-label="Spin the reels"
           >
-            {isAutoSpinning ? 'Auto…' : isSpinning ? 'Spinning…' : 'Spin'}
+            {isAutoSpinning ? 'Auto…' : (isSpinning || isBonusSequence) ? 'Spinning…' : 'Spin'}
           </button>
 
         </div>
