@@ -2,32 +2,27 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 import GameTopBar from '@/components/games/GameTopBar';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
+import SlotPaytableModal from '@/components/games/SlotPaytableModal';
 import { useAccount } from '@/hooks/useAccount';
 import { apiCall, ApiError } from '@/utils/api';
+import { LINE_OPTIONS, SYMBOLS } from './luckySevensConfig';
+import { evaluateWinningLines, evaluateScatterWin, type WinningLine, type ScatterWin } from './luckySevensWins';
 
+/* Filler icons shown while the reels are still cosmetically spinning — a
+   superset of the symbols the engine can actually resolve, for variety. */
 const ICONS = [
   'apple', 'apricot', 'banana', 'cherry', 'grapes',
   'lemon', 'lucky_seven', 'orange', 'pear', 'strawberry', 'watermelon',
 ];
 
-/* The engine's only configured machine ("lucky-sevens") is a 3x3 grid — its
-   own symbol set (cards/bars/bells) doesn't have matching art here, so each
-   resolved engine symbol id is mapped onto one of this machine's fruit icons.
-   The mapping is fixed, so a real engine match always renders as a visual
-   match too. */
-const SYMBOL_ICON_MAP: Record<string, string> = {
-  SYM_7: 'lucky_seven',
-  SYM_WILD: 'big_win',
-  SYM_DIAMOND: 'watermelon',
-  SYM_BAR: 'banana',
-  SYM_BELL: 'apple',
-  SYM_HEART: 'cherry',
-  SYM_SPADE: 'grapes',
-  SYM_CLUB: 'orange',
-};
+/* Every symbol in the engine config now maps 1:1 onto its own real asset
+   (see luckySevensConfig.ts), so a real engine match always renders as a
+   visual match too. */
+const SYMBOL_ICON_MAP: Record<string, string> = Object.fromEntries(
+  SYMBOLS.map((s) => [s.id, s.file.replace(/^\//, '').replace(/\.png$/, '')]),
+);
 
-/* The engine's only configured machine ("lucky-sevens") only accepts these line counts */
-const LINE_OPTIONS = [1, 3, 5, 10] as const;
+const LINE_COLORS = ['#ffd447', '#ff6b6b', '#4ecdc4', '#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fb923c', '#facc15', '#f87171'];
 
 const BASE_SPINNING_DURATION = 2.7;
 const COLUMN_SPINNING_DURATION = 0.3;
@@ -75,8 +70,12 @@ const SlotMachine: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [isAutoSpinning, setIsAutoSpinning] = useState(false);
   const [itemHeight, setItemHeight] = useState(100);
+  const [columnWidth, setColumnWidth] = useState(100);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [winningLines, setWinningLines] = useState<WinningLine[]>([]);
+  const [scatterWin, setScatterWin] = useState<ScatterWin | null>(null);
+  const [showPaytable, setShowPaytable] = useState(false);
 
   /* Auto spin loops faster than React state settles, so it tracks the live
      "should keep going" flag and the optimistic balance in refs rather than
@@ -90,8 +89,10 @@ const SlotMachine: React.FC = () => {
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768);
       if (windowRef.current) {
-        const measured = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
-        if (measured > 0) setItemHeight(measured);
+        const measuredHeight = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
+        if (measuredHeight > 0) setItemHeight(measuredHeight);
+        const measuredWidth = Math.floor(windowRef.current.clientWidth / NUM_REELS);
+        if (measuredWidth > 0) setColumnWidth(measuredWidth);
       }
     };
     handleResize();
@@ -127,11 +128,13 @@ const SlotMachine: React.FC = () => {
     setStagedChips(chips);
   };
 
-  // Measure actual rendered window height to derive item height
+  // Measure actual rendered window size to derive item height/width
   useLayoutEffect(() => {
     if (!windowRef.current) return;
-    const measured = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
-    if (measured > 0) setItemHeight(measured);
+    const measuredHeight = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
+    if (measuredHeight > 0) setItemHeight(measuredHeight);
+    const measuredWidth = Math.floor(windowRef.current.clientWidth / NUM_REELS);
+    if (measuredWidth > 0) setColumnWidth(measuredWidth);
   }, [isSmallScreen]);
 
   // Initialize reels once item height is known
@@ -179,7 +182,12 @@ const SlotMachine: React.FC = () => {
     });
   }, []);
 
-  const runSpinAnimation = useCallback((grid: string[][] | null, payout: number) => {
+  const runSpinAnimation = useCallback((
+    grid: string[][] | null,
+    payout: number,
+    lineWins: WinningLine[],
+    scatter: ScatterWin | null,
+  ) => {
     return new Promise<void>((resolve) => {
       spinningContainerRef.current?.classList.add('spinning');
 
@@ -197,6 +205,8 @@ const SlotMachine: React.FC = () => {
         spinningContainerRef.current?.classList.remove('spinning');
         setIsSpinning(false);
         setResultMessage(payout > 0 ? `You win $${payout.toLocaleString()}` : 'No win this spin');
+        setWinningLines(lineWins);
+        setScatterWin(scatter);
         getAccount().catch(() => {});
         resolve();
       }, duration * 1000 + NUM_REELS * 10);
@@ -208,6 +218,8 @@ const SlotMachine: React.FC = () => {
   const spinOnce = useCallback(async (bet: number, lineCount: number): Promise<boolean> => {
     setError(null);
     setResultMessage(null);
+    setWinningLines([]);
+    setScatterWin(null);
     setIsSpinning(true);
     try {
       const response = await apiCall<GameResponse>('POST', '/games', {
@@ -216,8 +228,11 @@ const SlotMachine: React.FC = () => {
         lines: lineCount,
       });
       const payout = Number(response.winnings);
+      const grid = response.slots?.grid ?? null;
+      const lineWins = grid ? evaluateWinningLines(grid, lineCount) : [];
+      const scatter = grid ? evaluateScatterWin(grid) : null;
       balanceRef.current = balanceRef.current - bet * lineCount + payout;
-      await runSpinAnimation(response.slots?.grid ?? null, payout);
+      await runSpinAnimation(grid, payout, lineWins, scatter);
       return true;
     } catch (err) {
       setIsSpinning(false);
@@ -307,6 +322,13 @@ const SlotMachine: React.FC = () => {
           animation-iteration-count: 1;
           animation-timing-function: cubic-bezier(.65, .97, .72, 1);
         }
+        .winner-cell {
+          animation: winner-pulse 1.1s ease-in-out infinite;
+        }
+        @keyframes winner-pulse {
+          0%, 100% { opacity: 0.55; }
+          50% { opacity: 1; }
+        }
         @keyframes slot-scroll {
           to { transform: translateY(0); }
         }
@@ -323,6 +345,15 @@ const SlotMachine: React.FC = () => {
         >
           {/* Pinstripe inset border */}
           <div className="absolute inset-3 rounded-xl border border-[rgba(212,175,55,0.1)] pointer-events-none" />
+
+          {/* Paytable / rules */}
+          <button
+            onClick={() => setShowPaytable(true)}
+            aria-label="View paytable and rules"
+            className="absolute top-4 right-4 z-20 w-6 h-6 rounded-full border border-[rgba(212,175,55,0.35)] font-serif text-[11px] text-[rgba(212,175,55,0.75)] hover:border-[rgba(212,175,55,0.7)] hover:text-[var(--gold)] transition-colors cursor-pointer flex items-center justify-center"
+          >
+            i
+          </button>
 
           {/* Machine title */}
           <div className="relative z-10 text-center">
@@ -405,6 +436,77 @@ const SlotMachine: React.FC = () => {
                     </React.Fragment>
                   ))}
                 </div>
+
+                {/* Winning line overlay — cell glows + connecting lines, one color per line */}
+                {!isSpinning && (winningLines.length > 0 || scatterWin) && (
+                  <>
+                    {Array.from(
+                      (() => {
+                        const highlighted = new Map<string, string>();
+                        winningLines.forEach((win) => {
+                          const color = LINE_COLORS[win.lineIndex % LINE_COLORS.length];
+                          win.cells.forEach(([row, col]) => highlighted.set(`${row}-${col}`, color));
+                        });
+                        scatterWin?.cells.forEach(([row, col]) => {
+                          if (!highlighted.has(`${row}-${col}`)) highlighted.set(`${row}-${col}`, 'var(--gold)');
+                        });
+                        return highlighted.entries();
+                      })(),
+                    ).map(([key, color]) => {
+                      const [row, col] = key.split('-').map(Number);
+                      return (
+                        <div
+                          key={key}
+                          className="absolute z-[15] pointer-events-none rounded-md winner-cell"
+                          style={{
+                            left: col * columnWidth,
+                            top: row * itemHeight,
+                            width: columnWidth,
+                            height: itemHeight,
+                            boxShadow: `inset 0 0 0 2px ${color}, 0 0 14px ${color}`,
+                          }}
+                        />
+                      );
+                    })}
+                    <svg
+                      className="absolute inset-0 z-20 pointer-events-none"
+                      width={columnWidth * NUM_REELS}
+                      height={itemHeight * NUM_ROWS}
+                      viewBox={`0 0 ${columnWidth * NUM_REELS} ${itemHeight * NUM_ROWS}`}
+                    >
+                      {winningLines.map((win) => {
+                        const color = LINE_COLORS[win.lineIndex % LINE_COLORS.length];
+                        const points = win.cells
+                          .map(([row, col]) => `${col * columnWidth + columnWidth / 2},${row * itemHeight + itemHeight / 2}`)
+                          .join(' ');
+                        return (
+                          <polyline
+                            key={win.lineIndex}
+                            points={points}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+                          />
+                        );
+                      })}
+                      {scatterWin?.cells.map(([row, col], i) => (
+                        <circle
+                          key={i}
+                          cx={col * columnWidth + columnWidth / 2}
+                          cy={row * itemHeight + itemHeight / 2}
+                          r={Math.min(columnWidth, itemHeight) * 0.42}
+                          fill="none"
+                          stroke="var(--gold)"
+                          strokeWidth={3}
+                          style={{ filter: 'drop-shadow(0 0 5px var(--gold))' }}
+                        />
+                      ))}
+                    </svg>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -436,7 +538,36 @@ const SlotMachine: React.FC = () => {
               </span>
             )}
           </div>
+
+          {/* Winning line breakdown */}
+          {!isSpinning && (winningLines.length > 0 || scatterWin) && (
+            <div className="relative z-10 flex flex-wrap gap-1.5 justify-center max-w-md mx-auto">
+              {winningLines.map((win) => {
+                const color = LINE_COLORS[win.lineIndex % LINE_COLORS.length];
+                const symbolLabel = SYMBOLS.find((s) => s.id === win.symbol)?.label ?? win.symbol;
+                const amount = Math.floor(win.multiplier * betPerLine);
+                return (
+                  <span
+                    key={win.lineIndex}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-[0.08em] border"
+                    style={{ borderColor: color, color }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                    Line {win.lineIndex + 1} · {symbolLabel} ×{win.count} · +${amount.toLocaleString()}
+                  </span>
+                );
+              })}
+              {scatterWin && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-[0.08em] border border-[var(--gold)] text-[var(--gold)]">
+                  ◆ Scatter ×{scatterWin.count} · +${Math.floor(scatterWin.multiplier * lines * betPerLine).toLocaleString()}
+                  {scatterWin.bonusTriggered ? ' · Free Spins!' : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
+
+        {showPaytable && <SlotPaytableModal onClose={() => setShowPaytable(false)} />}
 
         {/* ── Bottom console ── */}
         <div className="shrink-0 border-t border-[rgba(212,175,55,0.12)] bg-[var(--surface)] px-5 py-4 flex items-center gap-5">
