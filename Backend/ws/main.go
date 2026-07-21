@@ -16,6 +16,10 @@ func (wsState *WebSocketState) Main() {
 }
 
 func (wsState *WebSocketState) handlePacket(packet packet) {
+	if packet.internal && packet.PacketType == packetTypeDisconnected {
+		wsState.pokerHandleDisconnect(packet.userID)
+		return
+	}
 	switch packet.PacketType {
 	case PacketTypeJoin:
 		var payload PacketJoinLeave

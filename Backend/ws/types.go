@@ -133,10 +133,21 @@ const (
 	PacketTypeSync         = "sync"
 	PacketTypePokerState   = "poker_state"
 	PacketTypeError        = "error"
+
+	// packetTypeDisconnected is a server-internal packet type — never sent
+	// by a real client — used to route a user's disconnect through the same
+	// ordered queue as their other packets (see ws/pumps.go), so it can
+	// never race ahead of or behind something like a "leave" they sent
+	// right before closing the connection.
+	packetTypeDisconnected = "disconnected"
 )
 
 type packet struct {
 	userID     uint            `json:"-"`
+	// internal is never set by json.Unmarshal (it only touches exported
+	// fields), so a client can never forge a packet that reaches the
+	// internal-only switch cases in handlePacket.
+	internal   bool            `json:"-"`
 	PacketType string          `json:"packet_type"`
 	Payload    json.RawMessage `json:"payload"`
 }

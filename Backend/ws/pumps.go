@@ -31,12 +31,19 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	wsState.clientsMutex.Lock()
 	Client := wsState.clients[userID]
 	context := Client.contextList.swapPopByConnection(connection)
-	if Client.contextList.length() == 0 {
+	lastConnection := Client.contextList.length() == 0
+	if lastConnection {
 		delete(wsState.clients, userID)
 		go wsState.timeoutClient(userID)
-		go wsState.pokerHandleDisconnect(userID)
 	}
 	wsState.clientsMutex.Unlock()
+	if lastConnection {
+		// Routed through readChannel (same as this connection's own packets,
+		// e.g. a "leave" sent right before closing) rather than run
+		// directly, so it can never race ahead of or behind them — see
+		// packetTypeDisconnected.
+		wsState.readChannel.safeWrite(packet{userID: userID, PacketType: packetTypeDisconnected, internal: true})
+	}
 	if context == nil {
 		return
 	}

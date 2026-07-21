@@ -31,6 +31,12 @@ type pokerSeat struct {
 	username  string
 	avatarURL string
 	gameID    uint // games.id backing this seat's session, until settled
+	// stack is this seat's last-known chip count. While the seat is part of
+	// engineGame, currentStack() prefers the live value from the engine —
+	// this only becomes authoritative once the table drops below 2 players
+	// and engineGame is torn down, so a lone remaining player's stack isn't
+	// lost (and doesn't fall back to the buy-in) before they leave too.
+	stack int64
 	// pendingLeave is set when a player disconnects mid-hand — they're
 	// auto-folded so the hand can proceed, then actually removed once it
 	// ends rather than being dealt into another hand nobody can act for.
@@ -75,9 +81,15 @@ func (table *PokerTable) seatedCount() int {
 }
 
 // currentStack reports what a seat should be treated as holding right now:
-// its live stack if it's part of the current engine game, or the fixed
-// buy-in for a seat that hasn't played yet.
+// its live stack if it's part of the current engine game, or its last
+// synced stack (see pokerSeat.stack) for a seat that isn't — either because
+// it hasn't played yet (still the buy-in) or because engineGame was torn
+// down after the table dropped below 2 players.
 func (table *PokerTable) currentStack(seatIdx int) int64 {
+	seat := table.seats[seatIdx]
+	if seat == nil {
+		return PokerBuyIn
+	}
 	if table.engineGame != nil {
 		if playerIdx, ok := table.playerOfSeat[seatIdx]; ok {
 			state := table.engineGame.State()
@@ -86,7 +98,7 @@ func (table *PokerTable) currentStack(seatIdx int) int64 {
 			}
 		}
 	}
-	return PokerBuyIn
+	return seat.stack
 }
 
 // MARK: inbound actions — all called from ws.Main() with no lock held
@@ -130,6 +142,7 @@ func (wsState *WebSocketState) pokerJoin(userID uint, seat int) {
 		username:  user.Username,
 		avatarURL: user.AvatarURL,
 		gameID:    game.ID,
+		stack:     PokerBuyIn,
 	}
 
 	table.reconcile(wsState)
@@ -259,9 +272,13 @@ func (table *PokerTable) reconcile(wsState *WebSocketState) {
 		return
 	}
 
+	// Sync each survivor's last-known stack onto its seat before the live
+	// engine game (their only other source of truth) is torn down below.
 	stacksBySeat := make(map[int]int64, len(seatIndices))
 	for _, seatIdx := range seatIndices {
-		stacksBySeat[seatIdx] = table.currentStack(seatIdx)
+		stack := table.currentStack(seatIdx)
+		stacksBySeat[seatIdx] = stack
+		table.seats[seatIdx].stack = stack
 	}
 
 	if table.engineGame != nil {
@@ -466,7 +483,7 @@ func (table *PokerTable) broadcastState(wsState *WebSocketState, recipients []ui
 			UserID:    seat.userID,
 			Username:  seat.username,
 			AvatarURL: seat.avatarURL,
-			Stack:     PokerBuyIn,
+			Stack:     seat.stack,
 		}
 		if playerIdx, ok := table.playerOfSeat[seatIdx]; ok && playerIdx < len(state.Players) {
 			player := state.Players[playerIdx]
