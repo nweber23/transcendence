@@ -306,6 +306,7 @@ const Poker: React.FC = () => {
                         style={{
                           border: '1px solid rgba(212,175,55,0.3)',
                           background: 'rgba(0,0,0,0.35)',
+                          WebkitBackdropFilter: 'blur(6px)',
                           backdropFilter: 'blur(6px)',
                         }}
                       >
