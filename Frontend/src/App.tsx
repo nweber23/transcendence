@@ -2,8 +2,10 @@ import React, { useEffect } from 'react';
 
 import { connectWebSocket, disconnectWebSocket } from '@/utils/wsClient';
 import { AUTH_TOKEN_CHANGED_EVENT } from '@/hooks/useAuth';
+import { getAuthToken } from '@/utils/authStorage';
 
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -30,7 +32,7 @@ const AppLayout: React.FC = () => {
 
   useEffect(() => {
     const syncConnection = () => {
-      const token = localStorage.getItem('auth_token');
+      const token = getAuthToken();
       if (token == null) {
         disconnectWebSocket();
       } else {
@@ -106,7 +108,9 @@ const AppLayout: React.FC = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AppLayout />
+      <ErrorBoundary>
+        <AppLayout />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiCall, apiUpload } from '@/utils/api';
+import { getAuthToken } from '@/utils/authStorage';
 
 export interface ProfileUser {
   id: number;
@@ -11,14 +12,17 @@ export interface ProfileUser {
 
 export interface UseProfileReturn {
   user: ProfileUser | null;
+  notificationTypes: string[];
   isLoading: boolean;
   error: string | null;
   updateProfile: (username: string, email: string, password?: string) => Promise<void>;
   uploadAvatar: (file: File) => Promise<void>;
+  profile_setNotificationTypes: (notificationTypes: string[]) => Promise<void>;
 }
 
 export function useProfile(): UseProfileReturn {
   const [user, setUser] = useState<ProfileUser | null>(null);
+  const [notificationTypes, setNotificationTypes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +31,11 @@ export function useProfile(): UseProfileReturn {
     setUser(result);
   }, []);
 
+  const getNotificationTypes = useCallback(async () => {
+    const result = await apiCall<string[]>('GET', '/user/notification_types');
+    setNotificationTypes(result);
+  }, []);
+  
   const updateProfile = async (username: string, email: string, password?: string) => {
     setIsLoading(true);
     setError(null);
@@ -61,11 +70,26 @@ export function useProfile(): UseProfileReturn {
     }
   };
 
-  useEffect(() => {
-    if (localStorage.getItem('auth_token')) {
-      fetchProfile().catch(() => {});
+  const profile_setNotificationTypes = async (notificationTypesToSet: string[]) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiCall('PUT', '/user/notification_types', notificationTypesToSet);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Apply failed';
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
-  }, [fetchProfile]);
+  }
 
-  return { user, isLoading, error, updateProfile, uploadAvatar };
+  useEffect(() => {
+    if (getAuthToken()) {
+      fetchProfile().catch(() => {});
+      getNotificationTypes().catch(() => {});
+    }
+  }, [fetchProfile, getNotificationTypes]);
+
+  return { user, notificationTypes, isLoading, error, updateProfile, uploadAvatar, profile_setNotificationTypes };
 }

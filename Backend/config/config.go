@@ -7,30 +7,34 @@ import (
 )
 
 type Config struct {
-	DatabaseHost     string
-	DatabasePort     string
-	DatabaseUser     string
-	DatabasePassword string
-	DatabaseName     string
-	JWTSecret        string
-	JWTExpiration    int64
-	EngineHost       string
-	EnginePort       string
-	GinMode          string
+	DatabaseHost      string
+	DatabasePort      string
+	DatabaseUser      string
+	DatabasePassword  string
+	DatabaseName      string
+	Port              string
+	JWTSecret         string
+	JWTExpiration     int64
+	EngineHost        string
+	EnginePort        string
+	GinMode           string
+	CORSAllowedOrigin string
 }
 
 func LoadConfig() *Config {
 	return &Config{
-		DatabaseHost:     getEnv("DATABASE_HOST", "postgres"),
-		DatabasePort:     getEnv("DATABASE_PORT", "5432"),
-		DatabaseUser:     getEnv("DATABASE_USER", "admin"),
-		DatabasePassword: getEnv("DATABASE_PASSWORD", "admin123"),
-		DatabaseName:     getEnv("DATABASE_NAME", "postgres"),
-		JWTSecret:        getEnv("JWT_SECRET", "secret"),
-		JWTExpiration:    getEnvInt("JWT_EXPIRATION", 86400),
-		EngineHost:       getEnv("ENGINE_HOST", "engine"),
-		EnginePort:       getEnv("ENGINE_PORT", "9090"),
-		GinMode:          getEnv("GIN_MODE", "debug"),
+		DatabaseHost:      getEnv("DATABASE_HOST", "postgres"),
+		DatabasePort:      getEnv("DATABASE_PORT", "5432"),
+		DatabaseUser:      getEnv("DATABASE_USER", "admin"),
+		DatabasePassword:  getEnv("DATABASE_PASSWORD", "admin123"),
+		DatabaseName:      getEnv("DATABASE_NAME", "postgres"),
+		Port:              getEnv("PORT", "8080"),
+		JWTSecret:         getEnv("JWT_SECRET", "secret"),
+		JWTExpiration:     getEnvInt("JWT_EXPIRATION", 86400),
+		EngineHost:        getEnv("ENGINE_HOST", "engine"),
+		EnginePort:        getEnv("ENGINE_PORT", "9090"),
+		GinMode:           getEnv("GIN_MODE", "debug"),
+		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "*"),
 	}
 }
 

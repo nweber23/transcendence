@@ -4,6 +4,8 @@ import { UseFriendsReturn } from '@/hooks/useFriends';
 import { useOutsideClick } from '@/utils/useOutsideClick';
 import FriendsPanelContent from '@/components/layout/FriendsPanelContent';
 
+export const OPEN_FRIENDS_DROPDOWN_EVENT = 'open_friends_dropdown';
+
 const FriendsDropdown: React.FC<UseFriendsReturn> = ({
   friends,
   incoming,
@@ -24,6 +26,15 @@ const FriendsDropdown: React.FC<UseFriendsReturn> = ({
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const openFromEvent = () => {
+      setOpen(true);
+      refetch();
+    };
+    window.addEventListener(OPEN_FRIENDS_DROPDOWN_EVENT, openFromEvent);
+    return () => window.removeEventListener(OPEN_FRIENDS_DROPDOWN_EVENT, openFromEvent);
+  }, [refetch]);
 
   const handleToggle = () => {
     const next = !open;

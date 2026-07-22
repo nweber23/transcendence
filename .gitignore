@@ -26,6 +26,7 @@ go.work.sum
 
 # env file
 .env
+.env.prod
 
 # Editor/IDE
 .idea/
@@ -42,3 +43,8 @@ _*
 
 # Incase of local test builds
 Backend/backend
+Backend/engine_proto
+
+# Copied protobufs
+*/*.proto
+*/proto

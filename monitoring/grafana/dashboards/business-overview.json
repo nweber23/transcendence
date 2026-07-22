@@ -1,0 +1,272 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_POSTGRES",
+      "label": "Postgres",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-postgresql-datasource",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "title": "Business Overview",
+  "description": "Money flow across the platform: total amount lost by players, deposits/withdrawals, and per-game-type economics. Reads accounts/transactions/games directly via SQL.",
+  "uid": "business-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": { "from": "now-90d", "to": "now" },
+  "refresh": "1m",
+  "tags": ["business", "postgres", "revenue"],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_POSTGRES",
+        "type": "datasource",
+        "query": "grafana-postgresql-datasource",
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview (all-time)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total amount lost by players",
+      "description": "SUM(accounts.total_lost) -- the running total of losing bets across every account. This is money the house has taken in from losses (not netted against payouts).",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(total_lost), 0) AS \"Total Lost\" FROM accounts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total wagered",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(total_wagered), 0) AS \"Total Wagered\" FROM accounts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "blue" } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total paid out to players",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(total_won), 0) AS \"Total Won\" FROM accounts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "green" } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Net platform revenue",
+      "description": "SUM(total_wagered) - SUM(total_won) -- house edge actually realized, netting wins against losses (vs. the raw \"total lost\" figure which ignores payouts).",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(total_wagered) - SUM(total_won), 0) AS \"Net Revenue\" FROM accounts",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Cash flow",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Deposits vs withdrawals per day",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 7 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroup(created_at, '1d') AS time, SUM(CASE WHEN type = 'deposit' THEN amount ELSE 0 END) AS deposits, SUM(CASE WHEN type = 'withdrawal' THEN amount ELSE 0 END) AS withdrawals FROM transactions WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "bars", "fillOpacity": 30 } },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Net deposits (all-time)",
+      "description": "Total deposited minus total withdrawn.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 7 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount WHEN type = 'withdrawal' THEN -amount ELSE 0 END), 0) AS \"Net Deposits\" FROM transactions",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 2 },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Gameplay economics",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Amount lost per day (completed games)",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 16 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroup(completed_at, '1d') AS time, SUM(GREATEST(initial_bet - winnings, 0)) AS amount_lost FROM games WHERE status = 'completed' AND $__timeFilter(completed_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": { "drawStyle": "line", "fillOpacity": 15 },
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 11,
+      "type": "bargauge",
+      "title": "Amount lost by game type (all-time)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT game_type, SUM(GREATEST(initial_bet - winnings, 0)) AS amount_lost FROM games WHERE status = 'completed' GROUP BY game_type ORDER BY amount_lost DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 2 },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Players",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Top 10 players by amount lost",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 25 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+      "targets": [
+        {
+          "rawSql": "SELECT u.username AS \"Username\", a.total_wagered AS \"Wagered\", a.total_won AS \"Won\", a.total_lost AS \"Lost\", a.balance AS \"Balance\" FROM accounts a JOIN users u ON u.id = a.user_id ORDER BY a.total_lost DESC LIMIT 10",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 2 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Username" }, "properties": [{ "id": "unit", "value": "short" }] }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

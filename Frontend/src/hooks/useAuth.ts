@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiCall } from '@/utils/api';
+import { getAuthToken, getAuthUser, setAuthToken, setAuthUser, clearAuthStorage } from '@/utils/authStorage';
 
 export const AUTH_TOKEN_CHANGED_EVENT = 'auth-token-changed';
 
@@ -15,34 +16,28 @@ export interface UseAuthReturn {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('auth_token');
-  });
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('auth_user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [token, setToken] = useState<string | null>(() => getAuthToken());
+  const [user, setUser] = useState<User | null>(() => getAuthUser<User>());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const syncFromStorage = () => {
-      const savedUser = localStorage.getItem('auth_user');
-      setUser(savedUser ? JSON.parse(savedUser) : null);
-      setToken(localStorage.getItem('auth_token'));
+      setUser(getAuthUser<User>());
+      setToken(getAuthToken());
     };
     window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncFromStorage);
     return () => window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncFromStorage);
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, rememberMe = false) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -51,17 +46,17 @@ export function useAuth(): UseAuthReturn {
         '/auth/login',
         { username, password }
       );
-      localStorage.setItem('auth_token', response.token);
+      setAuthToken(response.token, rememberMe);
       setToken(response.token);
       // Fetch user profile after login
       try {
         const profile = await apiCall<User>('GET', '/user/profile');
-        localStorage.setItem('auth_user', JSON.stringify(profile));
+        setAuthUser(profile);
         setUser(profile);
         window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       } catch (profileErr) {
         // If profile fetch fails, clear the token and error out
-        localStorage.removeItem('auth_token');
+        clearAuthStorage();
         setToken(null);
         const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
         setError(errorMessage);
@@ -89,17 +84,17 @@ export function useAuth(): UseAuthReturn {
         '/auth/register',
         { username, email, password }
       );
-      localStorage.setItem('auth_token', response.token);
+      setAuthToken(response.token, true);
       setToken(response.token);
       // Fetch user profile after registration
       try {
         const profile = await apiCall<User>('GET', '/user/profile');
-        localStorage.setItem('auth_user', JSON.stringify(profile));
+        setAuthUser(profile);
         setUser(profile);
         window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
       } catch (profileErr) {
         // If profile fetch fails, clear the token and error out
-        localStorage.removeItem('auth_token');
+        clearAuthStorage();
         setToken(null);
         const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
         setError(errorMessage);
@@ -115,8 +110,7 @@ export function useAuth(): UseAuthReturn {
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    clearAuthStorage();
     setToken(null);
     setUser(null);
     setError(null);
@@ -126,7 +120,7 @@ export function useAuth(): UseAuthReturn {
   const refreshUser = async () => {
     try {
       const profile = await apiCall<User>('GET', '/user/profile');
-      localStorage.setItem('auth_user', JSON.stringify(profile));
+      setAuthUser(profile);
       setUser(profile);
       window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
     } catch {

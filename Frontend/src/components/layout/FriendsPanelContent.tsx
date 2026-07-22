@@ -90,7 +90,7 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
                   <span className="text-sm font-medium text-[var(--text)]">{result.username}</span>
                 </div>
                 <button
-                  onClick={() => addFriend(result.id)}
+                  onClick={() => addFriend(result.id).catch(() => {})}
                   disabled={isAlreadyFriend || isOutgoing}
                   className={`${ghostBtn} border ${
                     isAlreadyFriend
@@ -120,10 +120,10 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
                 friend={f}
                 actions={
                   <div className="flex gap-1.5">
-                    <button onClick={() => addFriend(f.friendId)} className={`${ghostBtn} border border-[rgba(45,122,99,0.3)] text-emerald-400 hover:bg-[rgba(45,122,99,0.08)]`}>
+                    <button onClick={() => addFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(45,122,99,0.3)] text-emerald-400 hover:bg-[rgba(45,122,99,0.08)]`}>
                       Accept
                     </button>
-                    <button onClick={() => removeFriend(f.friendId)} className={`${ghostBtn} border border-[rgba(139,38,53,0.3)] text-red-400 hover:bg-[rgba(139,38,53,0.08)]`}>
+                    <button onClick={() => removeFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(139,38,53,0.3)] text-red-400 hover:bg-[rgba(139,38,53,0.08)]`}>
                       Decline
                     </button>
                   </div>
@@ -143,7 +143,7 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
                 key={f.friendId}
                 friend={f}
                 actions={
-                  <button onClick={() => removeFriend(f.friendId)} className={`${ghostBtn} border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] hover:text-red-400 hover:border-red-400/30`}>
+                  <button onClick={() => removeFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] hover:text-red-400 hover:border-red-400/30`}>
                     Cancel
                   </button>
                 }
@@ -162,7 +162,7 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
                 key={f.friendId}
                 friend={f}
                 actions={
-                  <button onClick={() => removeFriend(f.friendId)} className={`${ghostBtn} border border-[rgba(139,38,53,0.3)] text-red-400 hover:bg-[rgba(139,38,53,0.08)]`}>
+                  <button onClick={() => removeFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(139,38,53,0.3)] text-red-400 hover:bg-[rgba(139,38,53,0.08)]`}>
                     Remove
                   </button>
                 }

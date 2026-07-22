@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"strings"
 
 	"crypto/rand"
 	"encoding/hex"
@@ -25,5 +26,13 @@ func ReinterpretNotFound(err error) (error) {
 		return nil
 	} else {
 		return err
+	}
+}
+
+func OrdinalSplit(s string, sep string) ([]string) {
+	if s == "" {
+		return []string{}
+	} else {
+		return strings.Split(s, sep)
 	}
 }

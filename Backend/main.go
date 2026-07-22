@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"transcendence/config"
 	"transcendence/handlers"
@@ -11,6 +10,7 @@ import (
 	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -24,27 +24,39 @@ func main() {
 	router := gin.Default()
 
 	// CORS middleware
-	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
+
+	// Prometheus request metrics + scrape endpoint
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Serve uploaded avatar files publicly (no auth required for <img> tags)
 	router.Static("/uploads", "./uploads")
 
-	// Initialize services
+	// Initialize database services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)
 	friendService := services.NewFriendService(db)
-	gameService := services.NewGameService(db)
-	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
+	notificationService := services.NewNotificationService(db)
+
+	// Intialize engine service
+	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
+	if err != nil {
+		log.Fatalf("Failed to create engine service: %v", err)
+	} else {
+		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
+	}
+	gameService := services.NewGameService(db, engineService)
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(friendService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
 	go wsState.Main()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
-	userHandler := handlers.NewUserHandler(userService, accountService, friendService, wsState)
-	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
-	wsHandler   := handlers.NewWebSocketHandler(wsState)
+	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
+	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")
@@ -69,6 +81,10 @@ func main() {
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
 		userRoutes.GET("/friends", userHandler.EnumerateFriends)
 		userRoutes.GET("/search", userHandler.SearchUsers)
+		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
+		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
+		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 	}
 
 	// Game routes (protected)
@@ -84,13 +100,8 @@ func main() {
 	// WebSocket route
 	router.GET("/ws", middleware.AuthFix, middleware.AuthMiddleware(cfg.JWTSecret), wsHandler.UpgradeConnection)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
+	log.Printf("Starting server on port %s", cfg.Port)
+	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

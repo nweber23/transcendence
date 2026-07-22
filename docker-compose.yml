@@ -19,6 +19,36 @@ services:
     networks:
       - transcendence-network
 
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    container_name: transcendence-postgres-exporter
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}?sslmode=disable"
+    # No ports mapping -> only reachable from other containers on
+    # monitoring-network (i.e. Prometheus), same pattern as prometheus itself.
+    # Pinned to v0.17.1: v0.15.0's stat_bgwriter collector errors against
+    # Postgres 18 (checkpoint columns moved to pg_stat_checkpointer in PG17+).
+    restart: unless-stopped
+    networks:
+      - transcendence-network
+      - monitoring-network
+
+  engine:
+    build:
+      context: ./Engine
+      dockerfile: Dockerfile
+    container_name: transcendence-engine
+    env_file: .env
+    environment:
+      ENGINE_PORT: ${ENGINE_PORT}
+    ports:
+      - "${ENGINE_PORT}:9090"
+    networks:
+      - transcendence-network
+
   backend:
     build:
       context: ./Backend
@@ -27,16 +57,25 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      engine:
+        condition: service_started
     env_file: ./.env
     ports:
       - "8080:8080"
+    volumes:
+      - backend_uploads:/root/uploads
     networks:
       - transcendence-network
+      # also on the monitoring network so Prometheus can scrape /metrics
+      # without the backend's app-network exposure being affected
+      - monitoring-network
 
   frontend:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     container_name: frontend
     ports:
       - "5173:5173"
@@ -46,9 +85,109 @@ services:
     networks:
       - transcendence-network
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: transcendence-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    # No ports: mapping -> not reachable from the host or internet, only
+    # from other containers on monitoring-network (i.e. Grafana).
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: transcendence-grafana
+    depends_on:
+      - prometheus
+    env_file: ./.env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      # Dev-only: lets you open http://localhost:3000 to view dashboards.
+      # docker-compose.prod.yml removes this mapping entirely for defense/
+      # production so no monitoring port is exposed publicly.
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      # also on the app network so the Postgres business-metrics datasource
+      # (SQL panels against accounts/transactions/games) can reach postgres:5432
+      - transcendence-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: transcendence-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/root'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    pid: host
+    # No ports mapping -> host metrics only reach Prometheus, over
+    # monitoring-network, same as every other scrape-only exporter here.
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    container_name: transcendence-caddy
+    ports:
+      - "3333:80"
+      - "3334:81"
+    volumes:
+      - ./caddy/conf:/etc/caddy
+      - ./caddy/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - transcendence-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    command:
+    - --port=1337
+    volumes:
+      - /run/user/${UID}/docker.sock:/var/run/docker.sock:ro   # UID anpassen!
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - monitoring-network
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
+  caddy_data:
+  caddy_config:
+  backend_uploads:
 
 networks:
   transcendence-network:
     driver: bridge
+  monitoring-network:
+    driver: bridge
+    #internal: true

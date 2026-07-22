@@ -26,6 +26,8 @@ const toastReducer = (state: ToastState, action: ToastAction): ToastState => {
 
 interface ShowToastOptions {
   duration?: number;
+  head?: string;
+  imageUrl?: string;
 }
 
 export const useToast = () => {
@@ -39,6 +41,8 @@ export const useToast = () => {
         message,
         type,
         duration: options?.duration,
+        head: options?.head,
+        imageUrl: options?.imageUrl,
       };
       dispatch({ type: 'ADD_TOAST', payload: toast });
       return id;

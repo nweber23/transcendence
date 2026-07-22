@@ -15,11 +15,13 @@ const mockToken = 'mock-jwt-token';
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   vi.clearAllMocks();
 });
 
 afterEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('useAuth - initialization', () => {
@@ -40,10 +42,31 @@ describe('useAuth - initialization', () => {
     const { result } = renderHook(() => useAuth());
     expect(result.current.user).toEqual(mockUser);
   });
+
+  it('restores token and user from sessionStorage on mount', () => {
+    sessionStorage.setItem('auth_token', mockToken);
+    sessionStorage.setItem('auth_user', JSON.stringify(mockUser));
+    const { result } = renderHook(() => useAuth());
+    expect(result.current.token).toBe(mockToken);
+    expect(result.current.user).toEqual(mockUser);
+  });
+
+  it('treats an expired remembered session as logged out and clears storage', () => {
+    localStorage.setItem('auth_token', mockToken);
+    localStorage.setItem('auth_user', JSON.stringify(mockUser));
+    localStorage.setItem('auth_expiry', String(Date.now() - 1000));
+
+    const { result } = renderHook(() => useAuth());
+
+    expect(result.current.token).toBeNull();
+    expect(result.current.user).toBeNull();
+    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(localStorage.getItem('auth_expiry')).toBeNull();
+  });
 });
 
 describe('useAuth - login', () => {
-  it('sets token and user on successful login', async () => {
+  it('sets token and user in sessionStorage by default (rememberMe not passed)', async () => {
     mockApiCall
       .mockResolvedValueOnce({ token: mockToken, user_id: 1 })
       .mockResolvedValueOnce(mockUser);
@@ -56,8 +79,43 @@ describe('useAuth - login', () => {
 
     expect(result.current.token).toBe(mockToken);
     expect(result.current.user).toEqual(mockUser);
+    expect(sessionStorage.getItem('auth_token')).toBe(mockToken);
+    expect(JSON.parse(sessionStorage.getItem('auth_user')!)).toEqual(mockUser);
+    expect(localStorage.getItem('auth_token')).toBeNull();
+  });
+
+  it('sets token and user in localStorage with a 7-day expiry when rememberMe is true', async () => {
+    mockApiCall
+      .mockResolvedValueOnce({ token: mockToken, user_id: 1 })
+      .mockResolvedValueOnce(mockUser);
+
+    const { result } = renderHook(() => useAuth());
+
+    await act(async () => {
+      await result.current.login('testuser', 'password', true);
+    });
+
+    expect(result.current.token).toBe(mockToken);
     expect(localStorage.getItem('auth_token')).toBe(mockToken);
     expect(JSON.parse(localStorage.getItem('auth_user')!)).toEqual(mockUser);
+    expect(localStorage.getItem('auth_expiry')).not.toBeNull();
+    expect(sessionStorage.getItem('auth_token')).toBeNull();
+  });
+
+  it('does not persist the session when rememberMe is false', async () => {
+    mockApiCall
+      .mockResolvedValueOnce({ token: mockToken, user_id: 1 })
+      .mockResolvedValueOnce(mockUser);
+
+    const { result } = renderHook(() => useAuth());
+
+    await act(async () => {
+      await result.current.login('testuser', 'password', false);
+    });
+
+    expect(sessionStorage.getItem('auth_token')).toBe(mockToken);
+    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(localStorage.getItem('auth_expiry')).toBeNull();
   });
 
   it('sets isLoading true during login and false after', async () => {

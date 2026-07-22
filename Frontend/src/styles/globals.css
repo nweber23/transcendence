@@ -400,19 +400,6 @@
   animation: card-deal 420ms var(--ease-out) backwards;
 }
 
-@keyframes card-flip-in {
-  from {
-    transform: perspective(600px) rotateY(88deg);
-  }
-  to {
-    transform: perspective(600px) rotateY(0deg);
-  }
-}
-
-.card-flip-in {
-  animation: card-flip-in 340ms var(--ease-out);
-}
-
 @keyframes banner-pop {
   from {
     opacity: 0;
@@ -515,4 +502,56 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border);
+}
+
+/* ─── LANDING PAGE CONTINUOUS CANVAS ─── */
+.landing-canvas {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(212, 175, 55, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 50% 100%, rgba(45, 122, 99, 0.08) 0%, transparent 60%),
+    var(--base);
+}
+
+.grid-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(var(--gold-rgb), 0.6) 1.5px, transparent 1.5px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  opacity: 0.4;
+}
+
+/* ─── HERO VISUAL (looping cards/chips) ─── */
+@keyframes heroCardDeal {
+  0% { opacity: 0; transform: translateY(-16px) rotate(var(--card-rot, 0deg)) scale(0.94); }
+  12% { opacity: 1; transform: translateY(0) rotate(var(--card-rot, 0deg)) scale(1); }
+  88% { opacity: 1; transform: translateY(0) rotate(var(--card-rot, 0deg)) scale(1); }
+  100% { opacity: 0; transform: translateY(-16px) rotate(var(--card-rot, 0deg)) scale(0.94); }
+}
+
+@keyframes heroChipStack {
+  0%, 15% { transform: translateY(10px); opacity: 0; }
+  30%, 85% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-6px); opacity: 0; }
+}
+
+.hero-visual-card {
+  animation: heroCardDeal 4.5s var(--ease-out) infinite;
+}
+
+.hero-visual-chip {
+  animation: heroChipStack 4.5s var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-visual-card,
+  .hero-visual-chip {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
