@@ -173,6 +173,12 @@ services:
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
+    # The image's built-in HEALTHCHECK defaults to hitting :8080/healthz,
+    # but we run cadvisor on --port=1337 -- without this override the
+    # healthcheck always fails (wrong port) even though the container and
+    # its Prometheus scrape are working fine.
+    environment:
+      CADVISOR_HEALTHCHECK_URL: "http://localhost:1337/healthz"
     command:
     - --port=1337
     volumes:
