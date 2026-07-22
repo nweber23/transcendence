@@ -12,14 +12,14 @@ export interface SlotSymbol {
 }
 
 export const SYMBOLS: SlotSymbol[] = [
-  { id: 'SYM_7', label: '7', file: '/lucky_seven.png' },
-  { id: 'SYM_BAR', label: 'BAR', file: '/banana.png' },
-  { id: 'SYM_WILD', label: 'WILD', file: '/big_win.png' },
-  { id: 'SYM_DIAMOND', label: '◆', file: '/watermelon.png' },
-  { id: 'SYM_HEART', label: '♥', file: '/cherry.png' },
-  { id: 'SYM_SPADE', label: '♠', file: '/grapes.png' },
-  { id: 'SYM_CLUB', label: '♣', file: '/orange.png' },
-  { id: 'SYM_BELL', label: 'BELL', file: '/apple.png' },
+  { id: 'SYM_7', label: '7', file: '/sym_seven.png' },
+  { id: 'SYM_BAR', label: 'BAR', file: '/sym_bar.png' },
+  { id: 'SYM_WILD', label: 'WILD', file: '/sym_wild.png' },
+  { id: 'SYM_DIAMOND', label: '◆', file: '/sym_diamond.png' },
+  { id: 'SYM_HEART', label: '♥', file: '/sym_heart.png' },
+  { id: 'SYM_SPADE', label: '♠', file: '/sym_spade.png' },
+  { id: 'SYM_CLUB', label: '♣', file: '/sym_club.png' },
+  { id: 'SYM_BELL', label: 'BELL', file: '/sym_bell.png' },
 ];
 
 export const symbolIcon = (id: string) => SYMBOLS.find((s) => s.id === id)?.file;
