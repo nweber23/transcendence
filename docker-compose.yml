@@ -152,6 +152,12 @@ services:
     ports:
       - "3333:80"
       - "3334:81"
+      # Non-privileged host ports: rootless Docker (and some grading setups)
+      # can't bind host port 443 without extra host capabilities/sysctl
+      # changes, which would break the single-command requirement. Caddy
+      # still terminates TLS on 443/8443 *inside* the container either way.
+      - "8443:443"
+      - "8444:8443"
     volumes:
       - ./caddy/conf:/etc/caddy
       - ./caddy/site:/srv
