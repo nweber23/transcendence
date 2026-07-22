@@ -8,19 +8,16 @@ import { apiCall, ApiError } from '@/utils/api';
 import { LINE_OPTIONS, SYMBOLS } from './luckySevensConfig';
 import { evaluateWinningLines, evaluateScatterWin, type WinningLine, type ScatterWin } from './luckySevensWins';
 
-/* Filler icons shown while the reels are still cosmetically spinning — a
-   superset of the symbols the engine can actually resolve, for variety. */
-const ICONS = [
-  'apple', 'apricot', 'banana', 'cherry', 'grapes',
-  'lemon', 'lucky_seven', 'orange', 'pear', 'strawberry', 'watermelon',
-];
-
-/* Every symbol in the engine config now maps 1:1 onto its own real asset
-   (see luckySevensConfig.ts), so a real engine match always renders as a
-   visual match too. */
+/* Every symbol in the engine config maps 1:1 onto its own real asset (see
+   luckySevensConfig.ts), so a real engine match always renders as a visual
+   match too. */
 const SYMBOL_ICON_MAP: Record<string, string> = Object.fromEntries(
   SYMBOLS.map((s) => [s.id, s.file.replace(/^\//, '').replace(/\.png$/, '')]),
 );
+
+/* Filler icons shown while the reels are still cosmetically spinning — just
+   the real symbol set, since there's no separate decorative art anymore. */
+const ICONS = Object.values(SYMBOL_ICON_MAP);
 
 const LINE_COLORS = ['#ffd447', '#ff6b6b', '#4ecdc4', '#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fb923c', '#facc15', '#f87171'];
 
