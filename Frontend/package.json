@@ -40,5 +40,11 @@
     "typescript": "^5.9.3",
     "vite": "^6.4.3",
     "vitest": "^4.1.10"
-  }
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ]
 }
