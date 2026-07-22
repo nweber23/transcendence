@@ -21,13 +21,25 @@ TEST_CASE("Engine creates and tracks blackjack games", "[engine]") {
     }
 
     SECTION("hit on existing game returns valid JSON") {
-        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+        // A natural blackjack settles and removes the game on deal, so
+        // retry until we land a deal that leaves the game open to act on.
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
         auto json = e.blackjack_hit("42");
         REQUIRE_FALSE(json.empty());
     }
 
     SECTION("stand on existing game returns valid JSON") {
-        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
         auto json = e.blackjack_stand("42");
         REQUIRE_FALSE(json.empty());
     }
