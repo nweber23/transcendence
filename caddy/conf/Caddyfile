@@ -26,3 +26,25 @@
 		format json
 	}
 }
+
+localhost:443, 127.0.0.1:443 {
+	tls internal
+
+	reverse_proxy frontend:5173
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+localhost:8443, 127.0.0.1:8443 {
+	tls internal
+
+	reverse_proxy backend:8080
+
+	log {
+		output stdout
+		format json
+	}
+}
