@@ -10,7 +10,7 @@
     }
   ],
   "title": "Caddy: Frontend vs Backend",
-  "description": "Request rate, status-code mix, and latency split by Caddy server block (srv0 = frontend, srv1 = backend).",
+  "description": "Request rate, status-code mix, and latency split by Caddy server block. 'Frontend' aggregates the frontend_http (:80) and frontend_https (:443) listeners; 'Backend' aggregates backend_http (:81) and backend_https (:8443).",
   "uid": "caddy-frontend-backend",
   "schemaVersion": 39,
   "version": 2,
@@ -66,7 +66,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_requests_total{server=\"srv0\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_requests_total{server=~\"frontend_.*\"}[5m]))",
           "legendFormat": "Frontend requests/sec"
         }
       ],
@@ -114,7 +114,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_requests_total{server=\"srv1\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_requests_total{server=~\"backend_.*\"}[5m]))",
           "legendFormat": "Backend requests/sec"
         }
       ],
@@ -162,7 +162,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\",code=~\"2..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\",code=~\"2..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\"}[5m]))",
           "legendFormat": "Frontend 2xx %"
         }
       ],
@@ -210,7 +210,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\",code=~\"2..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\",code=~\"2..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\"}[5m]))",
           "legendFormat": "Backend 2xx %"
         }
       ],
@@ -258,7 +258,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\",code=~\"4..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\",code=~\"4..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\"}[5m]))",
           "legendFormat": "Frontend 4xx %"
         }
       ],
@@ -306,7 +306,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\",code=~\"4..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\",code=~\"4..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\"}[5m]))",
           "legendFormat": "Backend 4xx %"
         }
       ],
@@ -354,7 +354,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\",code=~\"5..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv0\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\",code=~\"5..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"frontend_.*\"}[5m]))",
           "legendFormat": "Frontend 5xx %"
         }
       ],
@@ -402,7 +402,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\",code=~\"5..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=\"srv1\",handler=\"reverse_proxy\"}[5m]))",
+          "expr": "sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\",code=~\"5..\"}[5m])) / sum(rate(caddy_http_request_duration_seconds_count{server=~\"backend_.*\"}[5m]))",
           "legendFormat": "Backend 5xx %"
         }
       ],
@@ -463,15 +463,15 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv0\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"frontend_.*\"}[5m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv0\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"frontend_.*\"}[5m])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv0\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"frontend_.*\"}[5m])) by (le))",
           "legendFormat": "p99"
         }
       ],
@@ -514,15 +514,15 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv1\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"backend_.*\"}[5m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv1\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"backend_.*\"}[5m])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server=\"srv1\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server=~\"backend_.*\"}[5m])) by (le))",
           "legendFormat": "p99"
         }
       ],
@@ -578,11 +578,11 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(caddy_http_response_size_bytes_sum{server=\"srv0\"}[5m]))",
+          "expr": "sum(rate(caddy_http_response_size_bytes_sum{server=~\"frontend_.*\"}[5m]))",
           "legendFormat": "frontend response bytes/sec"
         },
         {
-          "expr": "sum(rate(caddy_http_response_size_bytes_sum{server=\"srv1\"}[5m]))",
+          "expr": "sum(rate(caddy_http_response_size_bytes_sum{server=~\"backend_.*\"}[5m]))",
           "legendFormat": "backend response bytes/sec"
         }
       ],
