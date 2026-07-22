@@ -10,42 +10,42 @@
     {
       "id": "SYM_7",
       "label": "7",
-      "file": "/assets/slots/lucky-sevens/sym_7.png"
+      "file": "/lucky_seven.png"
     },
     {
       "id": "SYM_BAR",
       "label": "BAR",
-      "file": "/assets/slots/lucky-sevens/sym_bar.png"
+      "file": "/banana.png"
     },
     {
       "id": "SYM_WILD",
-      "label": "W",
-      "file": "/assets/slots/lucky-sevens/sym_wild.png"
+      "label": "WILD",
+      "file": "/big_win.png"
     },
     {
       "id": "SYM_DIAMOND",
       "label": "◆",
-      "file": "/assets/slots/lucky-sevens/sym_diamond.png"
+      "file": "/watermelon.png"
     },
     {
       "id": "SYM_HEART",
       "label": "♥",
-      "file": "/assets/slots/lucky-sevens/sym_heart.png"
+      "file": "/cherry.png"
     },
     {
       "id": "SYM_SPADE",
       "label": "♠",
-      "file": "/assets/slots/lucky-sevens/sym_spade.png"
+      "file": "/grapes.png"
     },
     {
       "id": "SYM_CLUB",
       "label": "♣",
-      "file": "/assets/slots/lucky-sevens/sym_club.png"
+      "file": "/orange.png"
     },
     {
       "id": "SYM_BELL",
-      "label": "♣",
-      "file": "/assets/slots/lucky-sevens/sym_bell.png"
+      "label": "BELL",
+      "file": "/apple.png"
     }
   ],
 

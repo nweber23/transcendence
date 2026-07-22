@@ -22,7 +22,7 @@ find_package(Protobuf REQUIRED)
 find_program(PROTOC protoc REQUIRED)
 find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin REQUIRED)
 
-set(PROTO_FILE proto/engine.proto)
+set(PROTO_FILE engine.proto)
 set(PROTO_GEN_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${PROTO_GEN_DIR})
 
@@ -36,7 +36,7 @@ add_custom_command(
   COMMAND ${PROTOC}
   ARGS --grpc_out=${PROTO_GEN_DIR}
        --cpp_out=${PROTO_GEN_DIR}
-       -I ${CMAKE_SOURCE_DIR}/proto
+       -I ${CMAKE_SOURCE_DIR}
        --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}
        ${CMAKE_SOURCE_DIR}/${PROTO_FILE}
   DEPENDS ${CMAKE_SOURCE_DIR}/${PROTO_FILE}

@@ -23,6 +23,9 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
+      - name: Copy engine.proto
+        run: cp engine.proto Engine
+
       - name: Configure CMake (use GCC-14)
         working-directory: Engine
         run: |

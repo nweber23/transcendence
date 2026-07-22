@@ -14,9 +14,10 @@ fs::path Machine::config_directory() {
     return "games/slotMachine/configs";
 }
 
-SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
-                                      const std::vector<std::uint8_t>& stops,
-                                      std::uint8_t line_count)
+namespace {
+
+std::vector<std::vector<std::string>> resolve_grid(const SlotConfig& config,
+                                                    const std::vector<std::uint8_t>& stops)
 {
     std::vector<std::vector<std::string>> grid(
         config.rows, std::vector<std::string>(config.cols));
@@ -28,6 +29,17 @@ SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
             grid[r][c] = config.reels[c][idx];
         }
     }
+
+    return grid;
+}
+
+} // anonymous namespace
+
+SpinEvalResult Machine::evaluate_spin(const SlotConfig& config,
+                                      const std::vector<std::uint8_t>& stops,
+                                      std::uint8_t line_count)
+{
+    auto grid = resolve_grid(config, stops);
 
     double payline_total = 0;
     auto count = std::min<std::uint8_t>(line_count, config.max_lines);
@@ -120,7 +132,8 @@ std::string Machine::play_full_iteration(std::string_view game_name,
         base.current_multiplier,
         base.stops,
         base.win_amount,
-        base.total_free_win
+        base.total_free_win,
+        base.grid
     });
     if (!base.bonus_triggered) {
         std::string json_out;
@@ -140,7 +153,8 @@ std::string Machine::play_full_iteration(std::string_view game_name,
             fs_res.current_multiplier,
             fs_res.stops,
             fs_res.win_amount,
-            fs_res.total_free_win
+            fs_res.total_free_win,
+            fs_res.grid
         });
     }
     cycle.total_overall_win = accumulated_win;
@@ -259,6 +273,7 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     }
 
     auto eval = evaluate_spin(cfg, stops, line_count);
+    auto grid = resolve_grid(cfg, stops);
     double total = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
 
     if (is_free_spin) {
@@ -288,7 +303,8 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
     }
 
     return {std::move(stops), total_win, eval.bonus_triggered, eval.scatter_count,
-            is_free_spin, fs_state.free_spins_remaining, fs_state.current_multiplier, fs_state.total_free_win};
+            is_free_spin, fs_state.free_spins_remaining, fs_state.current_multiplier, fs_state.total_free_win,
+            std::move(grid)};
 }
 
 bool Machine::game_exists(std::string_view game_name) {

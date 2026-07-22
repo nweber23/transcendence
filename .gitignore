@@ -43,3 +43,8 @@ _*
 
 # Incase of local test builds
 Backend/backend
+Backend/engine_proto
+
+# Copied protobufs
+*/*.proto
+*/proto

@@ -28,10 +28,14 @@ down:
 	docker compose down
 
 rebuild:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose down
 	UID=$$(id -u) docker compose up -d --build
 
 build:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose build
 
 logs:

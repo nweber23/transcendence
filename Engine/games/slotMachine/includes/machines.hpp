@@ -62,6 +62,7 @@ struct SpinResult {
     std::uint8_t free_spins_remaining;
     std::uint8_t current_multiplier;
     std::uint32_t total_free_win;
+    std::vector<std::vector<std::string>> grid;
 };
 
 struct FreeSpinState {
@@ -91,6 +92,7 @@ struct SpinStep {
     std::vector<std::uint8_t> stops;
     std::uint32_t step_win;
     std::uint32_t accumulated_free_win;
+    std::vector<std::vector<std::string>> grid;
 };
 
 struct CompleteGameCycle {
@@ -111,7 +113,8 @@ struct glz::meta<SpinStep> {
         "multiplier",           &SpinStep::multiplier,
         "stops",                &SpinStep::stops,
         "step_win",             &SpinStep::step_win,
-        "accumulated_free_win", &SpinStep::accumulated_free_win
+        "accumulated_free_win", &SpinStep::accumulated_free_win,
+        "grid",                 &SpinStep::grid
     );
 };
 

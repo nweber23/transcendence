@@ -33,23 +33,30 @@ func main() {
 	// Serve uploaded avatar files publicly (no auth required for <img> tags)
 	router.Static("/uploads", "./uploads")
 
-	// Initialize services
+	// Initialize database services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)
 	friendService := services.NewFriendService(db)
-	gameService := services.NewGameService(db)
-	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 	notificationService := services.NewNotificationService(db)
 
+	// Intialize engine service
+	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
+	if err != nil {
+		log.Fatalf("Failed to create engine service: %v", err)
+	} else {
+		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
+	}
+	gameService := services.NewGameService(db, engineService)
+
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
 	go wsState.Main()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
-	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
-	wsHandler   := handlers.NewWebSocketHandler(wsState)
+	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")

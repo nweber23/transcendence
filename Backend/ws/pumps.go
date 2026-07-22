@@ -10,11 +10,11 @@ import (
 )
 
 func (wsState *WebSocketState) timeoutClient(userID uint) {
-	const timeout        int = 3000
+	const timeout int = 3000
 	const iterationCount int = 1000
 
 	for iteration := 0; iteration < iterationCount; {
-		time.Sleep(time.Millisecond * time.Duration(timeout / iterationCount))
+		time.Sleep(time.Millisecond * time.Duration(timeout/iterationCount))
 		if wsState.IsOnline(userID) {
 			return
 		}
@@ -31,11 +31,19 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	wsState.clientsMutex.Lock()
 	Client := wsState.clients[userID]
 	context := Client.contextList.swapPopByConnection(connection)
-	if Client.contextList.length() == 0 {
+	lastConnection := Client.contextList.length() == 0
+	if lastConnection {
 		delete(wsState.clients, userID)
 		go wsState.timeoutClient(userID)
 	}
 	wsState.clientsMutex.Unlock()
+	if lastConnection {
+		// Routed through readChannel (same as this connection's own packets,
+		// e.g. a "leave" sent right before closing) rather than run
+		// directly, so it can never race ahead of or behind them — see
+		// packetTypeDisconnected.
+		wsState.readChannel.safeWrite(packet{userID: userID, PacketType: packetTypeDisconnected, internal: true})
+	}
 	if context == nil {
 		return
 	}
@@ -64,7 +72,7 @@ func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *webso
 
 func pumpToConnection(context *connectionContext) {
 	for {
-		packet, ok := <- context.channel
+		packet, ok := <-context.channel
 		if !ok {
 			return
 		}
