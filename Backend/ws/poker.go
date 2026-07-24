@@ -150,6 +150,9 @@ func (wsState *WebSocketState) pokerJoin(userID uint, seat int) {
 	table.broadcastState(wsState, wsState.connectedUserIDs(), nil)
 }
 
+// pokerLeave vacates a seat. Between hands it's removed immediately; mid-hand
+// it's auto-folded (same as a disconnect, see foldSeatForLeaving) so play can
+// continue, and actually removed once that hand ends.
 func (wsState *WebSocketState) pokerLeave(userID uint) {
 	table := wsState.pokerTable
 	table.mutex.Lock()
@@ -160,15 +163,16 @@ func (wsState *WebSocketState) pokerLeave(userID uint) {
 		wsState.sendPokerError(userID, "not seated")
 		return
 	}
-	if table.handActive {
-		wsState.sendPokerError(userID, "cannot leave mid-hand — fold instead")
+
+	if !table.handActive {
+		table.removeSeat(wsState, seatIdx, "left")
+		table.reconcile(wsState)
+		table.tryStartHand(wsState)
+		table.broadcastState(wsState, wsState.connectedUserIDs(), nil)
 		return
 	}
 
-	table.removeSeat(wsState, seatIdx, "left")
-	table.reconcile(wsState)
-	table.tryStartHand(wsState)
-	table.broadcastState(wsState, wsState.connectedUserIDs(), nil)
+	table.foldSeatForLeaving(wsState, seatIdx)
 }
 
 func (wsState *WebSocketState) pokerPlay(userID uint, action string, amount int64) {
@@ -236,6 +240,15 @@ func (wsState *WebSocketState) pokerHandleDisconnect(userID uint) {
 		return
 	}
 
+	table.foldSeatForLeaving(wsState, seatIdx)
+}
+
+// foldSeatForLeaving auto-folds seatIdx's hand (if it's still live — not
+// already folded or all-in) and marks it pendingLeave so it's actually
+// vacated once the hand ends, then advances play. This is the shared exit
+// path for any seat that needs to leave without playing out the hand:
+// disconnects and a leave request sent mid-round.
+func (table *PokerTable) foldSeatForLeaving(wsState *WebSocketState, seatIdx int) {
 	table.seats[seatIdx].pendingLeave = true
 	playerIdx, ok := table.playerOfSeat[seatIdx]
 	if !ok {
@@ -244,7 +257,7 @@ func (wsState *WebSocketState) pokerHandleDisconnect(userID uint) {
 	state := table.engineGame.State()
 	if playerIdx < len(state.Players) && !state.Players[playerIdx].Folded && !state.Players[playerIdx].AllIn {
 		if err := table.engineGame.Play(uint64(playerIdx), "fold", 0); err != nil {
-			fmt.Printf("Failed to auto-fold disconnected user %d: %v\n", userID, err)
+			fmt.Printf("Failed to auto-fold leaving seat %d: %v\n", seatIdx, err)
 			return
 		}
 		table.advanceAfterAction(wsState)
