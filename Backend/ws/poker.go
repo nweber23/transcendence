@@ -23,7 +23,8 @@ const (
 	PokerBuyIn       = 1000
 	PokerSmallBlind  = 25
 	PokerBigBlind    = 50
-	pokerNextHandGap = 4 * time.Second // pause between hands so players can see who won
+	pokerNextHandGap = 4 * time.Second  // pause between hands so players can see who won
+	pokerTurnTimeout = 30 * time.Second // time a player has to act before being auto-folded and kicked
 )
 
 type pokerSeat struct {
@@ -55,6 +56,15 @@ type PokerTable struct {
 	// hand's blinds are posted, so the win/loss for that hand alone can be
 	// computed once it ends.
 	handStartStacks map[int]int64
+	// turnDeadline is when the acting player will be auto-folded and kicked
+	// if they haven't acted by then; zero while no turn is awaiting action
+	// (between hands, or at showdown). Broadcast to clients so they can
+	// render a countdown.
+	turnDeadline time.Time
+	// turnGen is bumped every time turnDeadline is (re)armed, so a stale
+	// enforceTurnTimeout goroutine from an already-completed turn can tell
+	// it's no longer current and do nothing.
+	turnGen int
 }
 
 func newPokerTable() *PokerTable {
@@ -247,7 +257,7 @@ func (wsState *WebSocketState) pokerHandleDisconnect(userID uint) {
 // already folded or all-in) and marks it pendingLeave so it's actually
 // vacated once the hand ends, then advances play. This is the shared exit
 // path for any seat that needs to leave without playing out the hand:
-// disconnects and a leave request sent mid-round.
+// disconnects, a leave request sent mid-round, and a turn timing out.
 func (table *PokerTable) foldSeatForLeaving(wsState *WebSocketState, seatIdx int) {
 	table.seats[seatIdx].pendingLeave = true
 	playerIdx, ok := table.playerOfSeat[seatIdx]
@@ -388,6 +398,59 @@ func (table *PokerTable) tryStartHand(wsState *WebSocketState) {
 		return
 	}
 	table.handActive = true
+	table.startTurnTimer(wsState)
+}
+
+// startTurnTimer (re)arms the countdown for whoever must act next, bumping
+// turnGen so any earlier countdown still sleeping in enforceTurnTimeout can
+// tell it's stale and do nothing when it wakes up. Must be called any time
+// the acting player changes: a new hand starting, and every action taken
+// (see advanceAfterAction).
+func (table *PokerTable) startTurnTimer(wsState *WebSocketState) {
+	table.turnGen++
+	gen := table.turnGen
+
+	if !table.handActive || table.engineGame == nil || table.engineGame.State().Phase == "showdown" {
+		table.turnDeadline = time.Time{}
+		return
+	}
+
+	playerIdx := int(table.engineGame.State().CurrentPlayer)
+	table.turnDeadline = time.Now().Add(pokerTurnTimeout)
+	go table.enforceTurnTimeout(wsState, gen, playerIdx)
+}
+
+// enforceTurnTimeout auto-folds and kicks whoever hasn't acted by the
+// deadline armed for them in startTurnTimer. gen and playerIdx are captured
+// at arm time so a timer left over from a turn that already ended — acted
+// on normally, or ended by that seat leaving/disconnecting some other way —
+// can recognize that and do nothing.
+func (table *PokerTable) enforceTurnTimeout(wsState *WebSocketState, gen int, playerIdx int) {
+	time.Sleep(pokerTurnTimeout)
+
+	table.mutex.Lock()
+	defer table.mutex.Unlock()
+
+	if table.turnGen != gen || !table.handActive || table.engineGame == nil {
+		return
+	}
+	state := table.engineGame.State()
+	if state.Phase == "showdown" || int(state.CurrentPlayer) != playerIdx {
+		return
+	}
+
+	seatIdx := -1
+	for seat, player := range table.playerOfSeat {
+		if player == playerIdx {
+			seatIdx = seat
+			break
+		}
+	}
+	if seatIdx < 0 || table.seats[seatIdx] == nil {
+		return
+	}
+
+	table.foldSeatForLeaving(wsState, seatIdx)
 }
 
 // advanceAfterAction broadcasts the post-action state to everyone connected.
@@ -396,9 +459,11 @@ func (table *PokerTable) tryStartHand(wsState *WebSocketState) {
 // hand after a short pause so the result stays visible for a moment.
 func (table *PokerTable) advanceAfterAction(wsState *WebSocketState) {
 	if table.engineGame == nil || table.engineGame.State().Phase != "showdown" {
+		table.startTurnTimer(wsState)
 		table.broadcastState(wsState, wsState.connectedUserIDs(), nil)
 		return
 	}
+	table.startTurnTimer(wsState) // clears turnDeadline — no one to act at showdown
 
 	recipients := wsState.connectedUserIDs()
 	handResult := table.finishHand()
@@ -481,6 +546,11 @@ func (table *PokerTable) broadcastState(wsState *WebSocketState, recipients []ui
 	}
 	showdown := state.Phase == "showdown"
 
+	var turnDeadlineMillis int64
+	if table.handActive && !showdown && !table.turnDeadline.IsZero() {
+		turnDeadlineMillis = table.turnDeadline.UnixMilli()
+	}
+
 	pot := int64(0)
 	for _, contribution := range state.Pot {
 		pot += contribution
@@ -539,6 +609,7 @@ func (table *PokerTable) broadcastState(wsState *WebSocketState, recipients []ui
 			BuyIn:            PokerBuyIn,
 			LastActionType:   state.LastActionType,
 			LastActionAmount: state.LastActionAmount,
+			TurnDeadline:     turnDeadlineMillis,
 			HandResult:       handResult,
 		}
 		if err := wsState.SendToTopic(recipientID, TopicGame, PacketTypePokerState, payload); err != nil {
