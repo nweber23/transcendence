@@ -7,18 +7,21 @@ import (
 )
 
 type Config struct {
-	DatabaseHost      string
-	DatabasePort      string
-	DatabaseUser      string
-	DatabasePassword  string
-	DatabaseName      string
-	Port              string
-	JWTSecret         string
-	JWTExpiration     int64
-	EngineHost        string
-	EnginePort        string
-	GinMode           string
-	CORSAllowedOrigin string
+	DatabaseHost       string
+	DatabasePort       string
+	DatabaseUser       string
+	DatabasePassword   string
+	DatabaseName       string
+	Port               string
+	JWTSecret          string
+	JWTExpiration      int64
+	EngineHost         string
+	EnginePort         string
+	GinMode            string
+	CORSAllowedOrigin  string
+	GithubClientId     string
+	GithubSecret       string
+	GithubRedirectURL  string
 }
 
 func LoadConfig() *Config {
@@ -35,6 +38,9 @@ func LoadConfig() *Config {
 		EnginePort:        getEnv("ENGINE_PORT", "9090"),
 		GinMode:           getEnv("GIN_MODE", "debug"),
 		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "*"),
+		GithubClientId:    getEnv("GITHUB_CLIENT_ID", ""),
+		GithubSecret:      getEnv("GITHUB_CLIENT_SECRET", ""),
+		GithubRedirectURL: getEnv("GITHUB_REDIRECT_URL", "http://localhost:3334/auth/github/callback"),
 	}
 }
 
