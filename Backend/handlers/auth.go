@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	//"fmt"
 	"net/http"
 
 	"transcendence/services"
@@ -10,16 +11,22 @@ import (
 )
 
 type AuthHandler struct {
-	userService *services.UserService
-	jwtSecret   string
-	jwtExpiry   int64
+	userService  *services.UserService
+	oauthService *services.OauthService
+	jwtSecret    string
+	jwtExpiry    int64
 }
 
-func NewAuthHandler(userService *services.UserService, jwtSecret string, jwtExpiry int64) *AuthHandler {
+func NewAuthHandler(
+	userService *services.UserService,
+	oauthService *services.OauthService,
+	jwtSecret string, jwtExpiry int64,
+) *AuthHandler {
 	return &AuthHandler{
-		userService: userService,
-		jwtSecret:   jwtSecret,
-		jwtExpiry:   jwtExpiry,
+		userService:  userService,
+		oauthService: oauthService,
+		jwtSecret:    jwtSecret,
+		jwtExpiry:    jwtExpiry,
 	}
 }
 
@@ -88,4 +95,52 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// Token invalidation would require a blacklist (Redis) in production
 	// For now, just return success - client deletes token
 	utils.RespondError(c, http.StatusOK, "logout successful", nil)
+}
+
+func (h *AuthHandler) OauthLogin(c *gin.Context) {
+	provider := h.oauthService.GetProvider(c.Param("provider"))
+	if provider == nil {
+		utils.RespondError(c, http.StatusNotFound, "404 Not Found", nil)
+		return
+	}
+	c.Redirect(http.StatusFound, provider.GetLoginUrl())
+}
+
+func (h *AuthHandler) OauthCallback(c *gin.Context) {
+	providerName := c.Param("provider")
+	provider := h.oauthService.GetProvider(providerName)
+	if provider == nil {
+		utils.RespondError(c, http.StatusNotFound, "404 Not Found", nil)
+		return
+	}
+
+	code := c.Query("code")
+	if code == "" {
+		utils.RespondError(c, http.StatusBadRequest, "no_code", "No code provided.")
+		return
+	}
+
+	token, err := provider.ExchangeCode(code)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "oauth_exchange_failed", err.Error())
+		return
+	}
+
+	oauthUser, err := provider.GetUser(token)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "oauth_user_fetch_failed", err.Error())
+		return
+	}
+
+	user, err := h.userService.FindOrCreateOauthUser(providerName, oauthUser.ID, oauthUser.Username, oauthUser.Email, oauthUser.AvatarURL)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "user_creation_failed", err.Error())
+		return
+	}
+
+	jwtToken := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
+	utils.RespondSuccess(c, http.StatusOK, "oauth login successful", AuthResponse{
+		Token:  jwtToken,
+		UserID: user.ID,
+	})
 }
