@@ -6,6 +6,7 @@ import (
 	"transcendence/config"
 	"transcendence/handlers"
 	"transcendence/middleware"
+	"transcendence/oauth"
 	"transcendence/services"
 	"transcendence/ws"
 
@@ -35,16 +36,21 @@ func main() {
 	gameService := services.NewGameService(db)
 	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 	notificationService := services.NewNotificationService(db)
+	oauthService := services.NewOauthService()
+
+	// Initialize OAuth Providers
+	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, "http://localhost:3334/auth/github/callback")
+	oauthService.RegisterProvider("github", githubOauthProvider)
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
 	go wsState.Main()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
+	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
-	wsHandler   := handlers.NewWebSocketHandler(wsState)
+	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
 	authRoutes := router.Group("/auth")
@@ -52,6 +58,8 @@ func main() {
 		authRoutes.POST("/register", authHandler.Register)
 		authRoutes.POST("/login", authHandler.Login)
 		authRoutes.POST("/logout", authHandler.Logout)
+		authRoutes.GET("/:provider", authHandler.OauthLogin)
+		authRoutes.GET("/:provider/callback", authHandler.OauthCallback)
 	}
 
 	// User routes (protected)
