@@ -71,11 +71,16 @@ interface PokerStatePacket {
   buy_in: number;
   last_action_type: string;
   last_action_amount: number;
+  turn_deadline: number; // unix ms; 0 if no turn is currently awaiting action
   hand_result?: PokerHandResult;
 }
 
 /* Matches the backend's pause between hands (ws/poker.go: pokerNextHandGap) */
 const HAND_RESULT_DISPLAY_MS = 4000;
+
+/* Matches the backend's per-turn countdown (ws/poker.go: pokerTurnTimeout) —
+   only used to turn the absolute turn_deadline into a fraction for the ring. */
+const TURN_TIMEOUT_MS = 30000;
 
 /*
   Seat positions on the oval — centered on the coordinate via translate(-50%, -50%).
@@ -138,6 +143,18 @@ const Poker: React.FC = () => {
     sendWebSocketPacket('sync');
     return unsubscribe;
   }, []);
+
+  /* Ticks while a turn countdown is running so the ring/badge below can
+     recompute how much time is left; idle otherwise. */
+  const turnDeadline = table?.turn_deadline || 0;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!turnDeadline) return;
+    const interval = window.setInterval(() => setNow(Date.now()), 200);
+    return () => window.clearInterval(interval);
+  }, [turnDeadline]);
+  const turnSecondsLeft = turnDeadline ? Math.max(0, Math.ceil((turnDeadline - now) / 1000)) : null;
+  const turnFraction = turnDeadline ? Math.max(0, Math.min(1, (turnDeadline - now) / TURN_TIMEOUT_MS)) : null;
 
   const smallBlind = table?.small_blind ?? DEFAULT_SMALL_BLIND;
   const bigBlind = table?.big_blind ?? DEFAULT_BIG_BLIND;
@@ -334,6 +351,8 @@ const Poker: React.FC = () => {
                     selected={selectedSeat === player.id}
                     selectable={!isSeated && !handActive}
                     onSelect={setSelectedSeat}
+                    turnSecondsLeft={player.isTurn ? turnSecondsLeft : null}
+                    turnFraction={player.isTurn ? turnFraction : null}
                   />
                 </div>
               ))}
@@ -452,8 +471,23 @@ const Poker: React.FC = () => {
                     <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Stack</p>
                     <p className="font-serif text-lg text-[var(--gold)]">${mySeat?.stack.toLocaleString()}</p>
                   </div>
+                  {isMyTurn && turnSecondsLeft !== null && (
+                    <div className="hidden sm:block leading-tight">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Time Left</p>
+                      <p
+                        className={`font-serif text-lg ${
+                          turnSecondsLeft <= 10 ? 'text-[var(--red)] animate-pulse' : 'text-[var(--gold)]'
+                        }`}
+                      >
+                        {turnSecondsLeft}s
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {error && <p className="text-xs text-[#e8a5ae]">{error}</p>}
+                <button onClick={leave} className={presetButton} title="Fold your hand and leave the table">
+                  Leave Table
+                </button>
                 <button
                   onClick={() => act('fold')}
                   disabled={!isMyTurn}
@@ -510,9 +544,13 @@ const Seat: React.FC<{
   selected: boolean;
   selectable: boolean;
   onSelect: (id: number) => void;
-}> = ({ player, selected, selectable, onSelect }) => {
+  turnSecondsLeft?: number | null;
+  turnFraction?: number | null;
+}> = ({ player, selected, selectable, onSelect, turnSecondsLeft, turnFraction }) => {
   const isEmpty = player.status === 'empty';
   const isFolded = player.status === 'folded';
+  const showTurnTimer = player.isTurn && turnSecondsLeft != null && turnFraction != null;
+  const turnUrgent = showTurnTimer && turnSecondsLeft! <= 10;
 
   // ── Empty seat — selectable before joining ─────────────────────────────────
   if (isEmpty) {
@@ -553,7 +591,7 @@ const Seat: React.FC<{
 
       {/* Avatar */}
       <div
-        className={`rounded-full transition-all ${
+        className={`relative rounded-full transition-all ${
           isFolded
             ? 'opacity-50 grayscale'
             : player.isTurn
@@ -562,6 +600,42 @@ const Seat: React.FC<{
         }`}
       >
         <Avatar avatarURL={player.avatarURL} size={48} />
+
+        {/* Turn countdown — a thin ring that drains as the deadline
+            approaches, so it stays visible without competing with the
+            avatar for attention; only shown for whoever must act. */}
+        {showTurnTimer && (
+          <>
+            <svg
+              width={48}
+              height={48}
+              viewBox="0 0 48 48"
+              className="absolute inset-0 -rotate-90 pointer-events-none"
+            >
+              <circle
+                cx={24}
+                cy={24}
+                r={22}
+                fill="none"
+                stroke={turnUrgent ? 'var(--red)' : 'var(--gold)'}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 22}
+                strokeDashoffset={2 * Math.PI * 22 * (1 - turnFraction!)}
+                style={{ transition: 'stroke-dashoffset 200ms linear' }}
+              />
+            </svg>
+            <div
+              className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold z-10 border shadow ${
+                turnUrgent
+                  ? 'bg-[var(--red)] text-[#f6e3e6] border-[rgba(255,255,255,0.25)] animate-pulse'
+                  : 'bg-[var(--gold)] text-[#0a0e12] border-[rgba(212,175,55,0.5)]'
+              }`}
+            >
+              {turnSecondsLeft}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Nameplate */}
