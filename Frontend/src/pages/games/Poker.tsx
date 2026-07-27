@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import PlayingCard, { CardData, CardSlot, Rank, Suit } from '@/components/games/PlayingCard';
 import GameTopBar from '@/components/games/GameTopBar';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
+import PokerRulesModal from '@/components/games/PokerRulesModal';
+import { InfoTriggerButton } from '@/components/games/GameInfoModal';
 import Avatar from '@/components/ui/Avatar';
 import { useAccount } from '@/hooks/useAccount';
 import { subscribeToWebSocket, sendWebSocketPacket, WsPacket } from '@/utils/wsClient';
@@ -109,6 +111,7 @@ const Poker: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [handResult, setHandResult] = useState<PokerHandResult | null>(null);
   const [bustedMessage, setBustedMessage] = useState<string | null>(null);
+  const [showRules, setShowRules] = useState(false);
 
   /* Seats persist across many hands now, so "you were seated last update and
      aren't anymore" only means something when it wasn't your own click. */
@@ -254,6 +257,9 @@ const Poker: React.FC = () => {
             >
               {/* Ambient glow */}
               <div className="glow-emerald absolute -inset-12 -z-10 pointer-events-none" />
+
+              {/* Rules */}
+              <InfoTriggerButton onClick={() => setShowRules(true)} />
 
               {/* ── Wood rail ───────────────────────────────────────────────── */}
               <div
@@ -532,6 +538,16 @@ const Poker: React.FC = () => {
             )}
           </div>
         </>
+      )}
+
+      {showRules && (
+        <PokerRulesModal
+          onClose={() => setShowRules(false)}
+          smallBlind={smallBlind}
+          bigBlind={bigBlind}
+          buyIn={buyIn}
+          turnTimeoutSeconds={TURN_TIMEOUT_MS / 1000}
+        />
       )}
     </div>
   );

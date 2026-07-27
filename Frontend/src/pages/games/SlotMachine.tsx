@@ -3,6 +3,7 @@ import GameTopBar from '@/components/games/GameTopBar';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import SlotPaytableModal from '@/components/games/SlotPaytableModal';
+import { InfoTriggerButton } from '@/components/games/GameInfoModal';
 import { useAccount } from '@/hooks/useAccount';
 import { apiCall, ApiError } from '@/utils/api';
 import { LINE_OPTIONS, SYMBOLS } from './luckySevensConfig';
@@ -408,7 +409,7 @@ const SlotMachine: React.FC = () => {
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
-        <GameTopBar title="Lucky Fruits" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
+        <GameTopBar title="Lucky Seven" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
         <div
@@ -422,13 +423,7 @@ const SlotMachine: React.FC = () => {
           <div className="absolute inset-3 rounded-xl border border-[rgba(212,175,55,0.1)] pointer-events-none" />
 
           {/* Paytable / rules */}
-          <button
-            onClick={() => setShowPaytable(true)}
-            aria-label="View paytable and rules"
-            className="absolute top-4 right-4 z-20 w-6 h-6 rounded-full border border-[rgba(212,175,55,0.35)] font-serif text-[11px] text-[rgba(212,175,55,0.75)] hover:border-[rgba(212,175,55,0.7)] hover:text-[var(--gold)] transition-colors cursor-pointer flex items-center justify-center"
-          >
-            i
-          </button>
+          <InfoTriggerButton onClick={() => setShowPaytable(true)} />
 
           {/* Machine title */}
           <div className="relative z-10 text-center">
@@ -436,7 +431,7 @@ const SlotMachine: React.FC = () => {
               className="uppercase tracking-[0.35em] text-[rgba(212,175,55,0.75)]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 13 }}
             >
-              ◆ Lucky Fruits ◆
+              ◆ Lucky Seven ◆
             </p>
             <p className="text-[9px] uppercase tracking-[0.2em] text-[rgba(212,175,55,0.35)] mt-0.5">
               3 Reels · {lines} Lines

@@ -3,6 +3,8 @@ import PlayingCard, { CardData, CardSlot, Rank, Suit } from '@/components/games/
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import GameTopBar from '@/components/games/GameTopBar';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
+import BlackjackRulesModal from '@/components/games/BlackjackRulesModal';
+import { InfoTriggerButton } from '@/components/games/GameInfoModal';
 import { useAccount } from '@/hooks/useAccount';
 import { apiCall, ApiError } from '@/utils/api';
 
@@ -59,6 +61,7 @@ const Blackjack: React.FC = () => {
   const [gameActive, setGameActive] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRules, setShowRules] = useState(false);
 
   const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -167,6 +170,9 @@ const Blackjack: React.FC = () => {
       >
         {/* Inner pinstripe */}
         <div className="absolute inset-2.5 rounded-xl border border-[rgba(212,175,55,0.12)] pointer-events-none" />
+
+        {/* Rules */}
+        <InfoTriggerButton onClick={() => setShowRules(true)} />
 
         {/* Arc inscription */}
         <svg
@@ -354,6 +360,8 @@ const Blackjack: React.FC = () => {
       </div>
         </>
       )}
+
+      {showRules && <BlackjackRulesModal onClose={() => setShowRules(false)} />}
     </div>
   );
 };
