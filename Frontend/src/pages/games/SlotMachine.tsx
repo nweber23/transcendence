@@ -408,7 +408,7 @@ const SlotMachine: React.FC = () => {
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
-        <GameTopBar title="Lucky Fruits" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
+        <GameTopBar title="Lucky Seven" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
         <div
@@ -436,7 +436,7 @@ const SlotMachine: React.FC = () => {
               className="uppercase tracking-[0.35em] text-[rgba(212,175,55,0.75)]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 13 }}
             >
-              ◆ Lucky Fruits ◆
+              ◆ Lucky Seven ◆
             </p>
             <p className="text-[9px] uppercase tracking-[0.2em] text-[rgba(212,175,55,0.35)] mt-0.5">
               3 Reels · {lines} Lines
