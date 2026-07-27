@@ -485,6 +485,9 @@ const Poker: React.FC = () => {
                   )}
                 </div>
                 {error && <p className="text-xs text-[#e8a5ae]">{error}</p>}
+                <button onClick={leave} className={presetButton} title="Fold your hand and leave the table">
+                  Leave Table
+                </button>
                 <button
                   onClick={() => act('fold')}
                   disabled={!isMyTurn}
