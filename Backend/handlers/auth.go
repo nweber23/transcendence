@@ -2,6 +2,7 @@ package handlers
 
 import (
 	//"fmt"
+	"crypto/subtle"
 	"net/http"
 
 	"transcendence/middleware"
@@ -11,23 +12,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const oauthStateCookie = "oauth_state"
+
+// isSecureRequest reports whether the original client connection was HTTPS.
+// The backend sits behind Caddy, which terminates TLS and proxies to it over
+// plain HTTP (see caddy/conf/Caddyfile), so c.Request.TLS is never set here —
+// Caddy's X-Forwarded-Proto is the source of truth instead.
+func isSecureRequest(c *gin.Context) bool {
+	return c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https"
+}
+
 type AuthHandler struct {
 	userService  *services.UserService
 	oauthService *services.OauthService
 	jwtSecret    string
 	jwtExpiry    int64
+	frontendURL  string
 }
 
 func NewAuthHandler(
 	userService *services.UserService,
 	oauthService *services.OauthService,
 	jwtSecret string, jwtExpiry int64,
+	frontendURL string,
 ) *AuthHandler {
 	return &AuthHandler{
 		userService:  userService,
 		oauthService: oauthService,
 		jwtSecret:    jwtSecret,
 		jwtExpiry:    jwtExpiry,
+		frontendURL:  frontendURL,
 	}
 }
 
@@ -107,7 +121,20 @@ func (h *AuthHandler) OauthLogin(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "404 Not Found", nil)
 		return
 	}
-	c.Redirect(http.StatusFound, provider.GetLoginUrl())
+
+	state, err := utils.GetRandomHexString(32)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "state_gen_failed", err.Error())
+		return
+	}
+	// Bind the state to this browser via a short-lived cookie; verified
+	// against the provider's callback query param to prevent CSRF against
+	// the OAuth flow (an attacker tricking a victim into completing a login
+	// initiated by the attacker).
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(oauthStateCookie, state, 600, "/auth", "", isSecureRequest(c), true)
+
+	c.Redirect(http.StatusFound, provider.GetLoginUrl(state))
 }
 
 func (h *AuthHandler) OauthCallback(c *gin.Context) {
@@ -115,6 +142,16 @@ func (h *AuthHandler) OauthCallback(c *gin.Context) {
 	provider := h.oauthService.GetProvider(providerName)
 	if provider == nil {
 		utils.RespondError(c, http.StatusNotFound, "404 Not Found", nil)
+		return
+	}
+
+	cookieState, cookieErr := c.Cookie(oauthStateCookie)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(oauthStateCookie, "", -1, "/auth", "", isSecureRequest(c), true)
+	queryState := c.Query("state")
+	if cookieErr != nil || queryState == "" ||
+		subtle.ConstantTimeCompare([]byte(cookieState), []byte(queryState)) != 1 {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_state", "OAuth state mismatch.")
 		return
 	}
 
@@ -136,15 +173,28 @@ func (h *AuthHandler) OauthCallback(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.FindOrCreateOauthUser(providerName, oauthUser.ID, oauthUser.Username, oauthUser.Email, oauthUser.AvatarURL)
+	// Mirror the provider's avatar locally under ./uploads so it's served the
+	// same way as a manually uploaded avatar (see UploadAvatar). If the
+	// download fails, fall back to no avatar rather than failing the login.
+	localAvatar := ""
+	if oauthUser.AvatarURL != "" {
+		if filename, err := utils.DownloadAvatarToUploads(oauthUser.AvatarURL, "./uploads/"); err == nil {
+			localAvatar = filename
+		}
+	}
+
+	user, err := h.userService.FindOrCreateOauthUser(providerName, oauthUser.ID, oauthUser.Username, oauthUser.Email, localAvatar)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "user_creation_failed", err.Error())
 		return
 	}
 
 	jwtToken := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
-	utils.RespondSuccess(c, http.StatusOK, "oauth login successful", AuthResponse{
-		Token:  jwtToken,
-		UserID: user.ID,
-	})
+
+	// The token rides in the URL fragment rather than the query string: the
+	// fragment is never sent to any server (including ours, on this very
+	// redirect) and browsers don't forward it in the Referer header, so it
+	// won't end up in server access logs.
+	redirectURL := h.frontendURL + "/auth/callback#token=" + jwtToken
+	c.Redirect(http.StatusFound, redirectURL)
 }

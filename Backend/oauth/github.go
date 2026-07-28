@@ -23,7 +23,7 @@ func NewGitHubProvider(clientId string, clientSecret string, redirectUri string)
 	}
 }
 
-func (o *GithubOauthProvider) GetLoginUrl() string {
+func (o *GithubOauthProvider) GetLoginUrl(state string) string {
 	var u url.URL
 
 	u.Scheme = "https"
@@ -33,6 +33,7 @@ func (o *GithubOauthProvider) GetLoginUrl() string {
 	q.Set("client_id", o.clientId)
 	q.Set("redirect_uri", o.redirectUri)
 	q.Set("scope", "user:email")
+	q.Set("state", state)
 	u.RawQuery = q.Encode()
 	return u.String()
 }

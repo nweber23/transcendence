@@ -42,8 +42,10 @@ func main() {
 	oauthService := services.NewOauthService()
 
 	// Initialize OAuth Providers
-	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, "http://localhost:3334/auth/github/callback")
+	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, cfg.GithubRedirectURL)
 	oauthService.RegisterProvider("github", githubOauthProvider)
+	googleOauthProvider := oauth.NewGoogleProvider(cfg.GoogleClientId, cfg.GoogleSecret, cfg.GoogleRedirectURL)
+	oauthService.RegisterProvider("google", googleOauthProvider)
 
 	// Intialize engine service
 	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
@@ -59,7 +61,7 @@ func main() {
 	go wsState.Main()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration)
+	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
 	wsHandler := handlers.NewWebSocketHandler(wsState)

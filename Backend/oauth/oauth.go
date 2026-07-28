@@ -8,7 +8,10 @@ type OauthUser struct {
 }
 
 type Provider interface {
-	GetLoginUrl() string
+	// GetLoginUrl builds the provider's authorization URL. state must be an
+	// unpredictable, per-login value the caller verifies on callback to
+	// prevent CSRF against the OAuth flow.
+	GetLoginUrl(state string) string
 	ExchangeCode(code string) (string, error)
 	GetUser(token string) (*OauthUser, error)
 }

@@ -22,6 +22,10 @@ type Config struct {
 	GithubClientId     string
 	GithubSecret       string
 	GithubRedirectURL  string
+	GoogleClientId     string
+	GoogleSecret       string
+	GoogleRedirectURL  string
+	FrontendURL        string
 }
 
 func LoadConfig() *Config {
@@ -41,6 +45,10 @@ func LoadConfig() *Config {
 		GithubClientId:    getEnv("GITHUB_CLIENT_ID", ""),
 		GithubSecret:      getEnv("GITHUB_CLIENT_SECRET", ""),
 		GithubRedirectURL: getEnv("GITHUB_REDIRECT_URL", "http://localhost:3334/auth/github/callback"),
+		GoogleClientId:    getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleSecret:      getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL: getEnv("GOOGLE_REDIRECT_URL", "http://localhost:3334/auth/google/callback"),
+		FrontendURL:       getEnv("FRONTEND_URL", "https://localhost:8443"),
 	}
 }
 

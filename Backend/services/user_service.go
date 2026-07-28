@@ -3,6 +3,8 @@ package services
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"transcendence/models"
@@ -92,6 +94,16 @@ func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, emai
 	var user models.User
 	err := s.db.Where("provider = ? AND provider_id = ? AND deleted_at IS NULL", provider, providerID).First(&user).Error
 	if err == nil {
+		if avatarURL != "" && avatarURL != user.AvatarURL {
+			oldURL := user.AvatarURL
+			user.AvatarURL = avatarURL
+			if err := s.db.Save(&user).Error; err != nil {
+				return nil, fmt.Errorf("failed to update oauth user avatar: %w", err)
+			}
+			if oldURL != "" && oldURL != models.DefaultAvatarURL {
+				_ = os.Remove(filepath.Join("./uploads/", oldURL))
+			}
+		}
 		return &user, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -132,7 +144,7 @@ func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, emai
 // resolveUniqueUsername sanitizes the provider username to fit constraints
 // and appends a numeric suffix if it's already taken by another account.
 func (s *UserService) resolveUniqueUsername(candidate, email string) (string, error) {
-	base := strings.TrimSpace(candidate)
+	base := strings.Join(strings.Fields(candidate), "")
 	if base == "" {
 		if at := strings.Index(email, "@"); at > 0 {
 			base = email[:at]
