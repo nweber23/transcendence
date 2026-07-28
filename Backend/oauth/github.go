@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 type GithubOauthProvider struct {
@@ -51,11 +52,11 @@ func (o *GithubOauthProvider) ExchangeCode(code string) (string, error) {
 	body.Add("client_secret", o.clientSecret)
 	body.Add("redirect_uri", o.redirectUri)
 
-	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", nil)
+	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", strings.NewReader(body.Encode()))
 	if err != nil {
 		return "", err
 	}
-	req.URL.RawQuery = body.Encode()
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)

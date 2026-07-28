@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type GoogleOauthProvider struct {
@@ -52,11 +53,11 @@ func (o *GoogleOauthProvider) ExchangeCode(code string) (string, error) {
 	body.Add("redirect_uri", o.redirectUri)
 	body.Add("grant_type", "authorization_code")
 
-	req, err := http.NewRequest("POST", "https://oauth2.googleapis.com/token", nil)
+	req, err := http.NewRequest("POST", "https://oauth2.googleapis.com/token", strings.NewReader(body.Encode()))
 	if err != nil {
 		return "", err
 	}
-	req.URL.RawQuery = body.Encode()
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
