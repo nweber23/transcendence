@@ -410,3 +410,60 @@ TEST_CASE("serialize_game_state round-trips community cards and pot", "[texas][e
     REQUIRE(state.community_cards.empty());
     REQUIRE(state.pot.empty());
 }
+
+TEST_CASE("Game with per-player stacks constructor sets each stack", "[texas][game]") {
+    Game g{std::vector<std::int64_t>{500, 1200, 800}};
+    REQUIRE(g.players().size() == 3);
+    REQUIRE(g.players()[0].stack() == 500);
+    REQUIRE(g.players()[1].stack() == 1200);
+    REQUIRE(g.players()[2].stack() == 800);
+    REQUIRE(g.phase() == Phase::PreFlop);
+}
+
+TEST_CASE("post_blinds after showdown starts a new hand preserving stacks", "[texas][game]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    // Everyone just calls/checks their way to showdown.
+    g.act(0, {ActionType::Call});
+    g.act(1, {ActionType::Check}); // -> flop
+    g.act(0, {ActionType::Check});
+    g.act(1, {ActionType::Check}); // -> turn
+    g.act(0, {ActionType::Check});
+    g.act(1, {ActionType::Check}); // -> river
+    g.act(0, {ActionType::Check});
+    g.act(1, {ActionType::Check}); // -> showdown, pot settled
+    REQUIRE(g.phase() == Phase::Showdown);
+
+    std::int64_t stackBeforeNextHand0 = g.players()[0].stack();
+    std::int64_t stackBeforeNextHand1 = g.players()[1].stack();
+    std::size_t dealerBefore = g.dealer();
+
+    g.post_blinds(10, 20);
+
+    REQUIRE(g.phase() == Phase::PreFlop);
+    REQUIRE(g.community_cards().empty());
+    REQUIRE(g.pot().size() == 2); // fresh small + big blind only
+    REQUIRE(g.dealer() == (dealerBefore + 1) % 2);
+    REQUIRE_FALSE(g.players()[0].is_folded());
+    REQUIRE_FALSE(g.players()[1].is_folded());
+    REQUIRE(g.players()[0].hole_cards()[0].has_value());
+    REQUIRE(g.players()[1].hole_cards()[0].has_value());
+    // Stacks carry over minus this hand's blinds, not reset to the original 1000.
+    std::int64_t blindPaid0 = (stackBeforeNextHand0 == g.players()[0].stack() + 10) ? 10 : 20;
+    REQUIRE(g.players()[0].stack() == stackBeforeNextHand0 - blindPaid0);
+    REQUIRE(g.players()[1].stack() != 1000);
+    (void)stackBeforeNextHand1;
+}
+
+TEST_CASE("post_blinds without a prior showdown does not reset the in-progress pot", "[texas][game]") {
+    Game g{2, 1000};
+    g.post_blinds(10, 20);
+    g.act(0, {ActionType::Call});
+    REQUIRE(g.phase() == Phase::PreFlop);
+    REQUIRE(g.pot().size() == 3); // small blind, big blind, call
+
+    // start_new_hand() only fires when phase() == Showdown, so calling
+    // post_blinds again mid-hand must not silently wipe the pot.
+    g.post_blinds(10, 20);
+    REQUIRE(g.pot().size() >= 3);
+}

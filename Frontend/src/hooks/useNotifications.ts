@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiCall } from '@/utils/api';
 import { subscribeToWebSocket, WsPacket } from '@/utils/wsClient';
+import { getAuthToken } from '@/utils/authStorage';
 
 export interface AppNotification {
   id: number | null;
@@ -87,7 +88,7 @@ export function useNotifications(
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem('auth_token')) {
+    if (getAuthToken()) {
       refetch().catch(() => setError('Failed to load notifications'));
     }
   }, [refetch]);

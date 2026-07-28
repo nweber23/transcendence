@@ -24,3 +24,17 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets: ['cadvisor:1337']
+
+  # Postgres metrics via prometheuscommunity/postgres-exporter
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+
+  # Host-level CPU/RAM/disk/network for the machine running Docker
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'host'

@@ -16,6 +16,10 @@ type Game struct {
 	CreatedAt   time.Time       `gorm:"index:idx_games_created_at"`
 	CompletedAt *time.Time
 	DurationMs  *int
+	// Correlates this row with the live in-memory game held by the engine
+	// process while a hand is still in progress (e.g. blackjack between
+	// deal and stand). Unset once the game is settled.
+	EngineGameID *uint64
 }
 
 func (Game) TableName() string {

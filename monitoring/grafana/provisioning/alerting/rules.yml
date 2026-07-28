@@ -104,7 +104,11 @@ groups:
           summary: "cAdvisor unreachable"
 
   # ---------------------------------------------------------------------
-  # Caddy error rates (srv0 = frontend, srv1 = backend)
+  # Caddy error rates. "backend" aggregates the backend_http (:81) and
+  # backend_https (:8443) listeners; "frontend" aggregates frontend_http
+  # (:80) and frontend_https (:443) -- see caddy/conf/Caddyfile's `servers
+  # <addr> { name ... }` blocks, which is what stamps these names onto the
+  # "server" label instead of Caddy's auto-numbered srv0/srv1/srv2/srv3.
   # ---------------------------------------------------------------------
   - orgId: 1
     name: caddy-errors
@@ -123,8 +127,8 @@ groups:
               to: 0
             model:
               expr: |
-                sum(rate(caddy_http_request_duration_seconds_count{server="srv1",code=~"5.."}[5m]))
-                / sum(rate(caddy_http_request_duration_seconds_count{server="srv1"}[5m]))
+                sum(rate(caddy_http_request_duration_seconds_count{server=~"backend_.*",code=~"5.."}[5m]))
+                / sum(rate(caddy_http_request_duration_seconds_count{server=~"backend_.*"}[5m]))
               instant: true
               range: false
           - refId: C
@@ -157,8 +161,8 @@ groups:
               to: 0
             model:
               expr: |
-                sum(rate(caddy_http_request_duration_seconds_count{server="srv0",code=~"5.."}[5m]))
-                / sum(rate(caddy_http_request_duration_seconds_count{server="srv0"}[5m]))
+                sum(rate(caddy_http_request_duration_seconds_count{server=~"frontend_.*",code=~"5.."}[5m]))
+                / sum(rate(caddy_http_request_duration_seconds_count{server=~"frontend_.*"}[5m]))
               instant: true
               range: false
           - refId: C
@@ -190,8 +194,8 @@ groups:
               to: 0
             model:
               expr: |
-                sum(rate(caddy_http_request_duration_seconds_count{server="srv1",code=~"4.."}[5m]))
-                / sum(rate(caddy_http_request_duration_seconds_count{server="srv1"}[5m]))
+                sum(rate(caddy_http_request_duration_seconds_count{server=~"backend_.*",code=~"4.."}[5m]))
+                / sum(rate(caddy_http_request_duration_seconds_count{server=~"backend_.*"}[5m]))
               instant: true
               range: false
           - refId: C
@@ -232,7 +236,7 @@ groups:
               to: 0
             model:
               expr: |
-                histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server="srv1"}[5m])) by (le))
+                histogram_quantile(0.95, sum(rate(caddy_http_request_duration_seconds_bucket{server=~"backend_.*"}[5m])) by (le))
               instant: true
               range: false
           - refId: C
@@ -264,7 +268,7 @@ groups:
               to: 0
             model:
               expr: |
-                histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server="srv1"}[5m])) by (le))
+                histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{server=~"backend_.*"}[5m])) by (le))
               instant: true
               range: false
           - refId: C
@@ -392,7 +396,13 @@ groups:
           description: "Not necessarily a security incident, but worth watching economically - check for bonus abuse or exploits."
 
   # ---------------------------------------------------------------------
-  # Container resources (cAdvisor)
+  # Container resources (cAdvisor). name=~"transcendence-.*|frontend" covers
+  # every app-tier container -- note the frontend container is literally
+  # named "frontend" (see docker-compose.yml), not "transcendence-frontend",
+  # so a bare "transcendence-.*" filter silently excludes it. The
+  # observability stack itself (prometheus/grafana/node-exporter/cadvisor/
+  # postgres-exporter) is intentionally excluded to avoid alerting on its
+  # own resource use.
   # ---------------------------------------------------------------------
   - orgId: 1
     name: container-resources
@@ -411,7 +421,7 @@ groups:
               to: 0
             model:
               expr: |
-                sum(rate(container_cpu_usage_seconds_total{name=~"transcendence-.*"}[5m])) by (name)
+                sum(rate(container_cpu_usage_seconds_total{name=~"transcendence-.*|frontend"}[5m])) by (name)
               instant: true
               range: false
           - refId: C
@@ -442,9 +452,16 @@ groups:
               from: 600
               to: 0
             model:
+              # None of these containers have a memory limit set in
+              # docker-compose.yml (no `mem_limit`/`deploy.resources`), so
+              # container_spec_memory_limit_bytes is 0 for all of them --
+              # usage/limit was therefore x/0 = +Inf, permanently above any
+              # threshold. Alert on absolute usage instead; 1GiB is a
+              # generous ceiling for this stack's services, adjust per
+              # service with a label override if one service legitimately
+              # needs more.
               expr: |
-                container_memory_usage_bytes{name=~"transcendence-.*"}
-                / container_spec_memory_limit_bytes{name=~"transcendence-.*"}
+                container_memory_usage_bytes{name=~"transcendence-.*|frontend"}
               instant: true
               range: false
           - refId: C
@@ -458,11 +475,11 @@ groups:
               conditions:
                 - evaluator:
                     type: gt
-                    params: [0.9]
+                    params: [1073741824]
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} near memory limit"
+          summary: "Container {{ $labels.name }} using over 1GiB of memory"
 
       - uid: container-restarting-frequently
         title: ContainerRestartingFrequently
@@ -476,7 +493,7 @@ groups:
               to: 0
             model:
               expr: |
-                increase(container_start_time_seconds{name=~"transcendence-.*"}[15m])
+                increase(container_start_time_seconds{name=~"transcendence-.*|frontend"}[15m])
               instant: true
               range: false
           - refId: C

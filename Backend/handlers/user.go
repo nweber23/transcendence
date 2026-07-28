@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"path/filepath"
 
+	"transcendence/middleware"
 	"transcendence/models"
 	"transcendence/services"
 	"transcendence/utils"
@@ -464,6 +465,7 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "deposit_failed", err.Error())
 		return
 	}
+	middleware.RecordDeposit(amount)
 	account, err := uh.accountService.GetAccount(userID.(uint))
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", "Failed to retrieve updated account")
@@ -509,6 +511,7 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "withdrawal_failed", err.Error())
 		return
 	}
+	middleware.RecordWithdrawal(amount)
 	account, err := uh.accountService.GetAccount(userID.(uint))
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "fetch_failed", "Failed to retrieve updated account")

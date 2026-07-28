@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 
 import { connectWebSocket, disconnectWebSocket } from '@/utils/wsClient';
 import { AUTH_TOKEN_CHANGED_EVENT } from '@/hooks/useAuth';
+import { getAuthToken } from '@/utils/authStorage';
 
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -31,7 +32,7 @@ const AppLayout: React.FC = () => {
 
   useEffect(() => {
     const syncConnection = () => {
-      const token = localStorage.getItem('auth_token');
+      const token = getAuthToken();
       if (token == null) {
         disconnectWebSocket();
       } else {

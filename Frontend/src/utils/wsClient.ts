@@ -14,7 +14,7 @@ export function connectWebSocket(token: string): WebSocket {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return socket;
   }
-  socket = createWebSocket(token, ['generic', 'notification']);
+  socket = createWebSocket(token, ['generic', 'notification', 'game']);
   socket.onmessage = (e) => {
     try {
       const packet = JSON.parse(e.data) as WsPacket;
@@ -37,4 +37,9 @@ export function disconnectWebSocket() {
 export function subscribeToWebSocket(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+export function sendWebSocketPacket(packetType: string, payload: unknown = {}) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  socket.send(JSON.stringify({ packet_type: packetType, payload }));
 }

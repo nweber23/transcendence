@@ -8,7 +8,12 @@ RUN go mod download
 COPY . .
 RUN chmod +x test.sh
 
-RUN go build -o backend main.go
+RUN apk --no-cache add protoc
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+RUN chmod +x build.sh
+RUN ./build.sh
 
 RUN apk --no-cache add ca-certificates
 

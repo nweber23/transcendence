@@ -400,19 +400,6 @@
   animation: card-deal 420ms var(--ease-out) backwards;
 }
 
-@keyframes card-flip-in {
-  from {
-    transform: perspective(600px) rotateY(88deg);
-  }
-  to {
-    transform: perspective(600px) rotateY(0deg);
-  }
-}
-
-.card-flip-in {
-  animation: card-flip-in 340ms var(--ease-out);
-}
-
 @keyframes banner-pop {
   from {
     opacity: 0;
@@ -500,6 +487,11 @@
 }
 
 /* ─── SCROLLBAR ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-2) var(--base);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }

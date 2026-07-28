@@ -11,6 +11,7 @@ import (
 	"transcendence/ws"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -26,15 +27,17 @@ func main() {
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
 
+	// Prometheus request metrics + scrape endpoint
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// Serve uploaded avatar files publicly (no auth required for <img> tags)
 	router.Static("/uploads", "./uploads")
 
-	// Initialize services
+	// Initialize database services
 	userService := services.NewUserService(db)
 	accountService := services.NewAccountService(db)
 	friendService := services.NewFriendService(db)
-	gameService := services.NewGameService(db)
-	engineClient := services.NewEngineClient(cfg.EngineHost, cfg.EnginePort)
 	notificationService := services.NewNotificationService(db)
 	oauthService := services.NewOauthService()
 
@@ -42,14 +45,23 @@ func main() {
 	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, "http://localhost:3334/auth/github/callback")
 	oauthService.RegisterProvider("github", githubOauthProvider)
 
+	// Intialize engine service
+	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
+	if err != nil {
+		log.Fatalf("Failed to create engine service: %v", err)
+	} else {
+		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
+	}
+	gameService := services.NewGameService(db, engineService)
+
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
 	go wsState.Main()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
-	gameHandler := handlers.NewGameHandler(gameService, accountService, engineClient)
+	gameHandler := handlers.NewGameHandler(gameService, accountService)
 	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes

@@ -19,6 +19,23 @@ services:
     networks:
       - transcendence-network
 
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    container_name: transcendence-postgres-exporter
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}?sslmode=disable"
+    # No ports mapping -> only reachable from other containers on
+    # monitoring-network (i.e. Prometheus), same pattern as prometheus itself.
+    # Pinned to v0.17.1: v0.15.0's stat_bgwriter collector errors against
+    # Postgres 18 (checkpoint columns moved to pg_stat_checkpointer in PG17+).
+    restart: unless-stopped
+    networks:
+      - transcendence-network
+      - monitoring-network
+
   engine:
     build:
       context: ./Engine
@@ -106,6 +123,28 @@ services:
     restart: unless-stopped
     networks:
       - monitoring-network
+      # also on the app network so the Postgres business-metrics datasource
+      # (SQL panels against accounts/transactions/games) can reach postgres:5432
+      - transcendence-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: transcendence-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/root'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    pid: host
+    # No ports mapping -> host metrics only reach Prometheus, over
+    # monitoring-network, same as every other scrape-only exporter here.
+    restart: unless-stopped
+    networks:
+      - monitoring-network
 
   caddy:
     image: caddy:2.11.4-alpine
@@ -113,6 +152,12 @@ services:
     ports:
       - "3333:80"
       - "3334:81"
+      # Non-privileged host ports: rootless Docker (and some grading setups)
+      # can't bind host port 443 without extra host capabilities/sysctl
+      # changes, which would break the single-command requirement. Caddy
+      # still terminates TLS on 443/8443 *inside* the container either way.
+      - "8443:443"
+      - "8444:8443"
     volumes:
       - ./caddy/conf:/etc/caddy
       - ./caddy/site:/srv
@@ -128,6 +173,12 @@ services:
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
+    # The image's built-in HEALTHCHECK defaults to hitting :8080/healthz,
+    # but we run cadvisor on --port=1337 -- without this override the
+    # healthcheck always fails (wrong port) even though the container and
+    # its Prometheus scrape are working fine.
+    environment:
+      CADVISOR_HEALTHCHECK_URL: "http://localhost:1337/healthz"
     command:
     - --port=1337
     healthcheck:

@@ -1,0 +1,24 @@
+apiVersion: 1
+
+# Direct SQL access to the app database for business/revenue dashboards
+# (accounts.total_lost, transactions ledger, games) that don't map cleanly
+# onto Prometheus time series. Credentials come from the same .env the
+# grafana service already loads (env_file: ./.env in docker-compose.yml),
+# resolved here via Grafana's $__env{} provisioning syntax -- these are NOT
+# docker-compose variables, compose does not substitute inside mounted files.
+datasources:
+  - name: Postgres
+    uid: Postgres
+    type: postgres
+    access: proxy
+    url: '$__env{DATABASE_HOST}:5432'
+    database: '$__env{DATABASE_NAME}'
+    user: '$__env{DATABASE_USER}'
+    secureJsonData:
+      password: '$__env{DATABASE_PASSWORD}'
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 1800
+      maxOpenConns: 5
+    isDefault: false
+    editable: false

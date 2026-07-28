@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	"net/http"
 
+	"transcendence/middleware"
 	"transcendence/services"
 	"transcendence/utils"
 
@@ -58,6 +59,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		utils.RespondError(c, http.StatusConflict, "registration_fail", err.Error())
 		return
 	}
+	middleware.AccountsCreatedTotal.Inc()
 	token := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
 	utils.RespondSuccess(c, http.StatusCreated, "user registered successfully", AuthResponse{
 		Token:  token,
@@ -74,6 +76,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 	user, err := h.userService.LoginUser(req.Username, req.Password)
 	if err != nil {
+		middleware.LoginsTotal.WithLabelValues("failure").Inc()
 		var message string
 		if utils.IsErrInvalid(err) {
 			message = "invalid user or password"
@@ -83,6 +86,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondError(c, http.StatusConflict, "login_fail", message)
 		return
 	}
+	middleware.LoginsTotal.WithLabelValues("success").Inc()
 	token := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
 	utils.RespondSuccess(c, http.StatusOK, "user logged in successfully", AuthResponse{
 		Token:  token,

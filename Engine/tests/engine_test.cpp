@@ -9,25 +9,47 @@ TEST_CASE("Engine creates and tracks blackjack games", "[engine]") {
     }
 
     SECTION("create returns non-empty JSON") {
-        auto json = e.create_blackjack("42", 100);
-        REQUIRE_FALSE(json.empty());
-        REQUIRE(e.blackjack_exists("42"));
+        // A natural blackjack settles and removes the game on deal, so
+        // retry until we land a deal that leaves the game open.
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
     }
 
     SECTION("create rejects duplicate game_id") {
-        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
         auto json = e.create_blackjack("42", 200);
         REQUIRE(json.empty());
     }
 
     SECTION("hit on existing game returns valid JSON") {
-        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+        // A natural blackjack settles and removes the game on deal, so
+        // retry until we land a deal that leaves the game open to act on.
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
         auto json = e.blackjack_hit("42");
         REQUIRE_FALSE(json.empty());
     }
 
     SECTION("stand on existing game returns valid JSON") {
-        REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+        bool active = false;
+        for (int attempt = 0; attempt < 50 && !active; ++attempt) {
+            REQUIRE_FALSE(e.create_blackjack("42", 100).empty());
+            active = e.blackjack_exists("42");
+        }
+        REQUIRE(active);
         auto json = e.blackjack_stand("42");
         REQUIRE_FALSE(json.empty());
     }
@@ -45,12 +67,22 @@ TEST_CASE("Engine creates and tracks blackjack games", "[engine]") {
 
 TEST_CASE("Engine manages multiple blackjack games independently", "[engine]") {
     Engine e;
-    auto j1 = e.create_blackjack("1", 50);
-    auto j2 = e.create_blackjack("2", 100);
-    REQUIRE_FALSE(j1.empty());
-    REQUIRE_FALSE(j2.empty());
-    REQUIRE(e.blackjack_exists("1"));
-    REQUIRE(e.blackjack_exists("2"));
+
+    // A natural blackjack settles and removes the game on deal, so retry
+    // each creation until it lands a deal that leaves the game open.
+    bool active1 = false;
+    for (int attempt = 0; attempt < 50 && !active1; ++attempt) {
+        REQUIRE_FALSE(e.create_blackjack("1", 50).empty());
+        active1 = e.blackjack_exists("1");
+    }
+    REQUIRE(active1);
+
+    bool active2 = false;
+    for (int attempt = 0; attempt < 50 && !active2; ++attempt) {
+        REQUIRE_FALSE(e.create_blackjack("2", 100).empty());
+        active2 = e.blackjack_exists("2");
+    }
+    REQUIRE(active2);
 }
 
 TEST_CASE("Engine creates and tracks texas hold'em games", "[engine]") {

@@ -41,13 +41,20 @@ TEST_CASE("Hand detects bust", "[blackjack][hand]") {
 }
 
 TEST_CASE("Game deals cards correctly", "[blackjack][game]") {
-    Game g{1};
-
-    g.deal(100);
-    REQUIRE(g.phase() == Phase::PlayerTurn);
-    REQUIRE(g.player_hand().size() == 2);
-    REQUIRE(g.dealer_hand().size() == 1);
-    REQUIRE(g.bet() == 100);
+    // A natural blackjack settles the game on deal, so retry until we land
+    // a deal that leaves the game in the ordinary player-turn state.
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        Game g{1};
+        g.deal(100);
+        if (g.phase() != Phase::PlayerTurn) {
+            continue;
+        }
+        REQUIRE(g.player_hand().size() == 2);
+        REQUIRE(g.dealer_hand().size() == 1);
+        REQUIRE(g.bet() == 100);
+        return;
+    }
+    FAIL("did not deal a non-blackjack hand after 20 attempts");
 }
 
 TEST_CASE("Game resolves blackjack", "[blackjack][game]") {
@@ -61,18 +68,25 @@ TEST_CASE("Game resolves blackjack", "[blackjack][game]") {
 }
 
 TEST_CASE("serialize_game_state returns valid JSON after deal", "[blackjack][engine]") {
-    Game g;
-    g.deal(100);
-    std::string json = serialize_game_state(g);
-    REQUIRE(!json.empty());
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        Game g;
+        g.deal(100);
+        if (g.phase() != Phase::PlayerTurn) {
+            continue;
+        }
+        std::string json = serialize_game_state(g);
+        REQUIRE(!json.empty());
 
-    GameState state;
-    auto err = glz::read_json(state, json);
-    REQUIRE(!err);
-    REQUIRE(state.bet == 100);
-    REQUIRE(state.phase == "player_turn");
-    REQUIRE(state.player_cards.size() == 2);
-    REQUIRE(state.dealer_cards.size() == 1);
+        GameState state;
+        auto err = glz::read_json(state, json);
+        REQUIRE(!err);
+        REQUIRE(state.bet == 100);
+        REQUIRE(state.phase == "player_turn");
+        REQUIRE(state.player_cards.size() == 2);
+        REQUIRE(state.dealer_cards.size() == 1);
+        return;
+    }
+    FAIL("did not deal a non-blackjack hand after 20 attempts");
 }
 
 TEST_CASE("serialize_game_state includes outcome after settle", "[blackjack][engine]") {
@@ -123,11 +137,18 @@ TEST_CASE("Dealer plays after stand and outcome is determined", "[blackjack][gam
 }
 
 TEST_CASE("Hit during player turn adds a card", "[blackjack][game]") {
-    Game g(1);
-    g.deal(100);
-    auto before = g.player_hand().size();
-    g.hit();
-    REQUIRE(g.player_hand().size() == before + 1);
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        Game g(1);
+        g.deal(100);
+        if (g.phase() != Phase::PlayerTurn) {
+            continue;
+        }
+        auto before = g.player_hand().size();
+        g.hit();
+        REQUIRE(g.player_hand().size() == before + 1);
+        return;
+    }
+    FAIL("did not deal a non-blackjack hand after 20 attempts");
 }
 
 TEST_CASE("Deal requires bet > 0", "[blackjack][game]") {

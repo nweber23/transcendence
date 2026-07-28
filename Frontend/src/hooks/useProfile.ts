@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiCall, apiUpload } from '@/utils/api';
+import { getAuthToken } from '@/utils/authStorage';
 
 export interface ProfileUser {
   id: number;
@@ -84,7 +85,7 @@ export function useProfile(): UseProfileReturn {
   }
 
   useEffect(() => {
-    if (localStorage.getItem('auth_token')) {
+    if (getAuthToken()) {
       fetchProfile().catch(() => {});
       getNotificationTypes().catch(() => {});
     }

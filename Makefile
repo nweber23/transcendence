@@ -28,10 +28,14 @@ down:
 	docker compose down
 
 rebuild:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose down
-	docker compose up -d --build
+	UID=$$(id -u) docker compose up -d --build
 
 build:
+	cp engine.proto Engine
+	cp engine.proto Backend
 	docker compose build
 
 logs:
@@ -72,17 +76,17 @@ retest: rebuild test
 # nginx on the VPS host terminates public TLS and forwards to caddy's
 # loopback ports; caddy stays in the stack behind it for access logs and
 # the Prometheus metrics Grafana's dashboards use.
-PROD_SERVICES := postgres engine backend frontend prometheus grafana caddy
+PROD_SERVICES := postgres postgres-exporter engine backend frontend prometheus grafana caddy cadvisor node-exporter
 
 prod-up:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
+	UID=$$(id -u) docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
 
 prod-down:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 prod-rebuild:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
+	UID=$$(id -u) docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build $(PROD_SERVICES)
 
 prod-logs:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
