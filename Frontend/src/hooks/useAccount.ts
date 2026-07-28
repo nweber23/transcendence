@@ -5,8 +5,8 @@ import { getAuthToken } from '@/utils/authStorage';
 export interface Account {
   id: number;
   balance: string;
-  total_winnings: string;
-  total_losses: string;
+  total_won: string;
+  total_lost: string;
 }
 
 export interface Transaction {

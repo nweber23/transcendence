@@ -160,7 +160,7 @@ const Account: React.FC = () => {
               <div className="relative z-10">
                 <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Winnings</p>
                 <p className="font-serif text-3xl md:text-4xl font-bold text-emerald-400 leading-none mb-3">
-                  ${account?.total_winnings ?? '0.00'}
+                  ${account?.total_won ?? '0.00'}
                 </p>
                 <div className="h-px w-10 bg-gradient-to-r from-emerald-400 to-transparent" />
               </div>
@@ -171,7 +171,7 @@ const Account: React.FC = () => {
               <div className="relative z-10">
                 <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-3 font-semibold">Losses</p>
                 <p className="font-serif text-3xl md:text-4xl font-bold text-red-400 leading-none mb-3">
-                  ${account?.total_losses ?? '0.00'}
+                  ${account?.total_lost ?? '0.00'}
                 </p>
                 <div className="h-px w-10 bg-gradient-to-r from-red-400 to-transparent" />
               </div>
