@@ -131,8 +131,9 @@ func fetchGithubJSON[T any](client *http.Client, token, url string) (*T, error) 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "ft_casino")
 
 	resp, err := client.Do(req)
 	if err != nil {
