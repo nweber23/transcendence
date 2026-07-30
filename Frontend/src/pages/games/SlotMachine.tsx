@@ -23,7 +23,7 @@ const ICONS = Object.values(SYMBOL_ICON_MAP);
 const LINE_COLORS = ['#ffd447', '#ff6b6b', '#4ecdc4', '#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fb923c', '#facc15', '#f87171'];
 
 const BASE_SPINNING_DURATION = 2.7;
-const COLUMN_SPINNING_DURATION = 0.3;
+const COLUMN_SPINNING_DURATION = 0.6;
 const NUM_REELS = 3;
 const NUM_ROWS = 3;
 /* How long the win/lose message stays on screen before auto spin fires the next spin */
@@ -225,24 +225,31 @@ const SlotMachine: React.FC = () => {
       setIsSpinning(true);
       spinningContainerRef.current?.classList.add('spinning');
 
+      let maxDelay = 0;
       let duration = spinDuration + randomDuration();
       colRefs.current.forEach((col, i) => {
         if (!col) return;
+        const animDelay = i * 0.35;
+        maxDelay = Math.max(maxDelay, animDelay);
         duration += COLUMN_SPINNING_DURATION + randomDuration();
         col.style.animationDuration = `${duration}s`;
-        col.style.animationDelay = `${i * 0.01}s`;
+        col.style.animationDelay = `${animDelay}s`;
       });
 
-      setTimeout(() => setResult(grid), (spinDuration * 1000) / 2);
+      const setResultTime = (spinDuration * 1000) / 2 + maxDelay * 1000;
+      setTimeout(() => setResult(grid), setResultTime);
 
+      const totalAnimTime = duration * 1000 + maxDelay * 1000 + NUM_REELS * 10;
       setTimeout(() => {
         spinningContainerRef.current?.classList.remove('spinning');
         setIsSpinning(false);
         setResultMessage(payout > 0 ? `You win $${payout.toLocaleString()}` : 'No win this spin');
+        resolve();
+      }, totalAnimTime);
+      setTimeout(() => {
         setWinningLines(lineWins);
         setScatterWin(scatter);
-        resolve();
-      }, duration * 1000 + NUM_REELS * 10);
+      }, totalAnimTime + 100);
     });
   }, [setResult]);
 
@@ -391,7 +398,7 @@ const SlotMachine: React.FC = () => {
         .spinning .slot-col {
           animation-name: slot-scroll;
           animation-iteration-count: 1;
-          animation-timing-function: cubic-bezier(.65, .97, .72, 1);
+          animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .winner-cell {
           animation: winner-pulse 1.1s ease-in-out infinite;
