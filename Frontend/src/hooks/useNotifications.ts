@@ -32,7 +32,10 @@ interface RawWsNotification {
   timestamp: string;
 }
 
-export const NOTIFICATIONS_LAST_SEEN_KEY = 'notifications_last_seen';
+interface RawNotificationsResponse {
+  notifications: RawRestNotification[];
+  last_seen_at: string | null;
+}
 
 export interface UseNotificationsReturn {
   notifications: AppNotification[];
@@ -72,18 +75,17 @@ export function useNotifications(
 ): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [lastSeen, setLastSeen] = useState<string>(
-    () => localStorage.getItem(NOTIFICATIONS_LAST_SEEN_KEY) ?? ''
-  );
+  const [lastSeen, setLastSeen] = useState<string>('');
   const toastCallbackRef = useRef(onToastNotification);
   toastCallbackRef.current = onToastNotification;
 
   const refetch = useCallback(async () => {
-    const raw = await apiCall<RawRestNotification[] | null>(
+    const raw = await apiCall<RawNotificationsResponse | null>(
       'GET',
       '/user/notifications?types=friends&limit=50'
     );
-    setNotifications((raw ?? []).map(fromRest));
+    setNotifications((raw?.notifications ?? []).map(fromRest));
+    setLastSeen(raw?.last_seen_at ?? '');
     setError(null);
   }, []);
 
@@ -106,9 +108,8 @@ export function useNotifications(
   }, []);
 
   const markSeen = useCallback(() => {
-    const now = new Date().toISOString();
-    localStorage.setItem(NOTIFICATIONS_LAST_SEEN_KEY, now);
-    setLastSeen(now);
+    setLastSeen(new Date().toISOString());
+    apiCall('PUT', '/user/notifications/seen').catch(() => {});
   }, []);
 
   const dismiss = useCallback(async (id: number) => {

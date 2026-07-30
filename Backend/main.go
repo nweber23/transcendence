@@ -93,6 +93,7 @@ func main() {
 		userRoutes.GET("/search", userHandler.SearchUsers)
 		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
 		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		userRoutes.PUT("/notifications/seen", userHandler.MarkNotificationsSeen)
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 	}

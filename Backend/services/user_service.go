@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"transcendence/models"
 	"transcendence/utils"
@@ -186,6 +187,20 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return &user, nil
+}
+
+// MarkNotificationsSeen persists the current time as the user's notifications
+// "last seen" marker so that unread state survives new devices and sessions.
+func (s *UserService) MarkNotificationsSeen(userID uint) (*time.Time, error) {
+	now := time.Now().UTC()
+	if err := s.db.
+		Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("notifications_seen_at", now).
+	Error; err != nil {
+		return nil, fmt.Errorf("failed to update notifications_seen_at: %w", err)
+	}
+	return &now, nil
 }
 
 // GetUsersByIDs retrieves multiple users in a single query, keyed by ID
