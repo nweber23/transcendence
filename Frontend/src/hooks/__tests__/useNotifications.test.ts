@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useNotifications, NOTIFICATIONS_LAST_SEEN_KEY } from '../useNotifications';
+import { useNotifications } from '../useNotifications';
 import { WsPacket } from '@/utils/wsClient';
 
 vi.mock('@/utils/api', () => ({
@@ -30,6 +30,10 @@ const restNotification = {
   action_url: '/friends',
   created_at: '2026-07-06T10:00:00Z',
 };
+
+function restResponse(lastSeenAt: string | null = null) {
+  return { notifications: [restNotification], last_seen_at: lastSeenAt };
+}
 
 const wsFriendsPayload = {
   notification_type: 'friends',
@@ -75,7 +79,7 @@ afterEach(() => {
 describe('useNotifications - fetching', () => {
   it('fetches friends notification history when token exists', async () => {
     localStorage.setItem('auth_token', 'token');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse());
 
     const { result } = renderHook(() => useNotifications());
     await flush();
@@ -116,7 +120,7 @@ describe('useNotifications - fetching', () => {
 describe('useNotifications - websocket routing', () => {
   it('prepends live friends notifications to the list', async () => {
     localStorage.setItem('auth_token', 'token');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse());
 
     const { result } = renderHook(() => useNotifications());
     await flush();
@@ -180,39 +184,49 @@ describe('useNotifications - websocket routing', () => {
 });
 
 describe('useNotifications - unseen tracking', () => {
-  it('counts notifications newer than last-seen and clears on markSeen', async () => {
+  it('counts notifications newer than the server last-seen and clears on markSeen', async () => {
     localStorage.setItem('auth_token', 'token');
-    localStorage.setItem(NOTIFICATIONS_LAST_SEEN_KEY, '2026-07-05T00:00:00Z');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse('2026-07-05T00:00:00Z'));
 
     const { result } = renderHook(() => useNotifications());
     await flush();
 
     expect(result.current.unseenCount).toBe(1);
 
+    mockApiCall.mockResolvedValueOnce(undefined);
     act(() => {
       result.current.markSeen();
     });
 
     expect(result.current.unseenCount).toBe(0);
-    expect(localStorage.getItem(NOTIFICATIONS_LAST_SEEN_KEY)).not.toBeNull();
+    expect(mockApiCall).toHaveBeenCalledWith('PUT', '/user/notifications/seen');
   });
 
-  it('counts everything as unseen when never marked seen', async () => {
+  it('counts everything as unseen when the server has no last-seen marker', async () => {
     localStorage.setItem('auth_token', 'token');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse(null));
 
     const { result } = renderHook(() => useNotifications());
     await flush();
 
     expect(result.current.unseenCount).toBe(1);
+  });
+
+  it('stays seen across a fresh session since the marker is server-persisted, not local', async () => {
+    localStorage.setItem('auth_token', 'token');
+    mockApiCall.mockResolvedValueOnce(restResponse('2026-07-06T11:00:00Z'));
+
+    const { result } = renderHook(() => useNotifications());
+    await flush();
+
+    expect(result.current.unseenCount).toBe(0);
   });
 });
 
 describe('useNotifications - dismiss', () => {
   it('deletes the notification and removes it from the list', async () => {
     localStorage.setItem('auth_token', 'token');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse());
 
     const { result } = renderHook(() => useNotifications());
     await flush();
@@ -228,7 +242,7 @@ describe('useNotifications - dismiss', () => {
 
   it('keeps the notification when the delete fails', async () => {
     localStorage.setItem('auth_token', 'token');
-    mockApiCall.mockResolvedValueOnce([restNotification]);
+    mockApiCall.mockResolvedValueOnce(restResponse());
 
     const { result } = renderHook(() => useNotifications());
     await flush();
