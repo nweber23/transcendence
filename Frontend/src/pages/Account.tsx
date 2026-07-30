@@ -7,6 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccount, TransactionCategory } from '@/hooks/useAccount';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
+import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
+
+const QUICK_PLAY_GAMES = [
+  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon },
+  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon },
+  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon },
+];
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
 
@@ -38,11 +45,18 @@ const Account: React.FC = () => {
   const [operationError, setOperationError] = useState<string | null>(null);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [justDeposited, setJustDeposited] = useState<string | null>(null);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<TransactionCategory>('all');
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const depositExceedsLimit = Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+
+  useEffect(() => {
+    if (!justDeposited) return;
+    const timeout = window.setTimeout(() => setJustDeposited(null), 15000);
+    return () => window.clearTimeout(timeout);
+  }, [justDeposited]);
 
   const handleCategoryChange = (nextCategory: TransactionCategory) => {
     if (nextCategory === activeCategory) return;
@@ -78,6 +92,7 @@ const Account: React.FC = () => {
     setDepositLoading(true);
     try {
       await deposit(depositAmount);
+      setJustDeposited(depositAmount);
       setDepositAmount('');
     } catch (err) {
       setOperationError(err instanceof Error ? err.message : 'Deposit failed');
@@ -266,19 +281,40 @@ const Account: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick play */}
-          <div className="mb-8 p-5 rounded-2xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)]">
-            <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-3">Quick Play</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: 'Blackjack', path: '/games/blackjack' },
-                { label: 'Texas Hold\'em', path: '/games/poker' },
-                { label: 'Slots', path: '/games/slots' },
-              ].map((game) => (
-                <Link key={game.path} to={game.path}>
-                  <span className="inline-block px-5 py-2 rounded-full border border-[rgba(212,175,55,0.18)] bg-[var(--surface-2)] text-sm font-medium text-[var(--text-2)] hover:border-[rgba(212,175,55,0.45)] hover:text-[var(--text)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 cursor-pointer">
-                    {game.label}
+          {/* Play — the conversion point from adding chips to actually playing */}
+          <div className={`mb-8 p-5 md:p-6 rounded-2xl border bg-[var(--surface)] transition-colors duration-500 ${
+            justDeposited ? 'border-[rgba(45,122,99,0.5)]' : 'border-[rgba(212,175,55,0.1)]'
+          }`}>
+            {justDeposited ? (
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-7 h-7 rounded-full bg-[rgba(45,122,99,0.18)] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-[var(--text)]">
+                  ${Number(justDeposited).toLocaleString()} added — ready to play
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-4">Play Now</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  onClick={() => setJustDeposited(null)}
+                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.2)] bg-[var(--surface-2)] hover:border-[rgba(212,175,55,0.55)] hover:bg-[rgba(212,175,55,0.08)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                >
+                  <Icon width={40} height={34} className="flex-shrink-0" />
+                  <span className="flex flex-col leading-tight">
+                    <span className="font-serif text-base font-semibold text-[var(--text)]">{label}</span>
+                    <span className="text-xs text-[var(--text-3)] group-hover:text-[var(--text-2)]">{tagline}</span>
                   </span>
+                  <svg className="w-4 h-4 ml-auto flex-shrink-0 text-[var(--gold)] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
                 </Link>
               ))}
             </div>
