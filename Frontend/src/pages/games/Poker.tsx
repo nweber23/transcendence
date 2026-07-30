@@ -206,7 +206,7 @@ const Poker: React.FC = () => {
   const act = (action: string, amount = 0) => sendWebSocketPacket('play', { action, amount });
 
   const presetButton =
-    'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-xs font-semibold uppercase tracking-wider hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
+    'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.45)] bg-[rgba(212,175,55,0.1)] text-[var(--text)] text-xs font-semibold uppercase tracking-wider hover:border-[rgba(212,175,55,0.75)] hover:bg-[rgba(212,175,55,0.2)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
   const actionButton =
     'flex-1 py-3.5 rounded-xl font-semibold uppercase tracking-[0.14em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
