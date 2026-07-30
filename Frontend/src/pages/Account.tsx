@@ -7,11 +7,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccount, TransactionCategory } from '@/hooks/useAccount';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
+import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
 
 const QUICK_PLAY_GAMES = [
-  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', glyph: '♠' },
-  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', glyph: '◆' },
-  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', glyph: '7' },
+  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon, glow: 'rgba(45,122,99,0.35)' },
+  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon, glow: 'rgba(212,175,55,0.3)' },
+  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon, glow: 'rgba(139,38,53,0.35)' },
 ];
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
@@ -299,18 +300,22 @@ const Account: React.FC = () => {
               <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-4">Play Now</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {QUICK_PLAY_GAMES.map(({ label, tagline, path, glyph }) => (
+              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon, glow }) => (
                 <Link
                   key={path}
                   to={path}
                   onClick={() => setJustDeposited(null)}
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.2)] bg-[var(--surface-2)] hover:border-[rgba(212,175,55,0.55)] hover:bg-[rgba(212,175,55,0.08)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                  className="group card-transition flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.2)] bg-[var(--surface-2)] hover:border-[rgba(212,175,55,0.55)] hover:bg-[rgba(212,175,55,0.08)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
                 >
-                  <span className="w-10 h-10 rounded-full border border-[rgba(212,175,55,0.35)] bg-[rgba(212,175,55,0.1)] flex items-center justify-center flex-shrink-0">
-                    <span className="font-serif text-lg text-[var(--gold)] leading-none">{glyph}</span>
+                  <span className="relative w-12 h-11 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <span
+                      className="absolute inset-0"
+                      style={{ background: `radial-gradient(ellipse 75% 75% at 50% 50%, ${glow} 0%, transparent 75%)` }}
+                    />
+                    <Icon width={40} height={34} className="relative z-10 card-icon" />
                   </span>
                   <span className="flex flex-col leading-tight">
-                    <span className="font-serif text-base font-semibold text-[var(--text)]">{label}</span>
+                    <span className="font-serif text-base font-semibold text-[var(--gold)]">{label}</span>
                     <span className="text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">{tagline}</span>
                   </span>
                   <svg className="w-4 h-4 ml-auto flex-shrink-0 text-[var(--gold)] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
