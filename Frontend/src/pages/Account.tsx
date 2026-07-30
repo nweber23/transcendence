@@ -237,7 +237,7 @@ const Account: React.FC = () => {
                 <button
                   type="submit"
                   disabled={depositLoading || !depositAmount || depositExceedsLimit}
-                  className="w-full py-3 rounded-lg bg-[rgba(45,122,99,0.12)] border border-[rgba(45,122,99,0.3)] text-emerald-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(45,122,99,0.22)] hover:border-[rgba(45,122,99,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-lg bg-[#1e5a45] text-[#e9f5ef] font-semibold text-sm uppercase tracking-wider hover:bg-[#247052] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {depositLoading ? 'Processing…' : 'Add Chips'}
                 </button>
@@ -273,7 +273,7 @@ const Account: React.FC = () => {
                 <button
                   type="submit"
                   disabled={withdrawLoading || !withdrawAmount}
-                  className="w-full py-3 rounded-lg bg-[rgba(139,38,53,0.12)] border border-[rgba(139,38,53,0.3)] text-red-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(139,38,53,0.22)] hover:border-[rgba(139,38,53,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-lg bg-[var(--red)] text-[#f6e3e6] font-semibold text-sm uppercase tracking-wider hover:bg-[#a12e40] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {withdrawLoading ? 'Processing…' : 'Cash Out'}
                 </button>
@@ -310,7 +310,7 @@ const Account: React.FC = () => {
                   <Icon width={40} height={34} className="flex-shrink-0" />
                   <span className="flex flex-col leading-tight">
                     <span className="font-serif text-base font-semibold text-[var(--text)]">{label}</span>
-                    <span className="text-xs text-[var(--text-3)] group-hover:text-[var(--text-2)]">{tagline}</span>
+                    <span className="text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">{tagline}</span>
                   </span>
                   <svg className="w-4 h-4 ml-auto flex-shrink-0 text-[var(--gold)] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
