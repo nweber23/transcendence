@@ -7,12 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccount, TransactionCategory } from '@/hooks/useAccount';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
-import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
 
 const QUICK_PLAY_GAMES = [
-  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon },
-  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon },
-  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon },
+  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', glyph: '♠' },
+  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', glyph: '◆' },
+  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', glyph: '7' },
 ];
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
@@ -300,14 +299,16 @@ const Account: React.FC = () => {
               <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-4">Play Now</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon }) => (
+              {QUICK_PLAY_GAMES.map(({ label, tagline, path, glyph }) => (
                 <Link
                   key={path}
                   to={path}
                   onClick={() => setJustDeposited(null)}
                   className="group flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.2)] bg-[var(--surface-2)] hover:border-[rgba(212,175,55,0.55)] hover:bg-[rgba(212,175,55,0.08)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
                 >
-                  <Icon width={40} height={34} className="flex-shrink-0" />
+                  <span className="w-10 h-10 rounded-full border border-[rgba(212,175,55,0.35)] bg-[rgba(212,175,55,0.1)] flex items-center justify-center flex-shrink-0">
+                    <span className="font-serif text-lg text-[var(--gold)] leading-none">{glyph}</span>
+                  </span>
                   <span className="flex flex-col leading-tight">
                     <span className="font-serif text-base font-semibold text-[var(--text)]">{label}</span>
                     <span className="text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">{tagline}</span>
