@@ -10,9 +10,9 @@ import Spinner from '@/components/ui/Spinner';
 import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
 
 const QUICK_PLAY_GAMES = [
-  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon, glow: 'rgba(45,122,99,0.35)' },
-  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon, glow: 'rgba(212,175,55,0.3)' },
-  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon, glow: 'rgba(139,38,53,0.35)' },
+  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon, glow: 'rgba(45,122,99,0.35)', color: '#d4af37' },
+  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon, glow: 'rgba(212,175,55,0.3)', color: '#d4af37' },
+  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon, glow: 'rgba(139,38,53,0.35)', color: '#d4af37' },
 ];
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
@@ -300,7 +300,7 @@ const Account: React.FC = () => {
               <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-4">Play Now</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon, glow }) => (
+              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon, glow, color }) => (
                 <Link
                   key={path}
                   to={path}
@@ -315,7 +315,7 @@ const Account: React.FC = () => {
                     <Icon width={40} height={34} className="relative z-10 card-icon" />
                   </span>
                   <span className="flex flex-col leading-tight">
-                    <span className="font-serif text-base font-semibold text-[var(--gold)]">{label}</span>
+                    <span className="font-serif text-base font-semibold" style={{ color }}>{label}</span>
                     <span className="text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">{tagline}</span>
                   </span>
                   <svg className="w-4 h-4 ml-auto flex-shrink-0 text-[var(--gold)] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
