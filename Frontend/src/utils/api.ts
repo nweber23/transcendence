@@ -1,7 +1,7 @@
 import { friendlyMessage } from '@/utils/errorMessages';
 import { getAuthToken } from '@/utils/authStorage';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export interface ApiResponse<T> {
   data: T;

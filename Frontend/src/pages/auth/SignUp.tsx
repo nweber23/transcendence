@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Logo from '@/components/ui/Logo';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Beams from '@/components/ui/Beams';
+import { API_BASE_URL } from '@/utils/api';
 
 interface SignUpFormData {
   username: string;
@@ -349,6 +350,9 @@ const OAuthButton: React.FC<{ provider: string }> = ({ provider }) => {
   return (
     <button
       type="button"
+      onClick={() => {
+        window.location.href = `${API_BASE_URL}/auth/${provider.toLowerCase()}`;
+      }}
       className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.15)] bg-[var(--surface-2)] text-[var(--text)] font-medium text-sm hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-3)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2"
     >
       {renderIcon()}

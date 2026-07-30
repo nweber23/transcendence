@@ -12,6 +12,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Landing from '@/pages/landing/Landing';
 import Login from '@/pages/auth/Login';
 import SignUp from '@/pages/auth/SignUp';
+import OAuthCallback from '@/pages/auth/OAuthCallback';
 import Account from '@/pages/Account';
 import ProfilePage from '@/pages/account/ProfilePage';
 import Blackjack from '@/pages/games/Blackjack';
@@ -28,7 +29,7 @@ import '@/styles/globals.css';
 const AppLayout: React.FC = () => {
   const { pathname } = useLocation();
   const showFooter = pathname === '/';
-  const hideHeader = pathname === '/login' || pathname === '/signup';
+  const hideHeader = pathname === '/login' || pathname === '/signup' || pathname === '/auth/callback';
 
   useEffect(() => {
     const syncConnection = () => {
@@ -54,6 +55,7 @@ const AppLayout: React.FC = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
         <Route
           path="/account"
           element={

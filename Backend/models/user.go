@@ -13,6 +13,8 @@ type User struct {
 	Username             string     `gorm:"uniqueIndex,size:50"`
 	Email                string     `gorm:"uniqueIndex,size:255"`
 	PasswordHash         string     `gorm:"size:255"`
+  Provider             string     `gorm:"size:20;default:'local';uniqueIndex:idx_provider_account,where:provider_id != ''"`
+	ProviderID           string     `gorm:"size:64;uniqueIndex:idx_provider_account,where:provider_id != ''"`
 	AvatarURL            string
 	NotificationTypes    string
 	NotificationsSeenAt  *time.Time
