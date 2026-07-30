@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"path/filepath"
 
 	"transcendence/middleware"
@@ -90,6 +91,15 @@ type FriendResponse struct {
 
 type RemoveNotificationResponse struct {
 	NotificationID uint `json:"notification_id"`
+}
+
+type NotificationsResponse struct {
+	Notifications []models.Notification `json:"notifications"`
+	LastSeenAt    *time.Time             `json:"last_seen_at"`
+}
+
+type NotificationsSeenResponse struct {
+	LastSeenAt time.Time `json:"last_seen_at"`
 }
 
 type UserProfileRequest struct {
@@ -752,10 +762,29 @@ func (uh *UserHandler) RemoveNotification(c *gin.Context) {
 	}
 }
 
+func (uh *UserHandler) MarkNotificationsSeen(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	seenAt, err := uh.userService.MarkNotificationsSeen(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "mark_notifications_seen_failed", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Notifications marked as seen", NotificationsSeenResponse{LastSeenAt: *seenAt})
+}
+
 func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
 	limit, err := strconv.Atoi(c.Query("limit"))
@@ -811,5 +840,8 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 			notifications[i].ImageURL = resolveAvatarURL(notifications[i].ImageURL)
 		}
 	}
-	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
+	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", NotificationsResponse{
+		Notifications: notifications,
+		LastSeenAt:    user.NotificationsSeenAt,
+	})
 }
