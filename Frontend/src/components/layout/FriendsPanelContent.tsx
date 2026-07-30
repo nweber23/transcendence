@@ -143,7 +143,7 @@ const FriendsPanelContent: React.FC<FriendsPanelContentProps> = ({
                 key={f.friendId}
                 friend={f}
                 actions={
-                  <button onClick={() => removeFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] hover:text-red-400 hover:border-red-400/30`}>
+                  <button onClick={() => removeFriend(f.friendId).catch(() => {})} className={`${ghostBtn} border border-[rgba(212,175,55,0.4)] text-[var(--text-2)] hover:text-red-400 hover:border-red-400/50`}>
                     Cancel
                   </button>
                 }
