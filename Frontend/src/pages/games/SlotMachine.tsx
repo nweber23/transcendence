@@ -347,7 +347,7 @@ const SlotMachine: React.FC = () => {
     setIsAutoSpinning(false);
   }, [canSpin, isAutoSpinning, betPerLine, lines, spinOnce]);
 
-  const ghostButton = 'px-3.5 py-2 rounded-lg border border-[rgba(212,175,55,0.45)] bg-[rgba(212,175,55,0.1)] text-[var(--text)] text-xs font-semibold uppercase tracking-[0.1em] hover:border-[rgba(212,175,55,0.75)] hover:bg-[rgba(212,175,55,0.2)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
+  const ghostButton = 'px-3.5 py-2 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-[0.1em] shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
   return (
       <div
@@ -735,7 +735,7 @@ const SlotMachine: React.FC = () => {
             className={`px-6 py-3.5 rounded-xl font-semibold text-sm tracking-[0.18em] uppercase transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${
               isAutoSpinning
                 ? 'text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]'
-                : 'text-[var(--text-2)] border border-[rgba(212,175,55,0.3)] hover:border-[rgba(212,175,55,0.6)] hover:text-[var(--gold)]'
+                : 'text-[var(--text)] bg-[var(--surface-2)] border border-[rgba(212,175,55,0.55)] shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.15)]'
             }`}
           >
             {isAutoSpinning ? 'Stop' : 'Auto Spin'}
