@@ -233,7 +233,7 @@ const Poker: React.FC = () => {
           />
 
           {/* ── Game area: sidebar (6 seats) + info panel + action bar ───────── */}
-          <div className="flex-1 min-h-0 grid grid-cols-[300px_1fr]">
+          <div className="flex-1 min-h-0 grid grid-cols-[320px_1fr]">
             {/* ── Sidebar ──────────────────────────────────────────────────── */}
             <div className="flex flex-col gap-2 p-3 border-r border-[rgba(212,175,55,0.12)] bg-[var(--surface)]">
               {players.map((player) => (
@@ -251,49 +251,61 @@ const Poker: React.FC = () => {
             </div>
 
             {/* ── Main column: info panel (flexible) + action bar (fixed) ───── */}
-            <div className="grid grid-rows-[1fr_auto] min-h-0">
+            <div className="grid grid-rows-[1fr_auto] min-h-0 min-w-0">
               {/* ── Info panel ──────────────────────────────────────────────── */}
-              <div className="relative min-h-0 flex flex-col items-center justify-center gap-4 px-8">
+              <div className="relative min-h-0 flex items-center justify-center px-8">
                 <InfoTriggerButton onClick={() => setShowRules(true)} />
 
-                <p className="text-[10px] uppercase tracking-[0.3em] text-[rgba(212,175,55,0.5)]">
-                  No-Limit Hold'em · ${smallBlind} / ${bigBlind}
-                </p>
+                {/* Bounded, bordered panel — keeps the table info visually
+                    contained instead of floating in open background, so the
+                    panel doesn't just read as empty space on wide screens. */}
+                <div
+                  className="w-full max-w-[640px] flex flex-col items-center gap-5 px-10 py-12 rounded-2xl"
+                  style={{
+                    border: '1px solid rgba(212,175,55,0.16)',
+                    background: 'rgba(255,255,255,0.02)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                  }}
+                >
+                  <p className="text-xs uppercase tracking-[0.3em] text-[rgba(212,175,55,0.55)]">
+                    No-Limit Hold'em · ${smallBlind} / ${bigBlind}
+                  </p>
 
-                {/* Community cards */}
-                <div className="flex gap-2">
-                  {communityCards.length > 0
-                    ? communityCards.map((card, i) => (
-                        <PlayingCard
-                          key={i}
-                          card={card}
-                          size="lg"
-                          className="card-deal"
-                          style={{ animationDelay: `${i * 120}ms` }}
-                        />
-                      ))
-                    : [0, 1, 2, 3, 4].map((i) => <CardSlot key={i} size="lg" />)}
-                </div>
-
-                {/* Pot */}
-                {pot > 0 && (
-                  <div
-                    className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full"
-                    style={{
-                      border: '1px solid rgba(212,175,55,0.3)',
-                      background: 'rgba(0,0,0,0.35)',
-                      WebkitBackdropFilter: 'blur(6px)',
-                      backdropFilter: 'blur(6px)',
-                    }}
-                  >
-                    <span className="text-[9px] text-[var(--text-3)] uppercase tracking-[0.25em]">
-                      Pot
-                    </span>
-                    <span className="font-serif text-lg text-[var(--gold)] leading-tight">
-                      ${pot.toLocaleString()}
-                    </span>
+                  {/* Community cards */}
+                  <div className="flex gap-3">
+                    {communityCards.length > 0
+                      ? communityCards.map((card, i) => (
+                          <PlayingCard
+                            key={i}
+                            card={card}
+                            size="xl"
+                            className="card-deal"
+                            style={{ animationDelay: `${i * 120}ms` }}
+                          />
+                        ))
+                      : [0, 1, 2, 3, 4].map((i) => <CardSlot key={i} size="xl" />)}
                   </div>
-                )}
+
+                  {/* Pot */}
+                  {pot > 0 && (
+                    <div
+                      className="inline-flex items-center gap-2 px-6 py-2 rounded-full"
+                      style={{
+                        border: '1px solid rgba(212,175,55,0.3)',
+                        background: 'rgba(0,0,0,0.35)',
+                        WebkitBackdropFilter: 'blur(6px)',
+                        backdropFilter: 'blur(6px)',
+                      }}
+                    >
+                      <span className="text-[10px] text-[var(--text-3)] uppercase tracking-[0.25em]">
+                        Pot
+                      </span>
+                      <span className="font-serif text-xl text-[var(--gold)] leading-tight">
+                        ${pot.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 {/* ── Hand result banner — the table keeps playing, so this is the only
                      place the outcome of a finished hand is shown ── */}
@@ -341,7 +353,7 @@ const Poker: React.FC = () => {
               </div>
 
               {/* ── Action bar ──────────────────────────────────────────────── */}
-              <div className="shrink-0 border-t border-[rgba(212,175,55,0.12)] bg-[var(--surface)] px-5 py-4 min-h-[96px] flex items-center">
+              <div className="border-t border-[rgba(212,175,55,0.12)] bg-[var(--surface)] px-5 py-4 h-[136px] flex items-center">
                 {!isSeated ? (
                   <div className="w-full flex flex-wrap items-center gap-x-6 gap-y-3">
                     {/* Seat indicator */}
@@ -361,7 +373,7 @@ const Poker: React.FC = () => {
                       <p className="font-serif text-lg text-[var(--gold)]">${buyIn.toLocaleString()}</p>
                     </div>
 
-                    {error && <p className="text-xs text-[#e8a5ae]">{error}</p>}
+                    {error && <p className="text-xs text-[#e8a5ae] truncate min-w-0">{error}</p>}
 
                     {/* Join */}
                     <button
@@ -382,7 +394,7 @@ const Poker: React.FC = () => {
                       Seated with ${mySeat?.stack.toLocaleString()} —{' '}
                       {seatedCount >= 2 ? 'next hand starting…' : 'waiting for another player to join…'}
                     </p>
-                    {error && <p className="text-xs text-[#e8a5ae]">{error}</p>}
+                    {error && <p className="text-xs text-[#e8a5ae] truncate min-w-0">{error}</p>}
                     <button onClick={leave} className={`${presetButton} ml-auto`}>
                       Leave Table
                     </button>
@@ -421,7 +433,7 @@ const Poker: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    {error && <p className="text-xs text-[#e8a5ae]">{error}</p>}
+                    {error && <p className="text-xs text-[#e8a5ae] truncate min-w-0">{error}</p>}
                     <button onClick={leave} className={presetButton} title="Fold your hand and leave the table">
                       Leave Table
                     </button>
@@ -536,7 +548,7 @@ const SeatRow: React.FC<{
       {/* Avatar + dealer badge + turn ring */}
       <div className="relative shrink-0">
         {player.isDealer && (
-          <div className="absolute -right-1.5 -top-1.5 w-4 h-4 rounded-full bg-[var(--gold)] flex items-center justify-center text-[#0a0e12] text-[8px] font-bold z-10 border border-[rgba(212,175,55,0.5)] shadow">
+          <div className="absolute -right-2 -top-2 w-5 h-5 rounded-full bg-[var(--gold)] flex items-center justify-center text-[#0a0e12] text-[9px] font-bold z-10 border border-[rgba(212,175,55,0.5)] shadow">
             D
           </div>
         )}
@@ -549,31 +561,31 @@ const SeatRow: React.FC<{
                 : ''
           }`}
         >
-          <Avatar avatarURL={player.avatarURL} size={40} />
+          <Avatar avatarURL={player.avatarURL} size={48} />
 
           {showTurnTimer && (
             <>
               <svg
-                width={40}
-                height={40}
-                viewBox="0 0 40 40"
+                width={48}
+                height={48}
+                viewBox="0 0 48 48"
                 className="absolute inset-0 -rotate-90 pointer-events-none"
               >
                 <circle
-                  cx={20}
-                  cy={20}
-                  r={18}
+                  cx={24}
+                  cy={24}
+                  r={22}
                   fill="none"
                   stroke={turnUrgent ? 'var(--red)' : 'var(--gold)'}
                   strokeWidth={2.5}
                   strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 18}
-                  strokeDashoffset={2 * Math.PI * 18 * (1 - turnFraction!)}
+                  strokeDasharray={2 * Math.PI * 22}
+                  strokeDashoffset={2 * Math.PI * 22 * (1 - turnFraction!)}
                   style={{ transition: 'stroke-dashoffset 200ms linear' }}
                 />
               </svg>
               <div
-                className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold z-10 border shadow ${
+                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold z-10 border shadow ${
                   turnUrgent
                     ? 'bg-[var(--red)] text-[#f6e3e6] border-[rgba(255,255,255,0.25)] animate-pulse'
                     : 'bg-[var(--gold)] text-[#0a0e12] border-[rgba(212,175,55,0.5)]'
@@ -588,8 +600,8 @@ const SeatRow: React.FC<{
 
       {/* Name + stack */}
       <div className="flex-1 min-w-0 leading-tight">
-        <p className="text-[11px] font-semibold text-[var(--text)] truncate">{player.name}</p>
-        <p className="font-serif text-xs text-[var(--gold)]">${player.stack.toLocaleString()}</p>
+        <p className="text-xs font-semibold text-[var(--text)] truncate">{player.name}</p>
+        <p className="font-serif text-sm text-[var(--gold)]">${player.stack.toLocaleString()}</p>
         {isFolded && (
           <span className="text-[9px] font-semibold text-[#d98994] uppercase tracking-[0.14em]">
             Fold
@@ -601,12 +613,12 @@ const SeatRow: React.FC<{
           action bar's "Your Hand" panel for your own, shown much larger) */}
       <div className="flex gap-1 shrink-0">
         {player.cards && player.cards.length > 0
-          ? player.cards.map((card, i) => <PlayingCard key={i} card={card} size="sm" />)
+          ? player.cards.map((card, i) => <PlayingCard key={i} card={card} size="md" />)
           : player.status === 'active' &&
             !isFolded && (
               <>
-                <PlayingCard faceDown size="sm" />
-                <PlayingCard faceDown size="sm" />
+                <PlayingCard faceDown size="md" />
+                <PlayingCard faceDown size="md" />
               </>
             )}
       </div>
