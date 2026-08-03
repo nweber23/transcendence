@@ -211,7 +211,7 @@ const Poker: React.FC = () => {
   const actionButton =
     'flex-1 py-3.5 rounded-xl font-semibold uppercase tracking-[0.14em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
 
-  const fitsScreen = () => window.innerWidth >= 1024 && window.innerHeight >= 700;
+  const fitsScreen = () => window.innerWidth >= 1280 && window.innerHeight >= 760;
   const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
 
   useEffect(() => {
