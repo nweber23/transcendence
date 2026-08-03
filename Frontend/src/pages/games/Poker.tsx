@@ -206,16 +206,17 @@ const Poker: React.FC = () => {
   const act = (action: string, amount = 0) => sendWebSocketPacket('play', { action, amount });
 
   const presetButton =
-    'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-xs font-semibold uppercase tracking-wider hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
+    'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-wider shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
   const actionButton =
     'flex-1 py-3.5 rounded-xl font-semibold uppercase tracking-[0.14em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
 
-  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 1024);
+  const fitsScreen = () => window.innerWidth >= 1024 && window.innerHeight >= 700;
+  const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
 
   useEffect(() => {
     const handleResize = () => {
-      setIsSmallScreen(window.innerWidth < 1024);
+      setIsSmallScreen(!fitsScreen());
     };
 
     handleResize();

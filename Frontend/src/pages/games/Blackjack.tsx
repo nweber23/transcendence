@@ -34,11 +34,49 @@ interface GameResponse {
   blackjack?: BlackjackDetail;
 }
 
-const OUTCOME_MESSAGES: Record<string, string> = {
-  player_blackjack: 'Blackjack! You win',
-  player_win: 'You win',
-  push: 'Push — bet returned',
-  dealer_win: 'Dealer wins',
+/* Whole-dollar amounts stay bare; anything the payout math left fractional gets cents */
+const formatMoney = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2));
+
+interface OutcomeConfig {
+  label: string;
+  textColor: string;
+  border: string;
+  amount: (bet: number, payout: number) => { text: string; color: string };
+}
+
+/* Keys match models.BlackjackGame.Result (blackjackResult() in game_service.go) —
+   the settled hand's result label, not the engine's raw outcome field */
+const OUTCOME_BANNER: Record<string, OutcomeConfig> = {
+  blackjack: {
+    label: 'Blackjack!',
+    textColor: 'text-[var(--gold)]',
+    border: 'rgba(212,175,55,0.6)',
+    amount: (bet, payout) => ({ text: `+$${formatMoney(payout - bet)}`, color: 'text-[var(--gold)]' }),
+  },
+  win: {
+    label: 'You Win',
+    textColor: 'text-[#8fe0b8]',
+    border: 'rgba(143,224,184,0.45)',
+    amount: (bet, payout) => ({ text: `+$${formatMoney(payout - bet)}`, color: 'text-[#8fe0b8]' }),
+  },
+  push: {
+    label: 'Push',
+    textColor: 'text-[rgba(230,230,230,0.9)]',
+    border: 'rgba(212,175,55,0.3)',
+    amount: (bet) => ({ text: `Bet returned · $${formatMoney(bet)}`, color: 'text-[rgba(212,175,55,0.6)]' }),
+  },
+  loss: {
+    label: 'Dealer Wins',
+    textColor: 'text-[#e8a5ae]',
+    border: 'rgba(139,38,53,0.6)',
+    amount: (bet) => ({ text: `-$${formatMoney(bet)}`, color: 'text-[#e8a5ae]' }),
+  },
+  bust: {
+    label: 'Bust!',
+    textColor: 'text-[#e8a5ae]',
+    border: 'rgba(139,38,53,0.6)',
+    amount: (bet) => ({ text: `-$${formatMoney(bet)}`, color: 'text-[#e8a5ae]' }),
+  },
 };
 
 const Blackjack: React.FC = () => {
@@ -63,9 +101,16 @@ const Blackjack: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
 
-  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
+  /* Snapshot of the wager for the hand in play — stagedChips is cleared the
+     moment the deal goes out, but the outcome banner and Rebet still need it */
+  const [activeBet, setActiveBet] = useState(0);
+  const [payout, setPayout] = useState(0);
+  const [lastBet, setLastBet] = useState<number | null>(null);
+
+  const fitsScreen = () => window.innerWidth >= 768 && window.innerHeight >= 650;
+  const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
   useEffect(() => {
-    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    const handleResize = () => setIsSmallScreen(!fitsScreen());
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -79,17 +124,22 @@ const Blackjack: React.FC = () => {
   };
   const undoChip = () => setStagedChips((c) => c.slice(0, -1));
   const clearChips = () => setStagedChips([]);
-  const maxBet = () => {
+  const decomposeToChips = (amount: number) => {
     const denoms = [...CHIP_VALUES].sort((a, b) => b - a);
     const chips: number[] = [];
-    let remaining = balance;
+    let remaining = Math.min(amount, balance);
     for (const d of denoms) {
       while (remaining >= d) {
         chips.push(d);
         remaining -= d;
       }
     }
-    setStagedChips(chips);
+    return chips;
+  };
+  const maxBet = () => setStagedChips(decomposeToChips(balance));
+  const rebet = () => {
+    if (!lastBet || lastBet > balance) return;
+    setStagedChips(decomposeToChips(lastBet));
   };
 
   const applyResponse = (response: GameResponse) => {
@@ -101,6 +151,7 @@ const Blackjack: React.FC = () => {
     setDealerValue(detail?.dealer_value ?? 0);
     setOutcome(detail?.outcome || null);
     setGameActive(response.status === 'in_progress');
+    setPayout(Number(response.winnings) || 0);
     if (response.status !== 'in_progress') {
       getAccount().catch(() => {});
     }
@@ -108,14 +159,17 @@ const Blackjack: React.FC = () => {
 
   const deal = async () => {
     if (!canDeal) return;
+    const wager = bet;
     setIsBusy(true);
     setError(null);
     try {
       const response = await apiCall<GameResponse>('POST', '/games', {
         game_type: 'blackjack',
-        bet_amount: String(bet),
+        bet_amount: String(wager),
       });
       applyResponse(response);
+      setActiveBet(wager);
+      setLastBet(wager);
       setStagedChips([]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to deal');
@@ -139,7 +193,7 @@ const Blackjack: React.FC = () => {
   };
 
   const ghostButton =
-    'px-4 py-2.5 rounded-lg border border-[rgba(212,175,55,0.15)] text-[var(--text-3)] text-sm font-semibold hover:border-[rgba(212,175,55,0.4)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
+    'px-4 py-2.5 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-sm font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
   const actionButton =
     'flex-1 py-4 rounded-xl font-semibold uppercase tracking-[0.18em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
@@ -201,6 +255,11 @@ const Blackjack: React.FC = () => {
           </text>
         </svg>
 
+        {/* Outcome banner — takes over the felt once the hand settles */}
+        {!gameActive && outcome && (
+          <OutcomeBanner key={gameId} outcome={outcome} bet={activeBet} payout={payout} />
+        )}
+
         <div className="relative h-full flex flex-col items-center justify-between px-4 py-5">
           {/* Dealer */}
           <div className="flex flex-col items-center gap-2.5">
@@ -255,15 +314,6 @@ const Blackjack: React.FC = () => {
             </div>
             {bet > 0 && (
               <span className="font-serif text-xl text-[var(--gold)]">${bet.toLocaleString()}</span>
-            )}
-            {!gameActive && outcome && (
-              <span
-                className={`text-xs font-semibold uppercase tracking-[0.15em] ${
-                  outcome === 'dealer_win' ? 'text-[#e8a5ae]' : 'text-[var(--gold)]'
-                }`}
-              >
-                {OUTCOME_MESSAGES[outcome] ?? outcome}
-              </span>
             )}
             {error && <span className="text-xs text-[#e8a5ae]">{error}</span>}
           </div>
@@ -321,6 +371,13 @@ const Blackjack: React.FC = () => {
               </button>
               <button onClick={maxBet} disabled={isBusy || balance === 0} className={ghostButton}>
                 Max
+              </button>
+              <button
+                onClick={rebet}
+                disabled={isBusy || !lastBet || lastBet > balance}
+                className={ghostButton}
+              >
+                Rebet{lastBet ? ` $${lastBet.toLocaleString()}` : ''}
               </button>
             </div>
             <button
@@ -381,5 +438,35 @@ const TotalBadge: React.FC<{ value: number }> = ({ value }) => (
     {value > 21 ? `${value} · Bust` : value}
   </span>
 );
+
+// ─── Outcome banner ───────────────────────────────────────────────────────────
+
+const OutcomeBanner: React.FC<{ outcome: string; bet: number; payout: number }> = ({
+  outcome,
+  bet,
+  payout,
+}) => {
+  const config = OUTCOME_BANNER[outcome];
+  if (!config) return null;
+  const { text, color } = config.amount(bet, payout);
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none px-6">
+      <div
+        className="banner-result text-center px-8 py-5 rounded-2xl"
+        style={{
+          background: 'rgba(8,12,16,0.92)',
+          border: `1px solid ${config.border}`,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+        }}
+      >
+        <p className="text-[9px] uppercase tracking-[0.3em] text-[rgba(212,175,55,0.5)] mb-1.5">
+          Round Over
+        </p>
+        <p className={`font-serif text-2xl leading-snug ${config.textColor}`}>{config.label}</p>
+        <p className={`text-sm font-semibold mt-1.5 ${color}`}>{text}</p>
+      </div>
+    </div>
+  );
+};
 
 export default Blackjack;
