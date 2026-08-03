@@ -3,29 +3,27 @@ import GameTopBar from '@/components/games/GameTopBar';
 import Chip, { CHIP_VALUES } from '@/components/games/Chip';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import SlotPaytableModal from '@/components/games/SlotPaytableModal';
+import { InfoTriggerButton } from '@/components/games/GameInfoModal';
 import { useAccount } from '@/hooks/useAccount';
 import { apiCall, ApiError } from '@/utils/api';
 import { LINE_OPTIONS, SYMBOLS } from './luckySevensConfig';
 import { evaluateWinningLines, evaluateScatterWin, type WinningLine, type ScatterWin } from './luckySevensWins';
 
-/* Filler icons shown while the reels are still cosmetically spinning — a
-   superset of the symbols the engine can actually resolve, for variety. */
-const ICONS = [
-  'apple', 'apricot', 'banana', 'cherry', 'grapes',
-  'lemon', 'lucky_seven', 'orange', 'pear', 'strawberry', 'watermelon',
-];
-
-/* Every symbol in the engine config now maps 1:1 onto its own real asset
-   (see luckySevensConfig.ts), so a real engine match always renders as a
-   visual match too. */
+/* Every symbol in the engine config maps 1:1 onto its own real asset (see
+   luckySevensConfig.ts), so a real engine match always renders as a visual
+   match too. */
 const SYMBOL_ICON_MAP: Record<string, string> = Object.fromEntries(
   SYMBOLS.map((s) => [s.id, s.file.replace(/^\//, '').replace(/\.png$/, '')]),
 );
 
+/* Filler icons shown while the reels are still cosmetically spinning — just
+   the real symbol set, since there's no separate decorative art anymore. */
+const ICONS = Object.values(SYMBOL_ICON_MAP);
+
 const LINE_COLORS = ['#ffd447', '#ff6b6b', '#4ecdc4', '#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fb923c', '#facc15', '#f87171'];
 
 const BASE_SPINNING_DURATION = 2.7;
-const COLUMN_SPINNING_DURATION = 0.3;
+const COLUMN_SPINNING_DURATION = 0.6;
 const NUM_REELS = 3;
 const NUM_ROWS = 3;
 /* How long the win/lose message stays on screen before auto spin fires the next spin */
@@ -95,7 +93,8 @@ const SlotMachine: React.FC = () => {
   useEffect(() => { getAccount().catch(() => {}); }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
-  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
+  const fitsScreen = () => window.innerWidth >= 768 && window.innerHeight >= 650;
+  const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
   const [stagedChips, setStagedChips] = useState<number[]>([]);
   const [lines, setLines] = useState<number>(LINE_OPTIONS[0]);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -121,7 +120,7 @@ const SlotMachine: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsSmallScreen(window.innerWidth < 768);
+      setIsSmallScreen(!fitsScreen());
       if (windowRef.current) {
         const measuredHeight = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
         if (measuredHeight > 0) setItemHeight(measuredHeight);
@@ -227,24 +226,31 @@ const SlotMachine: React.FC = () => {
       setIsSpinning(true);
       spinningContainerRef.current?.classList.add('spinning');
 
+      let maxDelay = 0;
       let duration = spinDuration + randomDuration();
       colRefs.current.forEach((col, i) => {
         if (!col) return;
+        const animDelay = i * 0.35;
+        maxDelay = Math.max(maxDelay, animDelay);
         duration += COLUMN_SPINNING_DURATION + randomDuration();
         col.style.animationDuration = `${duration}s`;
-        col.style.animationDelay = `${i * 0.01}s`;
+        col.style.animationDelay = `${animDelay}s`;
       });
 
-      setTimeout(() => setResult(grid), (spinDuration * 1000) / 2);
+      const setResultTime = (spinDuration * 1000) / 2 + maxDelay * 1000;
+      setTimeout(() => setResult(grid), setResultTime);
 
+      const totalAnimTime = duration * 1000 + maxDelay * 1000 + NUM_REELS * 10;
       setTimeout(() => {
         spinningContainerRef.current?.classList.remove('spinning');
         setIsSpinning(false);
         setResultMessage(payout > 0 ? `You win $${payout.toLocaleString()}` : 'No win this spin');
+        resolve();
+      }, totalAnimTime);
+      setTimeout(() => {
         setWinningLines(lineWins);
         setScatterWin(scatter);
-        resolve();
-      }, duration * 1000 + NUM_REELS * 10);
+      }, totalAnimTime + 100);
     });
   }, [setResult]);
 
@@ -342,7 +348,7 @@ const SlotMachine: React.FC = () => {
     setIsAutoSpinning(false);
   }, [canSpin, isAutoSpinning, betPerLine, lines, spinOnce]);
 
-  const ghostButton = 'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.12)] text-[var(--text-3)] text-[9px] font-semibold uppercase tracking-[0.12em] hover:border-[rgba(212,175,55,0.3)] hover:text-[var(--text-2)] transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed';
+  const ghostButton = 'px-3.5 py-2 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-[0.1em] shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
   return (
       <div
@@ -393,7 +399,7 @@ const SlotMachine: React.FC = () => {
         .spinning .slot-col {
           animation-name: slot-scroll;
           animation-iteration-count: 1;
-          animation-timing-function: cubic-bezier(.65, .97, .72, 1);
+          animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .winner-cell {
           animation: winner-pulse 1.1s ease-in-out infinite;
@@ -411,7 +417,7 @@ const SlotMachine: React.FC = () => {
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
-        <GameTopBar title="Lucky Fruits" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
+        <GameTopBar title="Lucky Seven" subtitle={`3-Reel · ${lines} Lines`} balance={balance} />
 
         {/* ── Felt stage ── */}
         <div
@@ -425,13 +431,7 @@ const SlotMachine: React.FC = () => {
           <div className="absolute inset-3 rounded-xl border border-[rgba(212,175,55,0.1)] pointer-events-none" />
 
           {/* Paytable / rules */}
-          <button
-            onClick={() => setShowPaytable(true)}
-            aria-label="View paytable and rules"
-            className="absolute top-4 right-4 z-20 w-6 h-6 rounded-full border border-[rgba(212,175,55,0.35)] font-serif text-[11px] text-[rgba(212,175,55,0.75)] hover:border-[rgba(212,175,55,0.7)] hover:text-[var(--gold)] transition-colors cursor-pointer flex items-center justify-center"
-          >
-            i
-          </button>
+          <InfoTriggerButton onClick={() => setShowPaytable(true)} />
 
           {/* Machine title */}
           <div className="relative z-10 text-center">
@@ -439,7 +439,7 @@ const SlotMachine: React.FC = () => {
               className="uppercase tracking-[0.35em] text-[rgba(212,175,55,0.75)]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 13 }}
             >
-              ◆ Lucky Fruits ◆
+              ◆ Lucky Seven ◆
             </p>
             <p className="text-[9px] uppercase tracking-[0.2em] text-[rgba(212,175,55,0.35)] mt-0.5">
               3 Reels · {lines} Lines
@@ -736,7 +736,7 @@ const SlotMachine: React.FC = () => {
             className={`px-6 py-3.5 rounded-xl font-semibold text-sm tracking-[0.18em] uppercase transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${
               isAutoSpinning
                 ? 'text-[#f6e3e6] bg-[var(--red)] hover:bg-[#a12e40]'
-                : 'text-[var(--text-2)] border border-[rgba(212,175,55,0.3)] hover:border-[rgba(212,175,55,0.6)] hover:text-[var(--gold)]'
+                : 'text-[var(--text)] bg-[var(--surface-2)] border border-[rgba(212,175,55,0.55)] shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.15)]'
             }`}
           >
             {isAutoSpinning ? 'Stop' : 'Auto Spin'}

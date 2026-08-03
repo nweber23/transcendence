@@ -3,7 +3,10 @@ package services
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"transcendence/models"
 	"transcendence/utils"
@@ -76,10 +79,105 @@ func (s *UserService) LoginUser(username string, password string) (*models.User,
 		}
 		return nil, fmt.Errorf("failed to login: %w", err)
 	}
+	if user.PasswordHash == "" {
+		// account was created via OAuth and has no local password
+		return nil, utils.ErrInvalidUsername
+	}
 	if !utils.VerifyPassword(user.PasswordHash, password) {
 		return nil, utils.ErrInvalidPassword
 	}
 	return &user, nil
+}
+
+// FindOrCreateOauthUser looks up a user by provider+providerID, creating one
+// (plus account and stats rows) if none exists yet.
+func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, email, avatarURL string) (*models.User, error) {
+	var user models.User
+	err := s.db.Where("provider = ? AND provider_id = ? AND deleted_at IS NULL", provider, providerID).First(&user).Error
+	if err == nil {
+		if avatarURL != "" && avatarURL != user.AvatarURL {
+			oldURL := user.AvatarURL
+			user.AvatarURL = avatarURL
+			if err := s.db.Save(&user).Error; err != nil {
+				return nil, fmt.Errorf("failed to update oauth user avatar: %w", err)
+			}
+			if oldURL != "" && oldURL != models.DefaultAvatarURL {
+				_ = os.Remove(filepath.Join("./uploads/", oldURL))
+			}
+		}
+		return &user, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to look up oauth user: %w", err)
+	}
+
+	uniqueUsername, err := s.resolveUniqueUsername(username, email)
+	if err != nil {
+		return nil, err
+	}
+
+	pid := providerID
+	newUser := &models.User{
+		Username:          uniqueUsername,
+		Email:             email,
+		AvatarURL:         avatarURL,
+		Provider:          provider,
+		ProviderID:        pid,
+		NotificationTypes: JoinAllNotificationTypes(),
+	}
+	if newUser.AvatarURL == "" {
+		newUser.AvatarURL = models.DefaultAvatarURL
+	}
+	if err := s.db.Create(newUser).Error; err != nil {
+		return nil, fmt.Errorf("failed to create oauth user: %w", err)
+	}
+	account := &models.Account{UserID: newUser.ID}
+	if err := s.db.Create(account).Error; err != nil {
+		return nil, fmt.Errorf("failed to create account: %w", err)
+	}
+	stats := &models.GameStatistics{UserID: newUser.ID}
+	if err := s.db.Create(stats).Error; err != nil {
+		return nil, fmt.Errorf("failed to create stats: %w", err)
+	}
+	return newUser, nil
+}
+
+// resolveUniqueUsername sanitizes the provider username to fit constraints
+// and appends a numeric suffix if it's already taken by another account.
+func (s *UserService) resolveUniqueUsername(candidate, email string) (string, error) {
+	base := strings.Join(strings.Fields(candidate), "")
+	if base == "" {
+		if at := strings.Index(email, "@"); at > 0 {
+			base = email[:at]
+		} else {
+			base = "user"
+		}
+	}
+	if len(base) > 28 {
+		base = base[:28]
+	}
+	for len(base) < 3 {
+		base = base + "0"
+	}
+
+	name := base
+	for i := 0; i < 1000; i++ {
+		if i > 0 {
+			name = fmt.Sprintf("%s%d", base, i)
+			if len(name) > 32 {
+				name = name[len(name)-32:]
+			}
+		}
+		var existing models.User
+		err := s.db.Where("username = ?", name).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return name, nil
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to check username availability: %w", err)
+		}
+	}
+	return "", errors.New("could not resolve a unique username")
 }
 
 // GetUserByID retrieves a user by ID
@@ -89,6 +187,20 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return &user, nil
+}
+
+// MarkNotificationsSeen persists the current time as the user's notifications
+// "last seen" marker so that unread state survives new devices and sessions.
+func (s *UserService) MarkNotificationsSeen(userID uint) (*time.Time, error) {
+	now := time.Now().UTC()
+	if err := s.db.
+		Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("notifications_seen_at", now).
+	Error; err != nil {
+		return nil, fmt.Errorf("failed to update notifications_seen_at: %w", err)
+	}
+	return &now, nil
 }
 
 // GetUsersByIDs retrieves multiple users in a single query, keyed by ID

@@ -33,6 +33,9 @@ var (
 	ErrUsernameWrongLength    = errors.New("username must be between 3 and 32 characters")
 	ErrEntryExists            = errors.New("matching entry already exists")
 	ErrNotificationIsNotYours = errors.New("notification is not yours")
+
+	ErrAvatarDownloadFailed  = errors.New("failed to download avatar")
+	ErrAvatarTooLarge        = errors.New("avatar image too large")
 )
 
 func IsErrInvalid(err error) bool {

@@ -6,6 +6,7 @@ import (
 	"transcendence/config"
 	"transcendence/handlers"
 	"transcendence/middleware"
+	"transcendence/oauth"
 	"transcendence/services"
 	"transcendence/ws"
 
@@ -38,6 +39,13 @@ func main() {
 	accountService := services.NewAccountService(db)
 	friendService := services.NewFriendService(db)
 	notificationService := services.NewNotificationService(db)
+	oauthService := services.NewOauthService()
+
+	// Initialize OAuth Providers
+	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, cfg.GithubRedirectURL)
+	oauthService.RegisterProvider("github", githubOauthProvider)
+	googleOauthProvider := oauth.NewGoogleProvider(cfg.GoogleClientId, cfg.GoogleSecret, cfg.GoogleRedirectURL)
+	oauthService.RegisterProvider("google", googleOauthProvider)
 
 	// Intialize engine service
 	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
@@ -53,7 +61,7 @@ func main() {
 	go wsState.Main()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
+	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
 	wsHandler := handlers.NewWebSocketHandler(wsState)
@@ -64,6 +72,8 @@ func main() {
 		authRoutes.POST("/register", authHandler.Register)
 		authRoutes.POST("/login", authHandler.Login)
 		authRoutes.POST("/logout", authHandler.Logout)
+		authRoutes.GET("/:provider", authHandler.OauthLogin)
+		authRoutes.GET("/:provider/callback", authHandler.OauthCallback)
 	}
 
 	// User routes (protected)
@@ -83,6 +93,7 @@ func main() {
 		userRoutes.GET("/search", userHandler.SearchUsers)
 		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
 		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		userRoutes.PUT("/notifications/seen", userHandler.MarkNotificationsSeen)
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 	}

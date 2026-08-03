@@ -196,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         className={`fixed inset-0 z-[99] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backdropFilter: menuOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
+        style={{ WebkitBackdropFilter: menuOpen ? 'blur(24px)' : 'none', backdropFilter: menuOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
         aria-hidden={!menuOpen}
         // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
         inert={!menuOpen ? '' : undefined}
@@ -376,7 +376,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         className={`fixed inset-0 z-[101] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           mobileFriendsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backdropFilter: mobileFriendsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
+        style={{ WebkitBackdropFilter: mobileFriendsOpen ? 'blur(24px)' : 'none', backdropFilter: mobileFriendsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
         aria-hidden={!mobileFriendsOpen}
         // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
         inert={!mobileFriendsOpen ? '' : undefined}
@@ -412,7 +412,7 @@ const Header: React.FC<HeaderProps> = ({ onScroll }) => {
         className={`fixed inset-0 z-[101] md:hidden overflow-y-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           mobileNotificationsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backdropFilter: mobileNotificationsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
+        style={{ WebkitBackdropFilter: mobileNotificationsOpen ? 'blur(24px)' : 'none', backdropFilter: mobileNotificationsOpen ? 'blur(24px)' : 'none', background: 'rgba(10,14,18,0.92)' }}
         aria-hidden={!mobileNotificationsOpen}
         // @ts-expect-error — inert is a valid HTML attribute but not yet in React's types
         inert={!mobileNotificationsOpen ? '' : undefined}

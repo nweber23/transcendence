@@ -105,19 +105,23 @@ type PacketPokerHandResult struct {
 // PacketPokerState is a full snapshot of the table, sent individually to
 // every seated player so hole cards can be redacted per recipient.
 type PacketPokerState struct {
-	Seats            []PacketPokerSeat      `json:"seats"`
-	YourSeat         int                    `json:"your_seat"` // -1 if not seated
-	HandActive       bool                   `json:"hand_active"`
-	Phase            string                 `json:"phase"`
-	CommunityCards   []string               `json:"community_cards"`
-	Pot              int64                  `json:"pot"`
-	MinRaise         int64                  `json:"min_raise"`
-	SmallBlind       int64                  `json:"small_blind"`
-	BigBlind         int64                  `json:"big_blind"`
-	BuyIn            int64                  `json:"buy_in"`
-	LastActionType   string                 `json:"last_action_type"`
-	LastActionAmount int64                  `json:"last_action_amount"`
-	HandResult       *PacketPokerHandResult `json:"hand_result,omitempty"`
+	Seats            []PacketPokerSeat `json:"seats"`
+	YourSeat         int               `json:"your_seat"` // -1 if not seated
+	HandActive       bool              `json:"hand_active"`
+	Phase            string            `json:"phase"`
+	CommunityCards   []string          `json:"community_cards"`
+	Pot              int64             `json:"pot"`
+	MinRaise         int64             `json:"min_raise"`
+	SmallBlind       int64             `json:"small_blind"`
+	BigBlind         int64             `json:"big_blind"`
+	BuyIn            int64             `json:"buy_in"`
+	LastActionType   string            `json:"last_action_type"`
+	LastActionAmount int64             `json:"last_action_amount"`
+	// TurnDeadline is the unix millisecond timestamp at which the acting
+	// player (see PacketPokerSeat.IsTurn) will be auto-folded and kicked for
+	// inaction, or 0 if no turn is currently awaiting action.
+	TurnDeadline int64                  `json:"turn_deadline"`
+	HandResult   *PacketPokerHandResult `json:"hand_result,omitempty"`
 }
 
 type PacketError struct {
@@ -143,7 +147,7 @@ const (
 )
 
 type packet struct {
-	userID     uint            `json:"-"`
+	userID uint `json:"-"`
 	// internal is never set by json.Unmarshal (it only touches exported
 	// fields), so a client can never forge a packet that reaches the
 	// internal-only switch cases in handlePacket.
