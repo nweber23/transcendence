@@ -294,6 +294,14 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
             --fs_state.free_spins_remaining;
         }
         fs_state.total_free_win += total_win;
+
+        // Increment multiplier for next free spin
+        if (fs_state.free_spins_remaining > 0) {
+            fs_state.current_multiplier = std::min(
+                static_cast<std::uint8_t>(fs_state.current_multiplier + cfg.free_spin_multiplier_increment),
+                cfg.free_spin_max_multiplier
+            );
+        }
     } else {
         if (eval.bonus_triggered && cfg.free_spin_count > 0) {
             fs_state.free_spins_remaining = cfg.free_spin_count;
