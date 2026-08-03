@@ -107,9 +107,10 @@ const Blackjack: React.FC = () => {
   const [payout, setPayout] = useState(0);
   const [lastBet, setLastBet] = useState<number | null>(null);
 
-  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
+  const fitsScreen = () => window.innerWidth >= 768 && window.innerHeight >= 650;
+  const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
   useEffect(() => {
-    const handleResize = () => setIsSmallScreen(window.innerWidth < 768);
+    const handleResize = () => setIsSmallScreen(!fitsScreen());
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

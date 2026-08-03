@@ -93,7 +93,8 @@ const SlotMachine: React.FC = () => {
   useEffect(() => { getAccount().catch(() => {}); }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
 
-  const [isSmallScreen, setIsSmallScreen] = useState(() => window.innerWidth < 768);
+  const fitsScreen = () => window.innerWidth >= 768 && window.innerHeight >= 650;
+  const [isSmallScreen, setIsSmallScreen] = useState(() => !fitsScreen());
   const [stagedChips, setStagedChips] = useState<number[]>([]);
   const [lines, setLines] = useState<number>(LINE_OPTIONS[0]);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -119,7 +120,7 @@ const SlotMachine: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsSmallScreen(window.innerWidth < 768);
+      setIsSmallScreen(!fitsScreen());
       if (windowRef.current) {
         const measuredHeight = Math.floor(windowRef.current.clientHeight / NUM_ROWS);
         if (measuredHeight > 0) setItemHeight(measuredHeight);
