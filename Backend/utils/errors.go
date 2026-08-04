@@ -33,6 +33,7 @@ var (
 	ErrUsernameWrongLength    = errors.New("username must be between 3 and 32 characters")
 	ErrEntryExists            = errors.New("matching entry already exists")
 	ErrNotificationIsNotYours = errors.New("notification is not yours")
+	ErrDuplicateRecipientIDs  = errors.New("duplicate recipient ids")
 )
 
 func IsErrInvalid(err error) bool {

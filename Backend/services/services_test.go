@@ -28,13 +28,20 @@ func InitMockDB(testInterface *testing.T) (*gorm.DB) {
 	return db
 }
 
-func createMockServices(testInterface *testing.T) (*AccountService, *UserService, *FriendService, *NotificationService) {
+func createMockServices(testInterface *testing.T) (
+	*AccountService,
+	*UserService,
+	*FriendService,
+	*NotificationService,
+	*ChatService,
+) {
 	db := InitMockDB(testInterface)
 	accountService      := NewAccountService(db)
 	userService         := NewUserService(db)
 	friendService       := NewFriendService(db)
 	notificationService := NewNotificationService(db)
-	return accountService, userService, friendService, notificationService
+	chatService         := NewChatService(db)
+	return accountService, userService, friendService, notificationService, chatService
 }
 
 func createMockUsers(testInterface *testing.T, userService *UserService) {
@@ -380,10 +387,18 @@ func createTestNotificationB(notificationID uint, userID uint) (models.Notificat
 	}
 }
 
+func addChatMessageExpect(testInterface *testing.T, chatService *ChatService, chatMessageInfo ChatMessageInfo, errExpect error) {
+	_, err := chatService.AddChatMessage(chatMessageInfo)
+	if err != errExpect {
+		testInterface.Errorf("Unexpected error %v when %v was expected", err, errExpect)
+	}
+}
+
 const STRESS_TEST_AMOUNT int = 500
 
 func TestServices(testInterface *testing.T) {
-	accountService, userService, friendService, notificationService := createMockServices(testInterface)
+	accountService, userService, friendService, notificationService, chatService := createMockServices(testInterface)
+	_ = chatService
 
 	// Create test users and check if they exist after
 	createMockUsers(testInterface, userService)
@@ -690,7 +705,7 @@ func searchUsersExpect(
 }
 
 func TestSearchUsers(t *testing.T) {
-	_, userService, _, _ := createMockServices(t)
+	_, userService, _, _, _ := createMockServices(t)
 	createMockUsers(t, userService)
 	// createMockUsers creates: test0, test1, test2, test3, test4, herold
 

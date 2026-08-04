@@ -34,10 +34,18 @@ func main() {
 	router.Static("/uploads", "./uploads")
 
 	// Initialize database services
-	userService := services.NewUserService(db)
-	accountService := services.NewAccountService(db)
-	friendService := services.NewFriendService(db)
+	userService         := services.NewUserService(db)
+	accountService      := services.NewAccountService(db)
+	friendService       := services.NewFriendService(db)
 	notificationService := services.NewNotificationService(db)
+	chatService         := services.NewChatService(db)
+
+	_, err = chatService.AddChatMessage(services.ChatMessageInfo{
+		SenderID:     1,
+		Message:      "Hello",
+		RecipientIDs: []uint{1, 2},
+	})
+	log.Printf("add chat message error: %v\n", err)
 
 	// Intialize engine service
 	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)

@@ -10,6 +10,9 @@ import (
 )
 
 func PrepareDB(db *gorm.DB) (error) {
+	//if err := db.SetupJoinTable(&models.ChatMessage{}, "Recipients", &models.Recipient{}); err != nil {
+	//	return err
+	//}
 	return db.AutoMigrate(
 		&models.User{},
 		&models.Account{},
@@ -21,6 +24,8 @@ func PrepareDB(db *gorm.DB) (error) {
 		&models.GameStatistics{},
 		&models.Friendship{},
 		&models.Notification{},
+		&models.ChatMessage{},
+		&models.Recipient{},
 	)
 }
 
