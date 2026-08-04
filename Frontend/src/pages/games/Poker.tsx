@@ -113,7 +113,7 @@ const Poker: React.FC = () => {
         setError(null);
 
         if (payload.hand_result) {
-          setHandResult(payload.hand_result);
+          setHandResult({ ...payload.hand_result, winners: payload.hand_result.winners ?? [] });
           window.setTimeout(() => setHandResult(null), HAND_RESULT_DISPLAY_MS);
         }
 
@@ -195,6 +195,9 @@ const Poker: React.FC = () => {
   const presetButton =
     'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-wider shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
 
+  const presetButtonTall =
+    'px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-wider shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
+
   const actionButton =
     'flex-1 py-3.5 rounded-xl font-semibold uppercase tracking-[0.14em] border border-[rgba(255,255,255,0.08)] transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed';
 
@@ -233,9 +236,9 @@ const Poker: React.FC = () => {
           />
 
           {/* ── Game area: sidebar (6 seats) + info panel + action bar ───────── */}
-          <div className="flex-1 min-h-0 grid grid-cols-[320px_1fr]">
+          <div className="flex-1 min-h-0 grid grid-cols-[360px_1fr]">
             {/* ── Sidebar ──────────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-2 p-3 border-r border-[rgba(212,175,55,0.12)] bg-[var(--surface)]">
+            <div className="flex flex-col justify-center gap-2 p-3 border-r border-[rgba(212,175,55,0.12)] bg-[var(--surface)]">
               {players.map((player) => (
                 <SeatRow
                   key={player.id}
@@ -297,7 +300,7 @@ const Poker: React.FC = () => {
                         backdropFilter: 'blur(6px)',
                       }}
                     >
-                      <span className="text-[10px] text-[var(--text-3)] uppercase tracking-[0.25em]">
+                      <span className="text-[10px] text-[#7a8fa3] uppercase tracking-[0.25em]">
                         Pot
                       </span>
                       <span className="font-serif text-xl text-[var(--gold)] leading-tight">
@@ -358,10 +361,10 @@ const Poker: React.FC = () => {
                   <div className="w-full flex flex-wrap items-center gap-x-6 gap-y-3">
                     {/* Seat indicator */}
                     <div className="leading-tight">
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Seat</p>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-[#7a8fa3]">Seat</p>
                       <p
                         className={`font-serif text-lg ${
-                          selectedSeat !== null ? 'text-[var(--gold)]' : 'text-[var(--text-3)]'
+                          selectedSeat !== null ? 'text-[var(--gold)]' : 'text-[#7a8fa3]'
                         }`}
                       >
                         {selectedSeat !== null ? `No. ${selectedSeat + 1}` : 'Pick one'}
@@ -369,7 +372,7 @@ const Poker: React.FC = () => {
                     </div>
 
                     <div className="leading-tight">
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Buy-in</p>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-[#7a8fa3]">Buy-in</p>
                       <p className="font-serif text-lg text-[var(--gold)]">${buyIn.toLocaleString()}</p>
                     </div>
 
@@ -390,7 +393,7 @@ const Poker: React.FC = () => {
                   </div>
                 ) : !handActive ? (
                   <div className="w-full flex items-center gap-4">
-                    <p className="text-sm text-[var(--text-3)]">
+                    <p className="text-sm text-[#7a8fa3]">
                       Seated with ${mySeat?.stack.toLocaleString()} —{' '}
                       {seatedCount >= 2 ? 'next hand starting…' : 'waiting for another player to join…'}
                     </p>
@@ -417,12 +420,12 @@ const Poker: React.FC = () => {
                         )}
                       </div>
                       <div className="hidden sm:block leading-tight">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Stack</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#7a8fa3]">Stack</p>
                         <p className="font-serif text-lg text-[var(--gold)]">${mySeat?.stack.toLocaleString()}</p>
                       </div>
                       {isMyTurn && turnSecondsLeft !== null && (
                         <div className="hidden sm:block leading-tight">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-3)]">Time Left</p>
+                          <p className="text-[10px] uppercase tracking-[0.22em] text-[#7a8fa3]">Time Left</p>
                           <p
                             className={`font-serif text-lg ${
                               turnSecondsLeft <= 10 ? 'text-[var(--red)] animate-pulse' : 'text-[var(--gold)]'
@@ -434,7 +437,7 @@ const Poker: React.FC = () => {
                       )}
                     </div>
                     {error && <p className="text-xs text-[#e8a5ae] truncate min-w-0">{error}</p>}
-                    <button onClick={leave} className={presetButton} title="Fold your hand and leave the table">
+                    <button onClick={leave} className={presetButtonTall} title="Fold your hand and leave the table">
                       Leave Table
                     </button>
                     <button
@@ -514,7 +517,7 @@ const SeatRow: React.FC<{
   const showTurnTimer = player.isTurn && turnSecondsLeft != null && turnFraction != null;
   const turnUrgent = showTurnTimer && turnSecondsLeft! <= 10;
 
-  const rowBase = 'flex-1 flex items-center gap-3 px-3 rounded-xl border transition-all min-h-0';
+  const rowBase = 'flex-1 max-h-28 flex items-center gap-3 px-3 rounded-xl border transition-all min-h-0';
 
   // ── Empty seat — selectable before joining ─────────────────────────────────
   if (isEmpty) {
@@ -527,7 +530,7 @@ const SeatRow: React.FC<{
         className={`${rowBase} justify-center border-dashed cursor-pointer disabled:cursor-not-allowed ${
           selected
             ? 'border-[var(--gold)] bg-[rgba(212,175,55,0.18)] text-[var(--gold)]'
-            : 'border-[rgba(212,175,55,0.3)] text-[var(--text-3)] hover:border-[var(--gold)] hover:text-[var(--gold)] hover:bg-[rgba(212,175,55,0.08)] disabled:hover:border-[rgba(212,175,55,0.3)] disabled:hover:text-[var(--text-3)] disabled:hover:bg-transparent disabled:opacity-50'
+            : 'border-[rgba(212,175,55,0.3)] text-[#7a8fa3] hover:border-[var(--gold)] hover:text-[var(--gold)] hover:bg-[rgba(212,175,55,0.08)] disabled:hover:border-[rgba(212,175,55,0.3)] disabled:hover:text-[var(--text-3)] disabled:hover:bg-transparent disabled:opacity-50'
         }`}
       >
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">
@@ -543,7 +546,7 @@ const SeatRow: React.FC<{
         isYou
           ? 'border-[var(--gold)] bg-[rgba(212,175,55,0.1)]'
           : 'border-[rgba(212,175,55,0.1)] bg-[var(--surface-2)]'
-      }`}
+      } ${isFolded ? 'opacity-55' : ''}`}
     >
       {/* Avatar + dealer badge + turn ring */}
       <div className="relative shrink-0">
@@ -555,7 +558,7 @@ const SeatRow: React.FC<{
         <div
           className={`relative rounded-full transition-all ${
             isFolded
-              ? 'opacity-50 grayscale'
+              ? 'grayscale'
               : player.isTurn
                 ? 'ring-2 ring-[var(--gold)] shadow-[0_0_16px_rgba(212,175,55,0.35)]'
                 : ''
@@ -577,7 +580,7 @@ const SeatRow: React.FC<{
                   r={22}
                   fill="none"
                   stroke={turnUrgent ? 'var(--red)' : 'var(--gold)'}
-                  strokeWidth={2.5}
+                  strokeWidth={3.5}
                   strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 22}
                   strokeDashoffset={2 * Math.PI * 22 * (1 - turnFraction!)}
@@ -585,10 +588,10 @@ const SeatRow: React.FC<{
                 />
               </svg>
               <div
-                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold z-10 border shadow ${
+                className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold z-10 border-2 shadow-lg ${
                   turnUrgent
-                    ? 'bg-[var(--red)] text-[#f6e3e6] border-[rgba(255,255,255,0.25)] animate-pulse'
-                    : 'bg-[var(--gold)] text-[#0a0e12] border-[rgba(212,175,55,0.5)]'
+                    ? 'bg-[var(--red)] text-[#f6e3e6] border-[rgba(255,255,255,0.35)] animate-pulse'
+                    : 'bg-[var(--gold)] text-[#0a0e12] border-[rgba(255,255,255,0.35)]'
                 }`}
               >
                 {turnSecondsLeft}
