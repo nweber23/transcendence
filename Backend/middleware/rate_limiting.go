@@ -10,7 +10,7 @@ import (
 )
 
 var retryAfterShared time.Time
-var retryAfters map[uint]*time.Time
+var retryAfters map[uint]*time.Time = make(map[uint]*time.Time)
 
 func CreateRateLimiter(minimumDelayInMilliseconds uint) gin.HandlerFunc {
 	return func(c *gin.Context) {
