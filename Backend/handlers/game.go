@@ -10,7 +10,6 @@ import (
 	"transcendence/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shopspring/decimal"
 )
 
 type GameHandler struct {
@@ -167,7 +166,7 @@ func (gh *GameHandler) CreateGame(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	betAmount, err := decimal.NewFromString(req.BetAmount)
+	betAmount, err := utils.ParseAmount(req.BetAmount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_bet", "Bet amount must be a valid number")
 		return

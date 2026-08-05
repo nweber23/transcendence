@@ -27,6 +27,9 @@ func main() {
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
 
+	// Max body size middleware (limit to 1MB)
+	router.Use(middleware.MaxBodySize(1 << 20)) // 1MB
+
 	// Prometheus request metrics + scrape endpoint
 	router.Use(middleware.PrometheusMiddleware())
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
