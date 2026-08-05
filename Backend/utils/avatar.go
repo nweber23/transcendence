@@ -18,7 +18,7 @@ const (
 	maxAvatarRedirects = 5
 )
 
-var avatarContentTypeExtensions = map[string]string{
+var AvatarContentTypeExtensions = map[string]string{
 	"image/jpeg": ".jpg",
 	"image/jpg":  ".jpg",
 	"image/png":  ".png",
@@ -27,6 +27,23 @@ var avatarContentTypeExtensions = map[string]string{
 }
 
 var errUnsafeAvatarURL = errors.New("avatar url is not safe to fetch")
+
+// DetectAvatarExtension sniffs an image's actual content (its magic bytes,
+// via http.DetectContentType) and returns the safe extension to store it
+// under, rejecting anything that isn't one of the known image types. This
+// must be used instead of trusting a client-supplied filename extension or
+// a remote server's Content-Type header, neither of which is verified
+// against what the file actually contains — an attacker-controlled
+// extension/header can smuggle an HTML/SVG payload that gets served back
+// with a browser-executable Content-Type.
+func DetectAvatarExtension(data []byte) (string, error) {
+	contentType := strings.Split(http.DetectContentType(data), ";")[0]
+	ext, ok := AvatarContentTypeExtensions[contentType]
+	if !ok {
+		return "", ErrUnsupportedAvatarType
+	}
+	return ext, nil
+}
 
 // validateAvatarURL guards against SSRF: it requires HTTPS and rejects any
 // hostname that resolves to a loopback, private, link-local (this includes
@@ -92,11 +109,6 @@ func DownloadAvatarToUploads(rawURL string, uploadsDir string) (string, error) {
 		return "", ErrAvatarDownloadFailed
 	}
 
-	ext := avatarContentTypeExtensions[strings.ToLower(strings.Split(resp.Header.Get("Content-Type"), ";")[0])]
-	if ext == "" {
-		ext = ".jpg"
-	}
-
 	limited := io.LimitReader(resp.Body, maxAvatarBytes+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
@@ -104,6 +116,11 @@ func DownloadAvatarToUploads(rawURL string, uploadsDir string) (string, error) {
 	}
 	if len(data) > maxAvatarBytes {
 		return "", ErrAvatarTooLarge
+	}
+
+	ext, err := DetectAvatarExtension(data)
+	if err != nil {
+		return "", err
 	}
 
 	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {

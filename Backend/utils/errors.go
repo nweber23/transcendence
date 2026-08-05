@@ -36,6 +36,7 @@ var (
 
 	ErrAvatarDownloadFailed  = errors.New("failed to download avatar")
 	ErrAvatarTooLarge        = errors.New("avatar image too large")
+	ErrUnsupportedAvatarType = errors.New("unsupported avatar file type")
 )
 
 func IsErrInvalid(err error) bool {
