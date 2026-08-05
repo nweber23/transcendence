@@ -450,6 +450,8 @@ func (uh *UserHandler) GetTransactionHistory(c *gin.Context) {
 	utils.RespondSuccess(c, http.StatusOK, "Transaction history retrieved successfully", response)
 }
 
+const maxDeposit = 1_000_000
+
 // Deposit adds funds to user's account
 func (uh *UserHandler) Deposit(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -462,7 +464,8 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return
@@ -471,6 +474,11 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount must be greater than zero")
 		return
 	}
+	if amount.GreaterThan(decimal.NewFromInt(maxDeposit)) {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount exceeds maximum allowed")
+		return
+	}
+
 	if err := uh.accountService.Deposit(userID.(uint), amount); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "deposit_failed", err.Error())
 		return
@@ -508,7 +516,7 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return

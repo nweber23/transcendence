@@ -27,6 +27,9 @@ func main() {
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
 
+	// Max body size middleware (limit to 1MB)
+	router.Use(middleware.MaxBodySize(1 << 20)) // 1MB
+
 	// Prometheus request metrics + scrape endpoint
 	router.Use(middleware.PrometheusMiddleware())
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -58,7 +61,7 @@ func main() {
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
-	go wsState.Main()
+	go wsState.Start()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
