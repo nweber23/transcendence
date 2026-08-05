@@ -61,7 +61,7 @@ func main() {
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
-	go wsState.Main()
+	go wsState.Start()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
