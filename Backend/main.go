@@ -85,7 +85,7 @@ func main() {
 		userRoutes.POST("/avatar", userHandler.UploadAvatar)
 		userRoutes.GET("/account", userHandler.GetAccount)
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
-		userRoutes.POST("/account/deposit", userHandler.Deposit)
+		userRoutes.POST("/account/deposit", middleware.CreateRateLimiter(1000), userHandler.Deposit)
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
 		userRoutes.POST("/:id/friends", userHandler.AddFriend)
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
