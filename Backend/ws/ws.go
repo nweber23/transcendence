@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (wsState *WebSocketState) Main() {
+func (wsState *WebSocketState) Start() {
 	for {
 		packet, ok := <-wsState.readChannel.channel
 		if !ok {
