@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"net/http"
@@ -234,22 +235,17 @@ func resolveAvatarURL(avatarURL string) string {
 	return avatarURL
 }
 
-func createRelatedURL(uploadFilePath string) (string, error) {
-	fileName := filepath.Base(uploadFilePath)
-	if fileName == "." || fileName == "/" {
-		return "", utils.ErrInvalidFilename
-	}
-	fileDots := strings.Split(fileName, ".")
-	fileExtension := ""
-	if len(fileDots) > 1 {
-		fileExtension = "." + fileDots[len(fileDots) - 1]
-	}
+// createUploadFilename generates a random filename with the given
+// (already-validated) extension. The extension must never be derived from a
+// client-supplied filename — see DetectAvatarExtension, which derives it
+// from the file's actual content instead.
+func createUploadFilename(extension string) (string, error) {
 	for {
 		fileURL, err := utils.GetRandomHexString(16)
 		if err != nil {
 			return "", utils.ErrRandomStringGenFailed
 		}
-		fileURL += fileExtension
+		fileURL += extension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
 			if os.IsNotExist(err) {
 				return fileURL, nil
@@ -271,6 +267,28 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
 		return
 	}
+	src, err := file.Open()
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	defer src.Close()
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	extension, err := utils.DetectAvatarExtension(header[:n])
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "unsupported_file_type", "Avatar must be a JPEG, PNG, GIF, or WebP image")
+		return
+	}
+	if _, err := src.Seek(0, io.SeekStart); err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "read_file_failed", err.Error())
+		return
+	}
+
 	err = os.Mkdir("./uploads/", os.ModeDir | os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
@@ -282,18 +300,13 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	oldURL := user.AvatarURL
-	user.AvatarURL, err = createRelatedURL(file.Filename)
+	user.AvatarURL, err = createUploadFilename(extension)
 	if err != nil {
-		var status int
-		if errors.Is(err, utils.ErrInvalidFilename) {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-		utils.RespondError(c, status, "create_url_failed", err.Error())
+		utils.RespondError(c, http.StatusInternalServerError, "create_url_failed", err.Error())
 		return
 	}
-	if err := c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL)); err != nil {
+	dst, err := os.Create(filepath.Join("./uploads/", user.AvatarURL))
+	if err != nil {
 		var status int
 		if errors.Is(err, syscall.ENOSPC) {
 			status = http.StatusInsufficientStorage
@@ -303,6 +316,12 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, status, "save_uploaded_file_failed", err.Error())
 		return
 	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		utils.RespondError(c, http.StatusInternalServerError, "save_uploaded_file_failed", err.Error())
+		return
+	}
+	dst.Close()
 	user, err = uh.userService.UpdateUser(
 		userID.(uint),
 		user.Username,

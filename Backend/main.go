@@ -22,7 +22,14 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		// The /ws route receives its JWT as a query parameter (browsers can't
+		// set custom headers on a WebSocket handshake), so query strings must
+		// never be logged or the token ends up in plaintext logs.
+		SkipQueryString: true,
+	}))
+	router.Use(gin.Recovery())
 
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
