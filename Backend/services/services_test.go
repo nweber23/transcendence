@@ -387,9 +387,50 @@ func createTestNotificationB(notificationID uint, userID uint) (models.Notificat
 	}
 }
 
-func addChatMessageExpect(testInterface *testing.T, chatService *ChatService, chatMessageInfo ChatMessageInfo, errExpect error) {
+func createChatExpect(
+	testInterface  *testing.T,
+	chatService    *ChatService,
+	participantIDs []uint,
+	errExpect      error,
+) {
+	_, err := chatService.CreateChat(participantIDs)
+	if !errors.Is(err, errExpect) {
+		testInterface.Errorf("Unexpected error %v when %v was expected", err, errExpect)
+	}
+}
+
+func addParticipantExpect(
+	testInterface *testing.T,
+	chatService   *ChatService,
+	participant   models.ChatParticipant,
+	expectSuccess bool,
+) {
+	_, err := chatService.AddParticipant(participant)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("Adding participant did not go as expected: %v", err)
+	}
+}
+
+func removeParticipantExpect(
+	testInterface *testing.T,
+	chatService   *ChatService,
+	participant   models.ChatParticipant,
+	expectSuccess bool,
+) {
+	err := chatService.RemoveParticipant(participant)
+	if (err != nil) == expectSuccess {
+		testInterface.Errorf("Removing participant did not go as expected: %v", err)
+	}
+}
+
+func addChatMessageExpect(
+	testInterface   *testing.T,
+	chatService     *ChatService,
+	chatMessageInfo ChatMessageInfo,
+	errExpect       error,
+) {
 	_, err := chatService.AddChatMessage(chatMessageInfo)
-	if err != errExpect {
+	if !errors.Is(err, errExpect) {
 		testInterface.Errorf("Unexpected error %v when %v was expected", err, errExpect)
 	}
 }
@@ -685,6 +726,38 @@ func TestServices(testInterface *testing.T) {
 	// Invalid notification type
 	enumerateNotificationsExpect(testInterface, notificationService, []models.Notification{
 	}, false, 1, []string{"wergfijijwer"}, 90)
+
+	// Create some chats
+	createChatExpect(testInterface, chatService, []uint{2, 4, 3}, nil)
+	createChatExpect(testInterface, chatService, []uint{1, 2}, nil)
+
+	// Failing cases
+	createChatExpect(testInterface, chatService, []uint{2, 2, 2},  utils.ErrDuplicateParticipantIDs)
+	createChatExpect(testInterface, chatService, []uint{1, 3, 90}, utils.ErrInvalidUserID)
+
+	// Add some participants
+	addParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 1,
+		UserID: 1,
+	}, true)
+	addParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 2,
+		UserID: 3,
+	}, true)
+
+	// Failing cases
+	addParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 1,
+		UserID: 1,
+	}, false)
+	addParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 1,
+		UserID: 90,
+	}, false)
+	addParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 90,
+		UserID: 1,
+	}, false)
 }
 
 func searchUsersExpect(

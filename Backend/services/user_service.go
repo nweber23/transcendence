@@ -91,6 +91,11 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 	return &user, nil
 }
 
+func (s *UserService) DoesUserExist(userID uint) (bool) {
+	_, err := s.GetUserByID(userID)
+	return err == nil
+}
+
 // GetUsersByIDs retrieves multiple users in a single query, keyed by ID
 func (s *UserService) GetUsersByIDs(userIDs []uint) (map[uint]*models.User, error) {
 	if len(userIDs) == 0 {

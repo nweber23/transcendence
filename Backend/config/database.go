@@ -24,8 +24,9 @@ func PrepareDB(db *gorm.DB) (error) {
 		&models.GameStatistics{},
 		&models.Friendship{},
 		&models.Notification{},
+		&models.ChatParticipant{},
 		&models.ChatMessage{},
-		&models.Recipient{},
+		&models.Chat{},
 	)
 }
 

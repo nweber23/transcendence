@@ -40,11 +40,6 @@ func main() {
 	notificationService := services.NewNotificationService(db)
 	chatService         := services.NewChatService(db)
 
-	_, err = chatService.AddChatMessage(services.ChatMessageInfo{
-		SenderID:     1,
-		Message:      "Hello",
-		RecipientIDs: []uint{1, 2},
-	})
 	log.Printf("add chat message error: %v\n", err)
 
 	// Intialize engine service

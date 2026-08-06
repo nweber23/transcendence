@@ -1,8 +1,6 @@
 package services
 
 import (
-	"fmt"
-
 	"transcendence/models"
 	"transcendence/utils"
 
@@ -17,87 +15,109 @@ func NewChatService(db *gorm.DB) *ChatService {
 	return &ChatService{db: db}
 }
 
-type AddChatMessageInfo struct {
-	SenderID     uint
-	Message      string
-	ImageURL     string
-	RecipientIDs []uint
-}
-
-func (s *ChatService) AddChatMessage(info AddChatMessageInfo) (*models.ChatMessage, error) {
-	recipientIDs := info.RecipientIDs
-	recipientCount := len(info.RecipientIDs)
+func (s *ChatService) CreateChat(participantIDs []uint) (uint, error) {
+	userService := NewUserService(s.db)
 	leftIndex := 0
-	for leftIndex < recipientCount {
+	for leftIndex < len(participantIDs) {
+		if !userService.DoesUserExist(participantIDs[leftIndex]) {
+			return 0, utils.ErrInvalidUserID
+		}
 		rightIndex := leftIndex + 1
-		for rightIndex < recipientCount {
-			if recipientIDs[leftIndex] == recipientIDs[rightIndex] {
-				return nil, utils.ErrDuplicateRecipientIDs
+		for rightIndex < len(participantIDs) {
+			if participantIDs[leftIndex] == participantIDs[rightIndex] {
+				return 0, utils.ErrDuplicateParticipantIDs
 			}
 			rightIndex++
 		}
 		leftIndex++
 	}
-	recipients := make([]models.Recipient, recipientCount)
-	for recipientIndex, _ := range recipients {
-		recipients[recipientIndex].UserID = recipientIDs[recipientIndex]
+	participants := make([]models.ChatParticipant, len(participantIDs))
+	for participantIndex, participantID := range participantIDs {
+		participants[participantIndex] = models.ChatParticipant{
+			UserID: participantID,
+		}
 	}
-	chatMessage := &models.ChatMessage{
-		SenderID:   info.SenderID,
-		Message:    info.Message,
-		ImageURL:   info.ImageURL,
-		Recipients: recipients,
+	chat := &models.Chat{
+		Participants: participants,
 	}
-	if err := s.db.Create(chatMessage).Error; err != nil {
-		return nil, fmt.Errorf("failed to create chat message: %w", err)
+	if err := s.db.Create(chat).Error; err != nil {
+		return 0, err
 	}
-	return chatMessage, nil
+	return chat.ID, nil
 }
 
-func (s *ChatService) RemoveChatMessage(ID uint) (error) {
-	chatMessage := ChatMessage{
-		ID: ID
+func (s *ChatService) DoesChatExist(chatID uint) (bool) {
+	var chat models.Chat
+	err := s.db.Where("chat_id = ?", chatID).First(&chat).Error
+	return err == nil
+}
+
+func (s *ChatService) AddParticipant(participant models.ChatParticipant) (*models.ChatParticipant, error) {
+	if !s.DoesChatExist(participant.ChatID) {
+		return nil, utils.ErrInvalidChatID
 	}
-	if err := s.db.Delete(&notification).Error; err != nil {
-		return fmt.Errorf("failed to delete chat message: %w", err)
+	userService := NewUserService(s.db)
+	if !userService.DoesUserExist(participant.UserID) {
+		return nil, utils.ErrInvalidUserID
+	}
+	if err := s.db.Create(&participant).Error; err != nil {
+		return nil, err
+	}
+	return &participant, nil
+}
+
+func (s *ChatService) RemoveParticipant(participant models.ChatParticipant) (error) {
+	if err := s.db.Delete(&participant).Error; err != nil {
+		return err
+	}
+	var chat models.Chat
+	if err := s.db.Where("chat_id = ?", participant.ChatID).First(&chat).Error; err == gorm.ErrRecordNotFound {
+		chat = models.Chat{
+			ID: participant.ChatID,
+		}
+		s.db.Delete(&chat)
 	}
 	return nil
 }
 
-type UpdateChatMessageInfo struct {
-	Message  string
-	ImageURL string
+type ChatMessageInfo struct {
+	ChatID       uint
+	SenderUserID uint
+	Message      string
+	ImageURL     string
 }
 
-func (s *ChatService) EditChatMessage(ID uint, message string) (*models.ChatMessage, error) {
-	chatMessage := &models.ChatMessage{
-		ID:      ID,
-		Message: message,
+func (s *ChatService) AddChatMessage(info ChatMessageInfo) (*models.ChatMessage, error) {
+	if !s.DoesChatExist(info.ChatID) {
+		return nil, utils.ErrInvalidChatID
 	}
-	if err := s.db.UpdateColumns(chatMessage).Error; err != nil {
-		return nil, fmt.Errorf("failed to edit chat message: %w", err)
+	var participant models.ChatParticipant
+	err := s.db.Where("chat_id = ? AND user_id = ?", info.ChatID, info.SenderUserID).First(&participant).Error
+	if err != nil {
+		return nil, err
+	}
+	chatMessage := &models.ChatMessage{
+		ChatID:       info.ChatID,
+		SenderUserID: info.SenderUserID,
+		Message:      info.Message,
+		ImageURL:     info.ImageURL,
+	}
+	if err := s.db.Create(chatMessage).Error; err != nil {
+		return nil, err
 	}
 	return chatMessage, nil
 }
 
-type UpdateRecipientOfInfo struct {
-	ReadAt time.Time
-}
-
-func (s *ChatService) UpdateRecipientOf(
-	ChatMessageID uint,
-	UserID        uint,
-	info          UpdateRecipientOfInfo,
-) (*models.Recipient, error) {
-	recipient := &models.Recipient{
-		ReadAt: info.ReadAt
+func (s *ChatService) EnumerateMessagesOf(chatID uint, offset int, limit int) ([]models.ChatMessage, error) {
+	var chatMessages []models.ChatMessage
+	if err := s.db.
+		Where("chat_id = ?", chatID).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&chatMessages).
+	Error; err != nil {
+		return nil, err
 	}
-	if err := s.db.Where("chat_message_id = ? AND user_id = ?", ChatMessageID, UserID).UpdateColumns(recipient).Error; err != nil {
-		return nil, fmt.Errorf("failed to update recipient: %w", err)
-	}
-	return recipient, nil
-}
-
-func (s *ChatService) EnumerateMessagesOf(RecipientIDs uint[]) ([]models.ChatMessage, error) {
-	if err := s.db.Where("")
+	return chatMessages, nil
 }

@@ -47,11 +47,11 @@ func (s *FriendService) AddFriend(userID uint, friendID uint) (bool, error) {
 		return false, utils.ErrSelfLove
 	}
 	userService := NewUserService(s.db)
-	if _, err := userService.GetUserByID(userID); err != nil {
-		return false, err
+	if !userService.DoesUserExist(userID) {
+		return false, utils.ErrInvalidUserID
 	}
-	if _, err := userService.GetUserByID(friendID); err != nil {
-		return false, err
+	if !userService.DoesUserExist(friendID) {
+		return false, utils.ErrInvalidUserID
 	}
 	lowID, highID := swapIDs(userID, friendID)
 	friendship := models.Friendship{
