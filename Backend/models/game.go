@@ -43,7 +43,7 @@ func (BlackjackGame) TableName() string {
 type PokerGame struct {
 	ID             uint `gorm:"primaryKey"`
 	GameID         uint `gorm:"uniqueIndex"`
-	TableID        uint
+	TableID        uint `gorm:"index"`
 	PlayerPosition string `gorm:"type:varchar(20)"`
 	HoleCards      []byte `gorm:"type:jsonb"`
 	CommunityCards []byte `gorm:"type:jsonb"`

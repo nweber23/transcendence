@@ -186,7 +186,7 @@ Game-specific record for Poker. Defined in `Backend/models/game.go`.
 type PokerGame struct {
     ID             uint `gorm:"primaryKey"`
     GameID         uint `gorm:"uniqueIndex"`
-    TableID        uint
+    TableID        uint `gorm:"index"`
     PlayerPosition string `gorm:"type:varchar(20)"`
     HoleCards      []byte `gorm:"type:jsonb"`
     CommunityCards []byte `gorm:"type:jsonb"`
@@ -195,7 +195,7 @@ type PokerGame struct {
 }
 ```
 
-`table_id` is not indexed (unlike the previous version of this doc claimed). `result` is an app-level enum.
+`table_id` references [`poker_tables.id`](#11-poker_tables) (no DB-level FK, app-level only — see [Constraints & Data Integrity](#constraints--data-integrity)) and is now indexed, since it's queried per-table once a poker table can outlive a single session. `result` is an app-level enum.
 
 ---
 
@@ -302,6 +302,52 @@ type Notification struct {
 
 ---
 
+### 11. `poker_tables`
+Persisted configuration and lifecycle status of a multi-table poker table. Defined in `Backend/models/poker_table.go`. The live seats/hand/turn-timer state is **not** stored here — it only ever exists in memory (`ws.PokerTable`, one per open row) and is rebuilt from this row (plus the current occupants) when a table is created; this row's job is just what needs to survive a restart or be queried for a lobby listing.
+
+```go
+type PokerTable struct {
+    ID         uint            `gorm:"primaryKey"`
+    HostUserID uint            `gorm:"index"`
+    Name       string          `gorm:"type:varchar(64)"`
+    Status     string          `gorm:"type:varchar(20);index;default:'open'"`
+    IsPrivate  bool            `gorm:"default:false"`
+    MaxSeats   int             `gorm:"default:6"`
+    BuyIn      decimal.Decimal `gorm:"type:numeric(19,2)"`
+    SmallBlind decimal.Decimal `gorm:"type:numeric(19,2)"`
+    BigBlind   decimal.Decimal `gorm:"type:numeric(19,2)"`
+    CreatedAt  time.Time
+    ClosedAt   *time.Time
+}
+```
+
+| Column | Notes |
+|---|---|
+| `host_user_id` | the only user who may edit settings, invite, kick, or close this table (app-level check in `PokerTableService`) |
+| `status` | app-level enum: `open`, `closed` (`models.PokerTableStatus*`) |
+| `is_private` | if true, joining/spectating requires being the host or holding a [`poker_table_invites`](#12-poker_table_invites) row |
+| `max_seats` | app-level bound `[2, 9]` (`models.PokerTableMinSeats`/`MaxSeats`), enforced in `PokerTableService.CreateTable`/`UpdateSettings`, not a DB constraint |
+| `buy_in` / `small_blind` / `big_blind` | validated positive, whole-number, and `small_blind < big_blind` at create time; only editable afterward while the live table has zero seated players (checked against the in-memory `ws.PokerTable`, not derivable from this row alone) |
+| `closed_at` | set when `status` transitions to `closed`, either by the host or by the abandoned-table garbage collector (`ws` package, 5-minute grace period once a table has zero seated players and zero spectators) |
+
+---
+
+### 12. `poker_table_invites`
+Grants one user access to one private poker table — the entire invite mechanism (no shareable link/token). Defined in `Backend/models/poker_table.go`.
+
+```go
+type PokerTableInvite struct {
+    ID           uint `gorm:"primaryKey"`
+    PokerTableID uint `gorm:"uniqueIndex:idx_poker_table_invite_binding"`
+    UserID       uint `gorm:"uniqueIndex:idx_poker_table_invite_binding"`
+    CreatedAt    time.Time
+}
+```
+
+`(poker_table_id, user_id)` is a composite unique index — inviting the same user to the same table twice is idempotent, not an error. Created via `POST /poker-tables/:id/invite` (host-only), where the host picks the invitee through the existing `GET /user/search` username search rather than a new lookup mechanism.
+
+---
+
 ## Relationships & ER Overview
 
 ```
@@ -319,10 +365,16 @@ users (1) ──── (1) accounts
   │
   ├─ (n) ──── (n) friendships   (via low_id/high_id)
   │
-  └─ (1) ──── (n) notifications
+  ├─ (1) ──── (n) notifications
+  │
+  └─ (1) ──── (n) poker_tables   (as host_user_id)
+                  │
+                  ├─ (1) ──── (n) poker_table_invites
+                  │
+                  └─ (1) ──── (n) poker_games   (via poker_games.table_id)
 ```
 
-None of these relationships are enforced by a foreign key at the database level — every arrow above is an application-level invariant only (checked in the Go service layer, e.g. `NotificationService.AddNotification` verifies the user exists before inserting).
+None of these relationships are enforced by a foreign key at the database level — every arrow above is an application-level invariant only (checked in the Go service layer, e.g. `NotificationService.AddNotification` verifies the user exists before inserting, `PokerTableService.CanAccess`/`RequireHost` verify table membership/ownership before inserting or mutating).
 
 ---
 
@@ -343,11 +395,15 @@ Indexes actually present, derived from GORM tags (not aspirational):
 | `games` | `created_at` | plain |
 | `blackjack_games` | `game_id` | unique |
 | `poker_games` | `game_id` | unique |
+| `poker_games` | `table_id` | plain |
 | `slots_games` | `game_id` | unique |
 | `game_statistics` | `user_id` | unique |
 | `friendships` | `(low_id, high_id)` | unique (composite PK) |
 | `friendships` | `status` | plain |
 | `notifications` | *(none beyond the `id` PK)* | — |
+| `poker_tables` | `host_user_id` | plain |
+| `poker_tables` | `status` | plain |
+| `poker_table_invites` | `(poker_table_id, user_id)` | unique (composite) |
 
 Known gap: `notifications` has no index on `user_id`, `type`, or `created_at`, even though `EnumerateNotifications` filters/sorts on exactly those columns. Not currently a problem at this data volume, but worth revisiting if notification volume grows.
 
