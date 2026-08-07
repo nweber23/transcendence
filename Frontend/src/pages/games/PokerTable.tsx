@@ -1,11 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import PlayingCard, { CardData, CardSlot, Rank, Suit } from '@/components/games/PlayingCard';
 import GameTopBar from '@/components/games/GameTopBar';
 import UnsupportedScreenSize from '@/components/games/UnsupportedScreenSize';
 import PokerRulesModal from '@/components/games/PokerRulesModal';
 import { InfoTriggerButton } from '@/components/games/GameInfoModal';
+import HostControls from '@/components/games/poker/HostControls';
+import InvitePanel from '@/components/games/poker/InvitePanel';
 import Avatar from '@/components/ui/Avatar';
 import { useAccount } from '@/hooks/useAccount';
+import { useAuth } from '@/hooks/useAuth';
+import { usePokerTables, PokerTableSummary } from '@/hooks/usePokerTables';
 import { subscribeToWebSocket, sendWebSocketPacket, WsPacket } from '@/utils/wsClient';
 
 interface Player {
@@ -26,14 +31,12 @@ const parseCard = (card: string): CardData => ({
   suit: card.slice(-1) as Suit,
 });
 
-/* The table has one fixed buy-in — the engine can't seed players with
-   different starting stacks, so these are only fallbacks until the first
-   poker_state snapshot arrives from the server (the source of truth). */
+/* Fallbacks only — overwritten as soon as the table's REST metadata or the
+   first poker_state snapshot arrives. */
 const DEFAULT_SMALL_BLIND = 25;
 const DEFAULT_BIG_BLIND = 50;
 const DEFAULT_BUY_IN = 1000;
-
-const SEAT_COUNT = 6;
+const DEFAULT_SEAT_COUNT = 6;
 
 interface PokerSeatPacket {
   seat: number;
@@ -61,8 +64,13 @@ interface PokerHandResult {
 }
 
 interface PokerStatePacket {
+  table_id: number;
+  table_name: string;
+  is_private: boolean;
+  max_seats: number;
   seats: PokerSeatPacket[];
   your_seat: number;
+  is_spectator: boolean;
   hand_active: boolean;
   phase: string;
   community_cards: string[];
@@ -84,13 +92,22 @@ const HAND_RESULT_DISPLAY_MS = 4000;
    only used to turn the absolute turn_deadline into a fraction for the ring. */
 const TURN_TIMEOUT_MS = 30000;
 
-const Poker: React.FC = () => {
+const PokerTable: React.FC = () => {
+  const { tableId } = useParams<{ tableId: string }>();
+  const numericTableId = Number(tableId);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { getTable, updateSettings, inviteUser, closeTable } = usePokerTables();
+
   /* autoFetch=false: only the account is needed here, not the transaction history */
   const { account, getAccount } = useAccount(false);
   useEffect(() => {
     getAccount().catch(() => {});
   }, [getAccount]);
   const balance = account ? Math.floor(Number(account.balance)) : 0;
+
+  const [tableMeta, setTableMeta] = useState<PokerTableSummary | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   const [table, setTable] = useState<PokerStatePacket | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
@@ -99,16 +116,49 @@ const Poker: React.FC = () => {
   const [handResult, setHandResult] = useState<PokerHandResult | null>(null);
   const [bustedMessage, setBustedMessage] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   /* Seats persist across many hands now, so "you were seated last update and
      aren't anymore" only means something when it wasn't your own click. */
   const previousSeatRef = useRef(-1);
   const didLeaveRef = useRef(false);
 
+  // Access gate: fetch the table's metadata over REST before opening any WS
+  // traffic for it — a 403/404 here means we never send join/spectate.
+  const hasEnteredTableRef = useRef(false);
+  useEffect(() => {
+    if (!numericTableId) return;
+    getTable(numericTableId)
+      .then((meta) => {
+        setTableMeta(meta);
+        hasEnteredTableRef.current = true;
+        sendWebSocketPacket('spectate', { table_id: numericTableId });
+      })
+      .catch((err) => {
+        setAccessError(err instanceof Error ? err.message : 'Unable to open this table');
+      });
+    return () => {
+      // Leaving the page (route change or unmount) drops the seat/spectator
+      // slot we registered above — otherwise a visitor who never explicitly
+      // clicks "Leave Table" stays in the table's spectator set forever,
+      // permanently inflating its occupancy count and preventing the
+      // abandoned-table garbage collector from ever reaping it. The backend
+      // handles this exactly like a disconnect: seated + hand in progress
+      // auto-folds, seated + idle removes the seat, spectating just drops
+      // the subscription.
+      if (hasEnteredTableRef.current) {
+        sendWebSocketPacket('leave', { table_id: numericTableId });
+        hasEnteredTableRef.current = false;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numericTableId]);
+
   useEffect(() => {
     const unsubscribe = subscribeToWebSocket((packet: WsPacket) => {
       if (packet.packet_type === 'poker_state') {
         const payload = packet.payload as PokerStatePacket;
+        if (payload.table_id !== numericTableId) return;
         setTable(payload);
         setError(null);
 
@@ -128,11 +178,19 @@ const Poker: React.FC = () => {
         previousSeatRef.current = payload.your_seat;
       } else if (packet.packet_type === 'error') {
         setError((packet.payload as { message: string }).message);
+      } else if (packet.packet_type === 'poker_kicked') {
+        const payload = packet.payload as { table_id: number };
+        if (payload.table_id !== numericTableId) return;
+        navigate('/games/poker', { state: { pokerNotice: "You've been removed from this table." } });
+      } else if (packet.packet_type === 'poker_closed') {
+        const payload = packet.payload as { table_id: number };
+        if (payload.table_id !== numericTableId) return;
+        navigate('/games/poker', { state: { pokerNotice: 'The host closed this table.' } });
       }
     });
-    sendWebSocketPacket('sync');
     return unsubscribe;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numericTableId, navigate]);
 
   /* Ticks while a turn countdown is running so the ring/badge below can
      recompute how much time is left; idle otherwise. */
@@ -146,16 +204,21 @@ const Poker: React.FC = () => {
   const turnSecondsLeft = turnDeadline ? Math.max(0, Math.ceil((turnDeadline - now) / 1000)) : null;
   const turnFraction = turnDeadline ? Math.max(0, Math.min(1, (turnDeadline - now) / TURN_TIMEOUT_MS)) : null;
 
-  const smallBlind = table?.small_blind ?? DEFAULT_SMALL_BLIND;
-  const bigBlind = table?.big_blind ?? DEFAULT_BIG_BLIND;
-  const buyIn = table?.buy_in ?? DEFAULT_BUY_IN;
+  const tableName = table?.table_name ?? tableMeta?.name ?? 'Poker Table';
+  const isPrivate = table?.is_private ?? tableMeta?.isPrivate ?? false;
+  const seatCount = table?.max_seats ?? tableMeta?.maxSeats ?? DEFAULT_SEAT_COUNT;
+  const smallBlind = table?.small_blind ?? Number(tableMeta?.smallBlind ?? DEFAULT_SMALL_BLIND);
+  const bigBlind = table?.big_blind ?? Number(tableMeta?.bigBlind ?? DEFAULT_BIG_BLIND);
+  const buyIn = table?.buy_in ?? Number(tableMeta?.buyIn ?? DEFAULT_BUY_IN);
   const mySeat = table && table.your_seat >= 0 ? table.seats.find((s) => s.seat === table.your_seat) : undefined;
   const isSeated = mySeat !== undefined;
   const handActive = table?.hand_active ?? false;
   const seatedCount = table?.seats.length ?? 0;
   const canJoin = selectedSeat !== null && !isSeated && !handActive && buyIn <= balance;
+  const isHost = tableMeta !== null && user !== null && tableMeta.hostUserId === user.id;
+  const canResizeTable = seatedCount === 0;
 
-  const players: Player[] = Array.from({ length: SEAT_COUNT }, (_, seatIdx) => {
+  const players: Player[] = Array.from({ length: seatCount }, (_, seatIdx) => {
     const seatState = table?.seats.find((s) => s.seat === seatIdx);
     if (!seatState) {
       return { id: seatIdx, name: '', avatarURL: '', stack: 0, currentBet: 0, status: 'empty' as const };
@@ -181,16 +244,35 @@ const Poker: React.FC = () => {
 
   const join = () => {
     if (!canJoin || selectedSeat === null) return;
-    sendWebSocketPacket('join', { seat: selectedSeat });
+    sendWebSocketPacket('join', { table_id: numericTableId, seat: selectedSeat });
     setSelectedSeat(null);
     getAccount().catch(() => {}); // buy-in is debited immediately
   };
   const leave = () => {
     didLeaveRef.current = true;
-    sendWebSocketPacket('leave');
+    sendWebSocketPacket('leave', { table_id: numericTableId });
     getAccount().catch(() => {});
   };
-  const act = (action: string, amount = 0) => sendWebSocketPacket('play', { action, amount });
+  const act = (action: string, amount = 0) => sendWebSocketPacket('play', { table_id: numericTableId, action, amount });
+
+  const handleSaveSettings = async (settings: {
+    name: string;
+    isPrivate: boolean;
+    maxSeats: number;
+    buyIn: string;
+    smallBlind: string;
+    bigBlind: string;
+  }) => {
+    const updated = await updateSettings(numericTableId, settings);
+    setTableMeta(updated);
+  };
+  const handleInvite = async (userId: number) => {
+    await inviteUser(numericTableId, userId);
+  };
+  const handleCloseTable = async () => {
+    await closeTable(numericTableId);
+    navigate('/games/poker');
+  };
 
   const presetButton =
     'px-3 py-2 rounded-lg border border-[rgba(212,175,55,0.55)] bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold uppercase tracking-wider shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-[var(--gold)] hover:bg-[rgba(212,175,55,0.25)] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
@@ -216,6 +298,20 @@ const Poker: React.FC = () => {
 
   const isMyTurn = handActive && mySeat?.is_turn === true;
 
+  if (accessError) {
+    return (
+      <div
+        className="mt-[4.75rem] flex flex-col items-center justify-center gap-4 bg-[var(--base)]"
+        style={{ height: 'calc(100dvh - 4.75rem)' }}
+      >
+        <p className="text-sm text-[#e8a5ae]">{accessError}</p>
+        <button onClick={() => navigate('/games/poker')} className={presetButton}>
+          Back to Lobby
+        </button>
+      </div>
+    );
+  }
+
   /* mt-[4.75rem] clears the floating global Header pill (pt-4 + h-14 = 4.5 rem) */
   return (
     <div
@@ -230,12 +326,12 @@ const Poker: React.FC = () => {
       ) : (
         <>
           <GameTopBar
-            title="Texas Hold'em"
-            subtitle={`No-Limit · 6-Max · Blinds $${smallBlind} / $${bigBlind}`}
+            title={tableName}
+            subtitle={`No-Limit · ${seatCount}-Max · Blinds $${smallBlind} / $${bigBlind}${isPrivate ? ' · Private' : ''}`}
             balance={balance}
           />
 
-          {/* ── Game area: sidebar (6 seats) + info panel + action bar ───────── */}
+          {/* ── Game area: sidebar (seats) + info panel + action bar ───────── */}
           <div className="flex-1 min-h-0 grid grid-cols-[360px_1fr]">
             {/* ── Sidebar ──────────────────────────────────────────────────── */}
             <div className="flex flex-col justify-center gap-2 p-3 border-r border-[rgba(212,175,55,0.12)] bg-[var(--surface)]">
@@ -258,6 +354,15 @@ const Poker: React.FC = () => {
               {/* ── Info panel ──────────────────────────────────────────────── */}
               <div className="relative min-h-0 flex items-center justify-center px-8">
                 <InfoTriggerButton onClick={() => setShowRules(true)} />
+                {isHost && tableMeta && (
+                  <HostControls
+                    table={tableMeta}
+                    canResize={canResizeTable}
+                    onSaveSettings={handleSaveSettings}
+                    onInviteClick={() => setShowInvite(true)}
+                    onCloseTable={handleCloseTable}
+                  />
+                )}
 
                 {/* Bounded, bordered panel — keeps the table info visually
                     contained instead of floating in open background, so the
@@ -497,6 +602,8 @@ const Poker: React.FC = () => {
           turnTimeoutSeconds={TURN_TIMEOUT_MS / 1000}
         />
       )}
+
+      {showInvite && <InvitePanel onClose={() => setShowInvite(false)} onInvite={handleInvite} />}
     </div>
   );
 };
@@ -636,4 +743,4 @@ const SeatRow: React.FC<{
   );
 };
 
-export default Poker;
+export default PokerTable;
