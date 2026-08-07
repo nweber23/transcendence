@@ -758,6 +758,45 @@ func TestServices(testInterface *testing.T) {
 		ChatID: 90,
 		UserID: 1,
 	}, false)
+
+	// Remove some participants
+	removeParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 1,
+		UserID: 4,
+	}, true)
+	removeParticipantExpect(testInterface, chatService, models.ChatParticipant{
+		ChatID: 2,
+		UserID: 3,
+	}, true)
+
+	// Adding Messages
+	addChatMessageExpect(testInterface, chatService, ChatMessageInfo{
+		ChatID:       1,
+		SenderUserID: 1,
+		Message:      "Hello!",
+	}, nil)
+	addChatMessageExpect(testInterface, chatService, ChatMessageInfo{
+		ChatID:       1,
+		SenderUserID: 3,
+		Message:      "Why is my toe blue?",
+	}, nil)
+	addChatMessageExpect(testInterface, chatService, ChatMessageInfo{
+		ChatID:       1,
+		SenderUserID: 2,
+		Message:      "Ayo guys I got three Blackjacks in a row!!",
+	}, nil)
+
+	// Failing cases
+	addChatMessageExpect(testInterface, chatService, ChatMessageInfo{
+		ChatID:       2,
+		SenderUserID: 3,
+	}, gorm.ErrRecordNotFound)
+	addChatMessageExpect(testInterface, chatService, ChatMessageInfo{
+		ChatID:       5,
+		SenderUserID: 80,
+	}, gorm.ErrRecordNotFound)
+
+	// Test automatic chat deletion
 }
 
 func searchUsersExpect(

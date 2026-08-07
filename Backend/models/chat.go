@@ -5,9 +5,8 @@ import (
 )
 
 type ChatParticipant struct {
-	ID       uint `gorm:"primaryKey"`
-	ChatID   uint
-	UserID   uint
+	ChatID   uint      `gorm:"primaryKey"`
+	UserID   uint      `gorm:"primaryKey"`
 	LastRead time.Time
 }
 

@@ -48,7 +48,7 @@ func (s *ChatService) CreateChat(participantIDs []uint) (uint, error) {
 
 func (s *ChatService) DoesChatExist(chatID uint) (bool) {
 	var chat models.Chat
-	err := s.db.Where("chat_id = ?", chatID).First(&chat).Error
+	err := s.db.Where("id = ?", chatID).First(&chat).Error
 	return err == nil
 }
 
@@ -67,17 +67,18 @@ func (s *ChatService) AddParticipant(participant models.ChatParticipant) (*model
 }
 
 func (s *ChatService) RemoveParticipant(participant models.ChatParticipant) (error) {
-	if err := s.db.Delete(&participant).Error; err != nil {
+	err := s.db.Delete(&participant).Error
+	if err != nil {
 		return err
 	}
-	var chat models.Chat
-	if err := s.db.Where("chat_id = ?", participant.ChatID).First(&chat).Error; err == gorm.ErrRecordNotFound {
-		chat = models.Chat{
+	err = s.db.Where("chat_id = ?", participant.ChatID).First(&participant).Error
+	if err == gorm.ErrRecordNotFound {
+		chat := models.Chat{
 			ID: participant.ChatID,
 		}
-		s.db.Delete(&chat)
+		err = s.db.Delete(&chat).Error
 	}
-	return nil
+	return err
 }
 
 type ChatMessageInfo struct {
@@ -88,9 +89,6 @@ type ChatMessageInfo struct {
 }
 
 func (s *ChatService) AddChatMessage(info ChatMessageInfo) (*models.ChatMessage, error) {
-	if !s.DoesChatExist(info.ChatID) {
-		return nil, utils.ErrInvalidChatID
-	}
 	var participant models.ChatParticipant
 	err := s.db.Where("chat_id = ? AND user_id = ?", info.ChatID, info.SenderUserID).First(&participant).Error
 	if err != nil {
