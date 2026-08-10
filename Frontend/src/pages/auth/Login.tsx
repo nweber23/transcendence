@@ -80,14 +80,22 @@ const Login: React.FC = () => {
     }
   };
 
+  const TOTP_CODE_PATTERN = /^\d{6}$/;
+  const BACKUP_CODE_PATTERN = /^[0-9a-fA-F]{10}$/;
+
   const handleTwoFactorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!twoFactorCode) {
+    const trimmedCode = twoFactorCode.trim();
+    if (!trimmedCode) {
       setErrors({ twoFactorCode: 'Enter the code from your authenticator app' });
       return;
     }
+    if (!TOTP_CODE_PATTERN.test(trimmedCode) && !BACKUP_CODE_PATTERN.test(trimmedCode)) {
+      setErrors({ twoFactorCode: 'Enter a 6-digit code or a 10-character backup code' });
+      return;
+    }
     try {
-      await verifyTwoFactor(twoFactorCode);
+      await verifyTwoFactor(trimmedCode);
       navigate('/account');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Verification failed';
@@ -160,6 +168,7 @@ const Login: React.FC = () => {
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
+                    maxLength={10}
                     autoFocus
                     value={twoFactorCode}
                     onChange={(e) => {
