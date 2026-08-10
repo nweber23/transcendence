@@ -256,6 +256,30 @@ func createUploadFilename(extension string) (string, error) {
 	}
 }
 
+// safeAvatarPath validates and returns the full path to an avatar file, ensuring
+// it's within the uploads directory. Returns empty string if the path is invalid.
+func safeAvatarPath(filename string) string {
+	if filename == "" {
+		return ""
+	}
+	// Extract only the basename to prevent directory traversal
+	base := filepath.Base(filename)
+	if base == "." || base == "/" || base == "" {
+		return ""
+	}
+	full := filepath.Join("./uploads/", base)
+	uploadsAbs, _ := filepath.Abs("./uploads/")
+	fullAbs, err := filepath.Abs(full)
+	if err != nil {
+		return ""
+	}
+	// Verify the resolved path is within uploads directory
+	if !strings.HasPrefix(fullAbs, uploadsAbs+string(os.PathSeparator)) && fullAbs != uploadsAbs {
+		return ""
+	}
+	return full
+}
+
 func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -318,7 +342,9 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	}
 	if _, err := io.Copy(dst, src); err != nil {
 		dst.Close()
-		os.Remove(filepath.Join("./uploads/", user.AvatarURL))
+		if path := safeAvatarPath(user.AvatarURL); path != "" {
+			os.Remove(path)
+		}
 		utils.RespondError(c, http.StatusInternalServerError, "save_uploaded_file_failed", err.Error())
 		return
 	}
@@ -345,9 +371,11 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 	if oldURL != models.DefaultAvatarURL {
-		err = os.Remove(filepath.Join("./uploads/", oldURL))
-		if err != nil {
-			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+		if path := safeAvatarPath(oldURL); path != "" {
+			err = os.Remove(path)
+			if err != nil {
+				fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+			}
 		}
 	}
 }
