@@ -270,8 +270,18 @@ func (s *UserService) VerifyTwoFactorCode(userID uint, code string) (bool, error
 	for i, hashedCode := range hashedCodes {
 		if utils.VerifyPassword(hashedCode, code) {
 			remaining := append(hashedCodes[:i:i], hashedCodes[i+1:]...)
-			if err := s.db.Model(&models.User{}).Where("id = ?", userID).Update("two_factor_backup_codes", strings.Join(remaining, ",")).Error; err != nil {
-				return false, fmt.Errorf("failed to consume backup code: %w", err)
+			// Conditional update (compare-and-swap on the stored codes
+			// string) so two concurrent requests racing on the same
+			// backup code can't both succeed — the loser sees no rows
+			// affected and reports the code as already used.
+			result := s.db.Model(&models.User{}).
+				Where("id = ? AND two_factor_backup_codes = ?", userID, user.TwoFactorBackupCodes).
+				Update("two_factor_backup_codes", strings.Join(remaining, ","))
+			if result.Error != nil {
+				return false, fmt.Errorf("failed to consume backup code: %w", result.Error)
+			}
+			if result.RowsAffected == 0 {
+				return false, nil
 			}
 			return true, nil
 		}
