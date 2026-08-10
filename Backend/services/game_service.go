@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"transcendence/models"
@@ -296,8 +297,11 @@ func (gs *GameService) CreateSlotsGame(userID uint, betPerLine decimal.Decimal, 
 	if betPerLine.LessThanOrEqual(decimal.Zero) {
 		return nil, utils.ErrAmountNotPositive
 	}
-	if lines <= 0 {
+	if lines <= 0 || lines > math.MaxUint8 {
 		return nil, utils.ErrInvalidLineCount
+	}
+	if betPerLine.IntPart() > math.MaxUint32 {
+		return nil, utils.ErrAmountTooLarge
 	}
 	totalBet := betPerLine.Mul(decimal.NewFromInt(int64(lines)))
 

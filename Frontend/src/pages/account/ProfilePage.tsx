@@ -170,13 +170,32 @@ const ProfilePage: React.FC = () => {
     }
   }, [user?.id, notificationTypes]);
 
+  const USERNAME_PATTERN = /^[a-zA-Z0-9_.-]+$/;
+  const EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const handleIdentitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIdentitySuccess(false);
     setIdentityError(null);
+
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedUsername || !trimmedEmail) {
+      setIdentityError('Username and email are required');
+      return;
+    }
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 32 || !USERNAME_PATTERN.test(trimmedUsername)) {
+      setIdentityError('Username must be 3-32 characters and contain only letters, numbers, underscores, hyphens, and dots');
+      return;
+    }
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setIdentityError('Please enter a valid email address');
+      return;
+    }
+
     setIdentityLoading(true);
     try {
-      await updateProfile(username, email);
+      await updateProfile(trimmedUsername, trimmedEmail);
       await refreshUser();
       setIdentitySuccess(true);
       setTimeout(() => setIdentitySuccess(false), 3000);
@@ -214,10 +233,23 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB, matches backend limit
+  const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarError(null);
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setAvatarError('Unsupported file type. Use JPEG, PNG, GIF, or WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setAvatarError('Image is too large. Max size is 5MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     setAvatarUploading(true);
     try {
       await uploadAvatar(file);

@@ -243,6 +243,7 @@ const PokerTable: React.FC = () => {
 
   const toCall = mySeat ? Math.max(0, (table?.last_action_amount ?? 0) - mySeat.current_bet) : 0;
   const minRaiseTo = (table?.last_action_amount ?? 0) + (table?.min_raise ?? bigBlind);
+  const maxRaiseTo = mySeat ? mySeat.current_bet + mySeat.stack : minRaiseTo;
 
   const join = () => {
     if (!canJoin || selectedSeat === null) return;
@@ -565,15 +566,19 @@ const PokerTable: React.FC = () => {
                       <input
                         type="number"
                         min={minRaiseTo}
+                        max={maxRaiseTo}
                         step={bigBlind}
                         value={raiseTo ?? minRaiseTo}
-                        onChange={(e) => setRaiseTo(Number(e.target.value))}
+                        onChange={(e) => {
+                          const parsed = Number(e.target.value);
+                          setRaiseTo(Number.isFinite(parsed) ? Math.min(parsed, maxRaiseTo) : minRaiseTo);
+                        }}
                         disabled={!isMyTurn}
                         className="w-24 bg-[var(--surface-2)] border border-[rgba(212,175,55,0.14)] rounded-lg px-2 py-3 font-serif text-[var(--gold)] text-right focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-40"
                         aria-label="Raise to amount"
                       />
                       <button
-                        onClick={() => act('raise', Math.max(raiseTo ?? minRaiseTo, minRaiseTo))}
+                        onClick={() => act('raise', Math.min(Math.max(raiseTo ?? minRaiseTo, minRaiseTo), maxRaiseTo))}
                         disabled={!isMyTurn}
                         className={`${actionButton} text-[#0a0e12] bg-[var(--gold)] hover:opacity-90 border-none`}
                       >

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +14,10 @@ import (
 
 	"gorm.io/gorm"
 )
+
+// usernamePattern restricts usernames to characters that are safe to render
+// and search on: letters, digits, underscore, hyphen, and dot.
+var usernamePattern = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
 
 type UserService struct {
 	db *gorm.DB
@@ -25,6 +30,9 @@ func NewUserService(db *gorm.DB) *UserService {
 func validateUsername(username string) error {
 	if len(username) < 3 || len(username) > 32 {
 		return utils.ErrUsernameWrongLength
+	}
+	if !usernamePattern.MatchString(username) {
+		return utils.ErrInvalidUsername
 	}
 	return nil
 }
@@ -110,6 +118,9 @@ func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, emai
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, fmt.Errorf("failed to look up oauth user: %w", err)
 	}
+	if !utils.ValidateEmail(email) {
+		return nil, utils.ErrInvalidEmail
+	}
 
 	uniqueUsername, err := s.resolveUniqueUsername(username, email)
 	if err != nil {
@@ -144,8 +155,10 @@ func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, emai
 
 // resolveUniqueUsername sanitizes the provider username to fit constraints
 // and appends a numeric suffix if it's already taken by another account.
+var usernameDisallowedChars = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
+
 func (s *UserService) resolveUniqueUsername(candidate, email string) (string, error) {
-	base := strings.Join(strings.Fields(candidate), "")
+	base := usernameDisallowedChars.ReplaceAllString(strings.Join(strings.Fields(candidate), ""), "")
 	if base == "" {
 		if at := strings.Index(email, "@"); at > 0 {
 			base = email[:at]

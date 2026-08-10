@@ -234,6 +234,9 @@ func (engineService *EngineService) PlayTexas(gameID uint64, playerID uint64, pl
 		playAction != "all_in" {
 		return nil, utils.ErrInvalidPlayAction
 	}
+	if amount < 0 {
+		return nil, utils.ErrInvalidPlayAction
+	}
 	request := engine_proto.TexasRequest{
 		GameId:   gameID,
 		PlayerId: playerID,
