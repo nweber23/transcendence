@@ -237,6 +237,9 @@ func (s *PokerTableService) Invite(hostUserID, tableID, inviteeUserID uint) (*mo
 	if _, err := s.RequireHost(hostUserID, tableID); err != nil {
 		return nil, err
 	}
+	if _, err := NewUserService(s.db).GetUserByID(inviteeUserID); err != nil {
+		return nil, err
+	}
 	invite := &models.PokerTableInvite{PokerTableID: tableID, UserID: inviteeUserID}
 	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(invite).Error; err != nil {
 		return nil, fmt.Errorf("failed to create poker table invite: %w", err)
