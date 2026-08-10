@@ -9,7 +9,7 @@ import (
 )
 
 func AuthFix(c *gin.Context) {
-	c.Request.Header.Set("Authorization", "Bearer " + c.Query("token"))
+	c.Request.Header.Set("Authorization", "Bearer "+c.Query("token"))
 	c.Next()
 }
 
@@ -31,6 +31,12 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		tokenString := parts[1]
 		claims, err := utils.ValidateToken(tokenString, jwtSecret)
 		if err != nil {
+			utils.RespondError(c, 401, "unauthorized", "invalid or expired token")
+			c.Abort()
+			return
+		}
+		if claims.Purpose != "" {
+			// e.g. a 2FA-pending token from mid-login must not grant API access
 			utils.RespondError(c, 401, "unauthorized", "invalid or expired token")
 			c.Abort()
 			return

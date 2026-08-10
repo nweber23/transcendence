@@ -49,11 +49,12 @@ func NewUserHandler(
 }
 
 type UserProfileResponse struct {
-	ID        uint   `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatarURL"`
-	JoinedAt  string `json:"joined_at"`
+	ID               uint   `json:"id"`
+	Username         string `json:"username"`
+	Email            string `json:"email"`
+	AvatarURL        string `json:"avatarURL"`
+	JoinedAt         string `json:"joined_at"`
+	TwoFactorEnabled bool   `json:"two_factor_enabled"`
 }
 
 type AccountResponse struct {
@@ -130,11 +131,12 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
@@ -213,11 +215,12 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        userID.(uint),
-		Username:  username,
-		Email:     email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               userID.(uint),
+		Username:         username,
+		Email:            email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
@@ -335,10 +338,11 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        user.AvatarURL,
+		TwoFactorEnabled: user.TwoFactorEnabled,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")

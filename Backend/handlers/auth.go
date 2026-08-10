@@ -3,6 +3,7 @@ package handlers
 import (
 	//"fmt"
 	"crypto/subtle"
+	"log"
 	"net/http"
 
 	"transcendence/middleware"
@@ -61,6 +62,20 @@ type AuthResponse struct {
 	UserID uint   `json:"user_id"`
 }
 
+// TwoFactorChallengeResponse is returned from /auth/login in place of
+// AuthResponse when the account has 2FA enabled. TempToken is scoped only to
+// completing the challenge at /auth/2fa/verify (see AuthMiddleware).
+type TwoFactorChallengeResponse struct {
+	TwoFactorRequired bool   `json:"two_factor_required"`
+	TempToken         string `json:"temp_token"`
+	UserID            uint   `json:"user_id"`
+}
+
+type TwoFactorLoginRequest struct {
+	TempToken string `json:"temp_token" binding:"required"`
+	Code      string `json:"code" binding:"required"`
+}
+
 // Register handles POST /auth/register
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
@@ -100,11 +115,52 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondError(c, http.StatusConflict, "login_fail", message)
 		return
 	}
+	if user.TwoFactorEnabled {
+		tempToken := utils.GenerateTwoFactorToken(user.ID, h.jwtSecret)
+		utils.RespondSuccess(c, http.StatusOK, "two-factor authentication required", TwoFactorChallengeResponse{
+			TwoFactorRequired: true,
+			TempToken:         tempToken,
+			UserID:            user.ID,
+		})
+		return
+	}
 	middleware.LoginsTotal.WithLabelValues("success").Inc()
 	token := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
 	utils.RespondSuccess(c, http.StatusOK, "user logged in successfully", AuthResponse{
 		Token:  token,
 		UserID: user.ID,
+	})
+}
+
+// VerifyTwoFactorLogin handles POST /auth/2fa/verify, completing a login
+// that Login() paused on because the account has 2FA enabled.
+func (h *AuthHandler) VerifyTwoFactorLogin(c *gin.Context) {
+	var req TwoFactorLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	claims, err := utils.ValidateToken(req.TempToken, h.jwtSecret)
+	if err != nil || claims.Purpose != utils.TwoFactorPurpose {
+		utils.RespondError(c, http.StatusUnauthorized, "invalid_token", "invalid or expired two-factor challenge")
+		return
+	}
+	ok, err := h.userService.VerifyTwoFactorCode(claims.UserID, req.Code)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "two_factor_verify_failed", err.Error())
+		return
+	}
+	if !ok {
+		log.Printf("invalid TOTP login attempt for user %d", claims.UserID)
+		middleware.LoginsTotal.WithLabelValues("failure").Inc()
+		utils.RespondError(c, http.StatusUnauthorized, "invalid_code", "invalid two-factor authentication code")
+		return
+	}
+	middleware.LoginsTotal.WithLabelValues("success").Inc()
+	token := utils.GenerateToken(claims.UserID, h.jwtSecret, h.jwtExpiry)
+	utils.RespondSuccess(c, http.StatusOK, "user logged in successfully", AuthResponse{
+		Token:  token,
+		UserID: claims.UserID,
 	})
 }
 

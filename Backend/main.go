@@ -95,6 +95,7 @@ func main() {
 		authRoutes.POST("/logout", authHandler.Logout)
 		authRoutes.GET("/:provider", authHandler.OauthLogin)
 		authRoutes.GET("/:provider/callback", authHandler.OauthCallback)
+		authRoutes.POST("/2fa/verify", authHandler.VerifyTwoFactorLogin)
 	}
 
 	// User routes (protected)
@@ -117,6 +118,9 @@ func main() {
 		userRoutes.PUT("/notifications/seen", userHandler.MarkNotificationsSeen)
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
+		userRoutes.POST("/2fa/setup", userHandler.SetupTwoFactor)
+		userRoutes.POST("/2fa/verify", userHandler.ConfirmTwoFactor)
+		userRoutes.DELETE("/2fa", userHandler.DisableTwoFactor)
 	}
 
 	// Game routes (protected)
