@@ -233,10 +233,23 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB, matches backend limit
+  const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarError(null);
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setAvatarError('Unsupported file type. Use JPEG, PNG, GIF, or WebP.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setAvatarError('Image is too large. Max size is 5MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     setAvatarUploading(true);
     try {
       await uploadAvatar(file);
