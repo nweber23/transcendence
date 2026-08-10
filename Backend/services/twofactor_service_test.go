@@ -37,8 +37,15 @@ func TestSetupTwoFactorStagesUnconfirmedSecret(testInterface *testing.T) {
 	if user.TwoFactorEnabled {
 		testInterface.Fatalf("expected 2FA to remain disabled until confirmed")
 	}
-	if user.TwoFactorSecret != key.Secret() {
-		testInterface.Fatalf("expected stored secret to match generated key")
+	if user.TwoFactorSecret == key.Secret() {
+		testInterface.Fatalf("expected stored secret to be encrypted, not stored in plaintext")
+	}
+	decryptedSecret, err := utils.DecryptString(user.TwoFactorSecret, twoFactorSecretEncryptionKey())
+	if err != nil {
+		testInterface.Fatalf("failed to decrypt stored secret: %v", err)
+	}
+	if decryptedSecret != key.Secret() {
+		testInterface.Fatalf("expected decrypted stored secret to match generated key")
 	}
 }
 

@@ -19,6 +19,18 @@ import (
 const twoFactorIssuer = "Transcendence Casino"
 const backupCodeCount = 10
 
+// twoFactorSecretEncryptionKey returns the key material used to encrypt
+// TOTP secrets at rest. It's derived from JWT_SECRET (prefixed so it's not
+// literally the same key used to sign tokens) rather than requiring a
+// separate deployment secret.
+func twoFactorSecretEncryptionKey() string {
+	base := os.Getenv("JWT_SECRET")
+	if base == "" {
+		base = "secret" // matches config.LoadConfig's fallback for JWT_SECRET
+	}
+	return "totp-secret-encryption:" + base
+}
+
 type UserService struct {
 	db *gorm.DB
 }
@@ -215,7 +227,11 @@ func (s *UserService) SetupTwoFactor(userID uint) (*otp.Key, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate TOTP secret: %w", err)
 	}
-	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Update("two_factor_secret", key.Secret()).Error; err != nil {
+	encryptedSecret, err := utils.EncryptString(key.Secret(), twoFactorSecretEncryptionKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt TOTP secret: %w", err)
+	}
+	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Update("two_factor_secret", encryptedSecret).Error; err != nil {
 		return nil, fmt.Errorf("failed to store TOTP secret: %w", err)
 	}
 	return key, nil
@@ -236,7 +252,11 @@ func (s *UserService) ConfirmTwoFactor(userID uint, code string) ([]string, erro
 	if user.TwoFactorSecret == "" {
 		return nil, utils.ErrTwoFactorNotSetUp
 	}
-	if !isSixDigitCode(code) || !totp.Validate(code, user.TwoFactorSecret) {
+	secret, err := utils.DecryptString(user.TwoFactorSecret, twoFactorSecretEncryptionKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
+	}
+	if !isSixDigitCode(code) || !totp.Validate(code, secret) {
 		return nil, utils.ErrInvalidTwoFactorCode
 	}
 	backupCodes, hashedCodes, err := generateBackupCodes()
@@ -263,8 +283,14 @@ func (s *UserService) VerifyTwoFactorCode(userID uint, code string) (bool, error
 	if !user.TwoFactorEnabled {
 		return false, utils.ErrTwoFactorNotEnabled
 	}
-	if isSixDigitCode(code) && totp.Validate(code, user.TwoFactorSecret) {
-		return true, nil
+	if isSixDigitCode(code) {
+		secret, err := utils.DecryptString(user.TwoFactorSecret, twoFactorSecretEncryptionKey())
+		if err != nil {
+			return false, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
+		}
+		if totp.Validate(code, secret) {
+			return true, nil
+		}
 	}
 	hashedCodes := utils.OrdinalSplit(user.TwoFactorBackupCodes, ",")
 	for i, hashedCode := range hashedCodes {
