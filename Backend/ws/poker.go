@@ -175,43 +175,47 @@ func (table *PokerTable) recipients() []uint {
 func (wsState *WebSocketState) pokerJoin(userID uint, tableID uint, seat int) {
 	table := wsState.pokerRegistry.get(tableID)
 	if table == nil {
-		wsState.sendPokerError(userID, "table not found")
+		wsState.sendPokerError(userID, tableID, "table not found")
 		return
 	}
 	if _, err := wsState.pokerTableService.CanAccess(tableID, userID); err != nil {
-		wsState.sendPokerError(userID, err.Error())
+		wsState.sendPokerError(userID, tableID, err.Error())
 		return
 	}
 
 	table.mutex.Lock()
 	defer table.mutex.Unlock()
 
+	if table.closed {
+		wsState.sendPokerError(userID, tableID, "table is closed")
+		return
+	}
 	if seat < 0 || seat >= table.maxSeats {
-		wsState.sendPokerError(userID, "invalid seat")
+		wsState.sendPokerError(userID, tableID, "invalid seat")
 		return
 	}
 	if table.handActive {
-		wsState.sendPokerError(userID, "a hand is already in progress, try again shortly")
+		wsState.sendPokerError(userID, tableID, "a hand is already in progress, try again shortly")
 		return
 	}
 	if table.seats[seat] != nil {
-		wsState.sendPokerError(userID, "seat is taken")
+		wsState.sendPokerError(userID, tableID, "seat is taken")
 		return
 	}
 	if table.seatOf(userID) >= 0 {
-		wsState.sendPokerError(userID, "already seated")
+		wsState.sendPokerError(userID, tableID, "already seated")
 		return
 	}
 
 	user, err := wsState.userService.GetUserByID(userID)
 	if err != nil {
-		wsState.sendPokerError(userID, "failed to load user")
+		wsState.sendPokerError(userID, tableID, "failed to load user")
 		return
 	}
 
 	game, err := wsState.gameService.CreatePokerGame(userID, decimal.NewFromInt(table.buyIn), seat, tableID)
 	if err != nil {
-		wsState.sendPokerError(userID, err.Error())
+		wsState.sendPokerError(userID, tableID, err.Error())
 		return
 	}
 
@@ -237,12 +241,16 @@ func (wsState *WebSocketState) pokerJoin(userID uint, tableID uint, seat int) {
 func (wsState *WebSocketState) pokerLeave(userID uint, tableID uint) {
 	table := wsState.pokerRegistry.get(tableID)
 	if table == nil {
-		wsState.sendPokerError(userID, "table not found")
+		wsState.sendPokerError(userID, tableID, "table not found")
 		return
 	}
 	table.mutex.Lock()
 	defer table.mutex.Unlock()
 
+	if table.closed {
+		wsState.sendPokerError(userID, tableID, "table is closed")
+		return
+	}
 	if seatIdx := table.seatOf(userID); seatIdx >= 0 {
 		if !table.handActive {
 			table.removeSeat(wsState, seatIdx, "left")
@@ -261,65 +269,75 @@ func (wsState *WebSocketState) pokerLeave(userID uint, tableID uint) {
 		table.broadcastState(wsState, table.recipients(), nil)
 		return
 	}
-	wsState.sendPokerError(userID, "not part of this table")
+	wsState.sendPokerError(userID, tableID, "not part of this table")
 }
 
 // pokerSpectate registers userID as a view-only observer — subscribed to
 // broadcasts but never dealt into a hand — and immediately sends them the
-// current snapshot. A seated user cannot also spectate.
+// current snapshot. A seated user reconnecting (e.g. a page refresh) is
+// already a recipient of every broadcast, so it just resends them the
+// current snapshot instead of rejecting the reconnect outright.
 func (wsState *WebSocketState) pokerSpectate(userID uint, tableID uint) {
 	table := wsState.pokerRegistry.get(tableID)
 	if table == nil {
-		wsState.sendPokerError(userID, "table not found")
+		wsState.sendPokerError(userID, tableID, "table not found")
 		return
 	}
 	if _, err := wsState.pokerTableService.CanAccess(tableID, userID); err != nil {
-		wsState.sendPokerError(userID, err.Error())
+		wsState.sendPokerError(userID, tableID, err.Error())
 		return
 	}
 
 	table.mutex.Lock()
 	defer table.mutex.Unlock()
 
+	if table.closed {
+		wsState.sendPokerError(userID, tableID, "table is closed")
+		return
+	}
 	if table.seatOf(userID) >= 0 {
-		wsState.sendPokerError(userID, "already seated")
+		table.broadcastState(wsState, []uint{userID}, nil)
 		return
 	}
 	table.spectators[userID] = true
 	table.armOrDisarmAbandonedTimer(wsState)
-	table.broadcastState(wsState, []uint{userID}, nil)
+	table.broadcastState(wsState, table.recipients(), nil)
 }
 
 func (wsState *WebSocketState) pokerPlay(userID uint, tableID uint, action string, amount int64) {
 	table := wsState.pokerRegistry.get(tableID)
 	if table == nil {
-		wsState.sendPokerError(userID, "table not found")
+		wsState.sendPokerError(userID, tableID, "table not found")
 		return
 	}
 	table.mutex.Lock()
 	defer table.mutex.Unlock()
 
+	if table.closed {
+		wsState.sendPokerError(userID, tableID, "table is closed")
+		return
+	}
 	if !table.handActive || table.engineGame == nil {
-		wsState.sendPokerError(userID, "no hand in progress")
+		wsState.sendPokerError(userID, tableID, "no hand in progress")
 		return
 	}
 	seatIdx := table.seatOf(userID)
 	if seatIdx < 0 {
-		wsState.sendPokerError(userID, "not seated")
+		wsState.sendPokerError(userID, tableID, "not seated")
 		return
 	}
 	playerIdx, ok := table.playerOfSeat[seatIdx]
 	if !ok {
-		wsState.sendPokerError(userID, "not part of this hand")
+		wsState.sendPokerError(userID, tableID, "not part of this hand")
 		return
 	}
 	if int(table.engineGame.State().CurrentPlayer) != playerIdx {
-		wsState.sendPokerError(userID, "not your turn")
+		wsState.sendPokerError(userID, tableID, "not your turn")
 		return
 	}
 
 	if err := table.engineGame.Play(uint64(playerIdx), action, amount); err != nil {
-		wsState.sendPokerError(userID, err.Error())
+		wsState.sendPokerError(userID, tableID, err.Error())
 		return
 	}
 
@@ -332,16 +350,20 @@ func (wsState *WebSocketState) pokerPlay(userID uint, tableID uint, action strin
 func (wsState *WebSocketState) pokerSync(userID uint, tableID uint) {
 	table := wsState.pokerRegistry.get(tableID)
 	if table == nil {
-		wsState.sendPokerError(userID, "table not found")
+		wsState.sendPokerError(userID, tableID, "table not found")
 		return
 	}
 	if _, err := wsState.pokerTableService.CanAccess(tableID, userID); err != nil {
-		wsState.sendPokerError(userID, err.Error())
+		wsState.sendPokerError(userID, tableID, err.Error())
 		return
 	}
 	table.mutex.Lock()
 	defer table.mutex.Unlock()
 
+	if table.closed {
+		wsState.sendPokerError(userID, tableID, "table is closed")
+		return
+	}
 	table.broadcastState(wsState, []uint{userID}, nil)
 }
 
@@ -774,6 +796,7 @@ func (wsState *WebSocketState) pokerKick(tableID uint, targetUserID uint) {
 	}
 
 	table.mutex.Lock()
+	found := true
 	if seatIdx := table.seatOf(targetUserID); seatIdx >= 0 {
 		if table.handActive {
 			table.foldSeatForLeaving(wsState, seatIdx)
@@ -788,9 +811,14 @@ func (wsState *WebSocketState) pokerKick(tableID uint, targetUserID uint) {
 		delete(table.spectators, targetUserID)
 		table.armOrDisarmAbandonedTimer(wsState)
 		table.broadcastState(wsState, table.recipients(), nil)
+	} else {
+		found = false
 	}
 	table.mutex.Unlock()
 
+	if !found {
+		return
+	}
 	if err := wsState.SendToTopic(targetUserID, TopicGame, PacketTypePokerKicked,
 		PacketPokerKicked{TableID: tableID, Reason: "kicked by host"}); err != nil {
 		fmt.Printf("Failed to send poker_kicked to user %d: %v\n", targetUserID, err)
@@ -883,8 +911,8 @@ func (wsState *WebSocketState) PokerTableLiveCounts(tableID uint) (seated int, s
 
 // MARK: broadcast
 
-func (wsState *WebSocketState) sendPokerError(userID uint, message string) {
-	if err := wsState.SendToTopic(userID, TopicGame, PacketTypeError, PacketError{Message: message}); err != nil {
+func (wsState *WebSocketState) sendPokerError(userID uint, tableID uint, message string) {
+	if err := wsState.SendToTopic(userID, TopicGame, PacketTypeError, PacketError{TableID: tableID, Message: message}); err != nil {
 		fmt.Printf("Failed to send poker error to user %d: %v\n", userID, err)
 	}
 }
