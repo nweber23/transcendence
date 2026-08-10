@@ -177,7 +177,9 @@ const PokerTable: React.FC = () => {
         }
         previousSeatRef.current = payload.your_seat;
       } else if (packet.packet_type === 'error') {
-        setError((packet.payload as { message: string }).message);
+        const payload = packet.payload as { table_id?: number; message: string };
+        if (payload.table_id !== undefined && payload.table_id !== numericTableId) return;
+        setError(payload.message);
       } else if (packet.packet_type === 'poker_kicked') {
         const payload = packet.payload as { table_id: number };
         if (payload.table_id !== numericTableId) return;
