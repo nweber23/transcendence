@@ -1,8 +1,10 @@
 package ws
 
 import (
-	"encoding/json"
 	"fmt"
+
+	"encoding/json"
+	"transcendence/services"
 )
 
 func (wsState *WebSocketState) Start() {
@@ -42,7 +44,7 @@ func (wsState *WebSocketState) handlePacket(packet packet) {
 		if err := json.Unmarshal(packet.Payload, &payload); err != nil {
 			return
 		}
-		chatMessageInfo := ChatMessageInfo{
+		chatMessageInfo := services.ChatMessageInfo{
 			ChatID:       payload.ChatID,
 			SenderUserID: payload.SenderUserID,
 			Message:      payload.Message,

@@ -303,6 +303,7 @@ func CreateWebSocketState(
 	notificationService *services.NotificationService,
 	gameService *services.GameService,
 	engineService *services.EngineService,
+	chatService *services.ChatService,
 ) *WebSocketState {
 	return &WebSocketState{
 		clients:             make(map[uint]*client),
