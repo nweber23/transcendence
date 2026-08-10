@@ -7,6 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccount, TransactionCategory } from '@/hooks/useAccount';
 import CasinoBackground from '@/components/ui/CasinoBackground';
 import Spinner from '@/components/ui/Spinner';
+import { BlackjackIcon, PokerIcon, SlotsIcon } from '@/components/icons/GameIcons';
+
+const QUICK_PLAY_GAMES = [
+  { label: 'Blackjack', tagline: 'Beat the dealer', path: '/games/blackjack', icon: BlackjackIcon, glow: 'rgba(45,122,99,0.35)', color: '#d4af37' },
+  { label: "Texas Hold'em", tagline: 'Take a seat at the table', path: '/games/poker', icon: PokerIcon, glow: 'rgba(212,175,55,0.3)', color: '#d4af37' },
+  { label: 'Slots', tagline: 'Spin the reels', path: '/games/slots', icon: SlotsIcon, glow: 'rgba(139,38,53,0.35)', color: '#d4af37' },
+];
 
 const MAX_TRANSACTION_AMOUNT = 1_000_000;
 
@@ -38,11 +45,18 @@ const Account: React.FC = () => {
   const [operationError, setOperationError] = useState<string | null>(null);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [justDeposited, setJustDeposited] = useState<string | null>(null);
   const [expandedTx, setExpandedTx] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<TransactionCategory>('all');
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const depositExceedsLimit = Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+
+  useEffect(() => {
+    if (!justDeposited) return;
+    const timeout = window.setTimeout(() => setJustDeposited(null), 15000);
+    return () => window.clearTimeout(timeout);
+  }, [justDeposited]);
 
   const handleCategoryChange = (nextCategory: TransactionCategory) => {
     if (nextCategory === activeCategory) return;
@@ -78,6 +92,7 @@ const Account: React.FC = () => {
     setDepositLoading(true);
     try {
       await deposit(depositAmount);
+      setJustDeposited(depositAmount);
       setDepositAmount('');
     } catch (err) {
       setOperationError(err instanceof Error ? err.message : 'Deposit failed');
@@ -222,7 +237,7 @@ const Account: React.FC = () => {
                 <button
                   type="submit"
                   disabled={depositLoading || !depositAmount || depositExceedsLimit}
-                  className="w-full py-3 rounded-lg bg-[rgba(45,122,99,0.12)] border border-[rgba(45,122,99,0.3)] text-emerald-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(45,122,99,0.22)] hover:border-[rgba(45,122,99,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-lg bg-[#1e5a45] text-[#e9f5ef] font-semibold text-sm uppercase tracking-wider hover:bg-[#247052] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {depositLoading ? 'Processing…' : 'Add Chips'}
                 </button>
@@ -258,7 +273,7 @@ const Account: React.FC = () => {
                 <button
                   type="submit"
                   disabled={withdrawLoading || !withdrawAmount}
-                  className="w-full py-3 rounded-lg bg-[rgba(139,38,53,0.12)] border border-[rgba(139,38,53,0.3)] text-red-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(139,38,53,0.22)] hover:border-[rgba(139,38,53,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-lg bg-[var(--red)] text-[#f6e3e6] font-semibold text-sm uppercase tracking-wider hover:bg-[#a12e40] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {withdrawLoading ? 'Processing…' : 'Cash Out'}
                 </button>
@@ -266,19 +281,46 @@ const Account: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick play */}
-          <div className="mb-8 p-5 rounded-2xl border border-[rgba(212,175,55,0.08)] bg-[var(--surface)]">
-            <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-3">Quick Play</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: 'Blackjack', path: '/games/blackjack' },
-                { label: 'Texas Hold\'em', path: '/games/poker' },
-                { label: 'Slots', path: '/games/slots' },
-              ].map((game) => (
-                <Link key={game.path} to={game.path}>
-                  <span className="inline-block px-5 py-2 rounded-full border border-[rgba(212,175,55,0.18)] bg-[var(--surface-2)] text-sm font-medium text-[var(--text-2)] hover:border-[rgba(212,175,55,0.45)] hover:text-[var(--text)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 cursor-pointer">
-                    {game.label}
+          {/* Play — the conversion point from adding chips to actually playing */}
+          <div className={`mb-8 p-5 md:p-6 rounded-2xl border bg-[var(--surface)] transition-colors duration-500 ${
+            justDeposited ? 'border-[rgba(45,122,99,0.5)]' : 'border-[rgba(212,175,55,0.1)]'
+          }`}>
+            {justDeposited ? (
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-7 h-7 rounded-full bg-[rgba(45,122,99,0.18)] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-[var(--text)]">
+                  ${Number(justDeposited).toLocaleString()} added — ready to play
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs uppercase tracking-widest font-semibold text-[var(--text-3)] mb-4">Play Now</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {QUICK_PLAY_GAMES.map(({ label, tagline, path, icon: Icon, glow, color }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  onClick={() => setJustDeposited(null)}
+                  className="group card-transition flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[rgba(212,175,55,0.2)] bg-[var(--surface-2)] hover:border-[rgba(212,175,55,0.55)] hover:bg-[rgba(212,175,55,0.08)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                >
+                  <span className="relative w-12 h-11 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <span
+                      className="absolute inset-0"
+                      style={{ background: `radial-gradient(ellipse 75% 75% at 50% 50%, ${glow} 0%, transparent 75%)` }}
+                    />
+                    <Icon width={40} height={34} className="relative z-10 card-icon" />
                   </span>
+                  <span className="flex flex-col leading-tight">
+                    <span className="font-serif text-base font-semibold" style={{ color }}>{label}</span>
+                    <span className="text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">{tagline}</span>
+                  </span>
+                  <svg className="w-4 h-4 ml-auto flex-shrink-0 text-[var(--gold)] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
                 </Link>
               ))}
             </div>

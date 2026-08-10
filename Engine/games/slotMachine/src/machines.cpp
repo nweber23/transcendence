@@ -274,26 +274,33 @@ SpinResult Machine::get_monetary_result(std::string_view game_name,
 
     auto eval = evaluate_spin(cfg, stops, line_count);
     auto grid = resolve_grid(cfg, stops);
-    double total = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
+    double base_total = eval.payline_win * bet_per_line + eval.scatter_win * line_count * bet_per_line;
+    auto base_win = static_cast<std::uint32_t>(base_total);
 
-    if (is_free_spin) {
-        total *= fs_state.current_multiplier;
-    }
+    auto total_win = is_free_spin
+        ? base_win * static_cast<std::uint32_t>(fs_state.current_multiplier)
+        : base_win;
 
     if (cfg.max_win_multiplier > 0) {
-        double max_win = static_cast<double>(cfg.max_win_multiplier) * line_count * bet_per_line;
-        if (total > max_win) {
-            total = max_win;
+        auto max_win = static_cast<std::uint32_t>(cfg.max_win_multiplier) * line_count * bet_per_line;
+        if (total_win > max_win) {
+            total_win = max_win;
         }
     }
-
-    auto total_win = static_cast<std::uint32_t>(total);
 
     if (is_free_spin) {
         if (fs_state.free_spins_remaining > 0) {
             --fs_state.free_spins_remaining;
         }
         fs_state.total_free_win += total_win;
+
+        // Increment multiplier for next free spin
+        if (fs_state.free_spins_remaining > 0) {
+            fs_state.current_multiplier = std::min(
+                static_cast<std::uint8_t>(fs_state.current_multiplier + cfg.free_spin_multiplier_increment),
+                cfg.free_spin_max_multiplier
+            );
+        }
     } else {
         if (eval.bonus_triggered && cfg.free_spin_count > 0) {
             fs_state.free_spins_remaining = cfg.free_spin_count;

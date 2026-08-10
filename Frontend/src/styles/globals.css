@@ -90,15 +90,6 @@
     pointer-events: none;
   }
 
-  .glow-emerald {
-    background: radial-gradient(
-      ellipse 60% 55% at 50% 50%,
-      rgba(45, 122, 99, 0.13) 0%,
-      transparent 100%
-    );
-    pointer-events: none;
-  }
-
   /* Better text rendering */
   body {
     -webkit-font-smoothing: antialiased;
@@ -413,6 +404,19 @@
 
 .banner-pop {
   animation: banner-pop 360ms var(--ease-out) 120ms backwards;
+}
+
+@keyframes banner-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Pops in like .banner-pop, holds, then fades itself out — no JS timer needed */
+.banner-result {
+  animation:
+    banner-pop 360ms var(--ease-out) 120ms backwards,
+    banner-fade-out 500ms ease-in 2000ms forwards;
 }
 
 @keyframes chip-pop {

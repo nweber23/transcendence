@@ -486,7 +486,7 @@ func (table *PokerTable) advanceAfterAction(wsState *WebSocketState) {
 func (table *PokerTable) finishHand() *PacketPokerHandResult {
 	state := table.engineGame.State()
 
-	var winners []PacketPokerHandWinner
+	winners := []PacketPokerHandWinner{}
 	for seatIdx, playerIdx := range table.playerOfSeat {
 		seat := table.seats[seatIdx]
 		if seat == nil || playerIdx >= len(state.Players) {

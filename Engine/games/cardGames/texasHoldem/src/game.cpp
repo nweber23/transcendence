@@ -137,6 +137,11 @@ void Game::start_new_hand() {
     for (auto& p : _players) {
         p.reset_hand();
     }
+    // The same Game plays many hands in a row (see the class comment) without
+    // ever being reconstructed, so the deck must be reshuffled here — it only
+    // shuffles itself once, in its own constructor, otherwise it runs dry
+    // after a couple of hands.
+    _deck.reshuffle();
 }
 
 Phase Game::phase() const noexcept {

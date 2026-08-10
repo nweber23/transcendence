@@ -6,6 +6,7 @@ import (
 	"transcendence/config"
 	"transcendence/handlers"
 	"transcendence/middleware"
+	"transcendence/oauth"
 	"transcendence/services"
 	"transcendence/ws"
 
@@ -21,10 +22,20 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		// The /ws route receives its JWT as a query parameter (browsers can't
+		// set custom headers on a WebSocket handshake), so query strings must
+		// never be logged or the token ends up in plaintext logs.
+		SkipQueryString: true,
+	}))
+	router.Use(gin.Recovery())
 
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
+
+	// Max body size middleware (limit to 1MB)
+	router.Use(middleware.MaxBodySize(1 << 20)) // 1MB
 
 	// Prometheus request metrics + scrape endpoint
 	router.Use(middleware.PrometheusMiddleware())
@@ -41,6 +52,13 @@ func main() {
 	chatService         := services.NewChatService(db)
 
 	log.Printf("add chat message error: %v\n", err)
+	oauthService := services.NewOauthService()
+
+	// Initialize OAuth Providers
+	githubOauthProvider := oauth.NewGitHubProvider(cfg.GithubClientId, cfg.GithubSecret, cfg.GithubRedirectURL)
+	oauthService.RegisterProvider("github", githubOauthProvider)
+	googleOauthProvider := oauth.NewGoogleProvider(cfg.GoogleClientId, cfg.GoogleSecret, cfg.GoogleRedirectURL)
+	oauthService.RegisterProvider("google", googleOauthProvider)
 
 	// Intialize engine service
 	engineService, err := services.NewEngineService(cfg.EngineHost, cfg.EnginePort)
@@ -53,10 +71,10 @@ func main() {
 
 	// Initialize WebSockets
 	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
-	go wsState.Main()
+	go wsState.Start()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
+	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
 	chatHandler := handlers.NewChatHandler(chatService, friendService)
@@ -68,6 +86,8 @@ func main() {
 		authRoutes.POST("/register", authHandler.Register)
 		authRoutes.POST("/login", authHandler.Login)
 		authRoutes.POST("/logout", authHandler.Logout)
+		authRoutes.GET("/:provider", authHandler.OauthLogin)
+		authRoutes.GET("/:provider/callback", authHandler.OauthCallback)
 	}
 
 	// User routes (protected)
@@ -87,6 +107,7 @@ func main() {
 		userRoutes.GET("/search", userHandler.SearchUsers)
 		userRoutes.DELETE("/:id/notifications", userHandler.RemoveNotification)
 		userRoutes.GET("/notifications", userHandler.EnumerateNotifications)
+		userRoutes.PUT("/notifications/seen", userHandler.MarkNotificationsSeen)
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 	}

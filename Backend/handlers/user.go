@@ -3,12 +3,14 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"net/http"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"path/filepath"
 
 	"transcendence/middleware"
@@ -90,6 +92,15 @@ type FriendResponse struct {
 
 type RemoveNotificationResponse struct {
 	NotificationID uint `json:"notification_id"`
+}
+
+type NotificationsResponse struct {
+	Notifications []models.Notification `json:"notifications"`
+	LastSeenAt    *time.Time             `json:"last_seen_at"`
+}
+
+type NotificationsSeenResponse struct {
+	LastSeenAt time.Time `json:"last_seen_at"`
 }
 
 type UserProfileRequest struct {
@@ -224,22 +235,17 @@ func resolveAvatarURL(avatarURL string) string {
 	return avatarURL
 }
 
-func createRelatedURL(uploadFilePath string) (string, error) {
-	fileName := filepath.Base(uploadFilePath)
-	if fileName == "." || fileName == "/" {
-		return "", utils.ErrInvalidFilename
-	}
-	fileDots := strings.Split(fileName, ".")
-	fileExtension := ""
-	if len(fileDots) > 1 {
-		fileExtension = "." + fileDots[len(fileDots) - 1]
-	}
+// createUploadFilename generates a random filename with the given
+// (already-validated) extension. The extension must never be derived from a
+// client-supplied filename — see DetectAvatarExtension, which derives it
+// from the file's actual content instead.
+func createUploadFilename(extension string) (string, error) {
 	for {
 		fileURL, err := utils.GetRandomHexString(16)
 		if err != nil {
 			return "", utils.ErrRandomStringGenFailed
 		}
-		fileURL += fileExtension
+		fileURL += extension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
 			if os.IsNotExist(err) {
 				return fileURL, nil
@@ -261,6 +267,28 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
 		return
 	}
+	src, err := file.Open()
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	defer src.Close()
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	extension, err := utils.DetectAvatarExtension(header[:n])
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "unsupported_file_type", "Avatar must be a JPEG, PNG, GIF, or WebP image")
+		return
+	}
+	if _, err := src.Seek(0, io.SeekStart); err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "read_file_failed", err.Error())
+		return
+	}
+
 	err = os.Mkdir("./uploads/", os.ModeDir | os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
@@ -272,18 +300,13 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	oldURL := user.AvatarURL
-	user.AvatarURL, err = createRelatedURL(file.Filename)
+	user.AvatarURL, err = createUploadFilename(extension)
 	if err != nil {
-		var status int
-		if errors.Is(err, utils.ErrInvalidFilename) {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-		utils.RespondError(c, status, "create_url_failed", err.Error())
+		utils.RespondError(c, http.StatusInternalServerError, "create_url_failed", err.Error())
 		return
 	}
-	if err := c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL)); err != nil {
+	dst, err := os.Create(filepath.Join("./uploads/", user.AvatarURL))
+	if err != nil {
 		var status int
 		if errors.Is(err, syscall.ENOSPC) {
 			status = http.StatusInsufficientStorage
@@ -293,6 +316,12 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, status, "save_uploaded_file_failed", err.Error())
 		return
 	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		utils.RespondError(c, http.StatusInternalServerError, "save_uploaded_file_failed", err.Error())
+		return
+	}
+	dst.Close()
 	user, err = uh.userService.UpdateUser(
 		userID.(uint),
 		user.Username,
@@ -440,6 +469,8 @@ func (uh *UserHandler) GetTransactionHistory(c *gin.Context) {
 	utils.RespondSuccess(c, http.StatusOK, "Transaction history retrieved successfully", response)
 }
 
+const maxDeposit = 1_000_000
+
 // Deposit adds funds to user's account
 func (uh *UserHandler) Deposit(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -452,7 +483,8 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return
@@ -461,6 +493,11 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount must be greater than zero")
 		return
 	}
+	if amount.GreaterThan(decimal.NewFromInt(maxDeposit)) {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount exceeds maximum allowed")
+		return
+	}
+
 	if err := uh.accountService.Deposit(userID.(uint), amount); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "deposit_failed", err.Error())
 		return
@@ -498,7 +535,7 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return
@@ -752,10 +789,29 @@ func (uh *UserHandler) RemoveNotification(c *gin.Context) {
 	}
 }
 
+func (uh *UserHandler) MarkNotificationsSeen(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	seenAt, err := uh.userService.MarkNotificationsSeen(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "mark_notifications_seen_failed", err.Error())
+		return
+	}
+	utils.RespondSuccess(c, http.StatusOK, "Notifications marked as seen", NotificationsSeenResponse{LastSeenAt: *seenAt})
+}
+
 func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	user, err := uh.userService.GetUserByID(userID.(uint))
+	if err != nil {
+		utils.RespondError(c, http.StatusNotFound, "user_not_found", err.Error())
 		return
 	}
 	limit, err := strconv.Atoi(c.Query("limit"))
@@ -811,5 +867,8 @@ func (uh *UserHandler) EnumerateNotifications(c *gin.Context) {
 			notifications[i].ImageURL = resolveAvatarURL(notifications[i].ImageURL)
 		}
 	}
-	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", notifications)
+	utils.RespondSuccess(c, http.StatusOK, "Notifications retrieved successfully", NotificationsResponse{
+		Notifications: notifications,
+		LastSeenAt:    user.NotificationsSeenAt,
+	})
 }
