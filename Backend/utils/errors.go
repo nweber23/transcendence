@@ -36,6 +36,10 @@ var (
 	ErrEntryExists             = errors.New("matching entry already exists")
 	ErrNotificationIsNotYours  = errors.New("notification is not yours")
 	ErrDuplicateParticipantIDs = errors.New("duplicate participant ids")
+
+	ErrAvatarDownloadFailed  = errors.New("failed to download avatar")
+	ErrAvatarTooLarge        = errors.New("avatar image too large")
+	ErrUnsupportedAvatarType = errors.New("unsupported avatar file type")
 )
 
 func IsErrInvalid(err error) bool {
