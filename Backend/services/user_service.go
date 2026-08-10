@@ -233,7 +233,7 @@ func (s *UserService) ConfirmTwoFactor(userID uint, code string) ([]string, erro
 	if user.TwoFactorSecret == "" {
 		return nil, utils.ErrTwoFactorNotSetUp
 	}
-	if !totp.Validate(code, user.TwoFactorSecret) {
+	if !isSixDigitCode(code) || !totp.Validate(code, user.TwoFactorSecret) {
 		return nil, utils.ErrInvalidTwoFactorCode
 	}
 	backupCodes, hashedCodes, err := generateBackupCodes()
@@ -260,7 +260,7 @@ func (s *UserService) VerifyTwoFactorCode(userID uint, code string) (bool, error
 	if !user.TwoFactorEnabled {
 		return false, utils.ErrTwoFactorNotEnabled
 	}
-	if totp.Validate(code, user.TwoFactorSecret) {
+	if isSixDigitCode(code) && totp.Validate(code, user.TwoFactorSecret) {
 		return true, nil
 	}
 	hashedCodes := utils.OrdinalSplit(user.TwoFactorBackupCodes, ",")
@@ -296,6 +296,21 @@ func (s *UserService) DisableTwoFactor(userID uint, password string) error {
 		return fmt.Errorf("failed to disable two-factor authentication: %w", err)
 	}
 	return nil
+}
+
+// isSixDigitCode reports whether code has the shape of a TOTP code (exactly
+// six digits) so obviously-malformed input can be rejected outright instead
+// of running it through totp.Validate.
+func isSixDigitCode(code string) bool {
+	if len(code) != 6 {
+		return false
+	}
+	for _, r := range code {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // generateBackupCodes returns backupCodeCount single-use recovery codes

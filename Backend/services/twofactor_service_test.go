@@ -84,6 +84,27 @@ func TestConfirmTwoFactorRejectsInvalidCode(testInterface *testing.T) {
 	}
 }
 
+func TestConfirmTwoFactorRejectsWrongLengthCodesWithoutValidating(testInterface *testing.T) {
+	_, userService, _, _ := createMockServices(testInterface)
+	userID := setupTwoFactorUser(testInterface, userService)
+
+	key, err := userService.SetupTwoFactor(userID)
+	if err != nil {
+		testInterface.Fatalf("SetupTwoFactor failed: %v", err)
+	}
+	// A valid code padded/truncated is still the wrong shape and must be
+	// rejected outright rather than passed to totp.Validate.
+	validCode, err := totp.GenerateCode(key.Secret(), time.Now())
+	if err != nil {
+		testInterface.Fatalf("failed to generate TOTP code: %v", err)
+	}
+	for _, malformed := range []string{validCode[:5], validCode + "0", "abcdef", ""} {
+		if _, err := userService.ConfirmTwoFactor(userID, malformed); !errors.Is(err, utils.ErrInvalidTwoFactorCode) {
+			testInterface.Fatalf("expected ErrInvalidTwoFactorCode for code %q, got %v", malformed, err)
+		}
+	}
+}
+
 func TestVerifyTwoFactorCodeAcceptsTOTP(testInterface *testing.T) {
 	_, userService, _, _ := createMockServices(testInterface)
 	userID := setupTwoFactorUser(testInterface, userService)
@@ -118,6 +139,33 @@ func TestVerifyTwoFactorCodeAcceptsTOTP(testInterface *testing.T) {
 	}
 	if ok {
 		testInterface.Fatalf("expected an invalid code to fail verification")
+	}
+}
+
+func TestVerifyTwoFactorCodeRejectsWrongLengthCodes(testInterface *testing.T) {
+	_, userService, _, _ := createMockServices(testInterface)
+	userID := setupTwoFactorUser(testInterface, userService)
+
+	key, err := userService.SetupTwoFactor(userID)
+	if err != nil {
+		testInterface.Fatalf("SetupTwoFactor failed: %v", err)
+	}
+	setupCode, err := totp.GenerateCode(key.Secret(), time.Now())
+	if err != nil {
+		testInterface.Fatalf("failed to generate TOTP code: %v", err)
+	}
+	if _, err := userService.ConfirmTwoFactor(userID, setupCode); err != nil {
+		testInterface.Fatalf("ConfirmTwoFactor failed: %v", err)
+	}
+
+	for _, malformed := range []string{"12345", "1234567", ""} {
+		ok, err := userService.VerifyTwoFactorCode(userID, malformed)
+		if err != nil {
+			testInterface.Fatalf("VerifyTwoFactorCode failed for code %q: %v", malformed, err)
+		}
+		if ok {
+			testInterface.Fatalf("expected code %q to be rejected", malformed)
+		}
 	}
 }
 

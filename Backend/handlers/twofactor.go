@@ -133,5 +133,7 @@ func (uh *UserHandler) DisableTwoFactor(c *gin.Context) {
 		"Your account no longer requires an authenticator code to sign in",
 		"/account/profile",
 	)
-	utils.RespondSuccess(c, http.StatusOK, "Two-factor authentication disabled", nil)
+	// APIResponse.Data uses `json:"data,omitempty"`, so a literal nil here would
+	// drop the "data" key entirely and trip the frontend's `'data' in result` check.
+	utils.RespondSuccess(c, http.StatusOK, "Two-factor authentication disabled", struct{}{})
 }
