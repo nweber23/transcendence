@@ -205,6 +205,9 @@ func (s *UserService) SetupTwoFactor(userID uint) (*otp.Key, error) {
 	if user.TwoFactorEnabled {
 		return nil, utils.ErrTwoFactorAlreadyEnabled
 	}
+	if user.PasswordHash == "" {
+		return nil, utils.ErrTwoFactorRequiresPassword
+	}
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      twoFactorIssuer,
 		AccountName: user.Username,

@@ -48,10 +48,11 @@ var (
 	ErrPokerTableHasSeatedPlayers = errors.New("buy-in, blinds, and max seats can't change while players are seated")
 	ErrPokerHandInProgress        = errors.New("can't close the table while a hand is in progress, try again shortly")
 
-	ErrTwoFactorAlreadyEnabled = errors.New("two-factor authentication is already enabled")
-	ErrTwoFactorNotSetUp       = errors.New("two-factor authentication setup was not started")
-	ErrTwoFactorNotEnabled     = errors.New("two-factor authentication is not enabled")
-	ErrInvalidTwoFactorCode    = errors.New("invalid two-factor authentication code")
+	ErrTwoFactorAlreadyEnabled   = errors.New("two-factor authentication is already enabled")
+	ErrTwoFactorNotSetUp         = errors.New("two-factor authentication setup was not started")
+	ErrTwoFactorNotEnabled       = errors.New("two-factor authentication is not enabled")
+	ErrInvalidTwoFactorCode      = errors.New("invalid two-factor authentication code")
+	ErrTwoFactorRequiresPassword = errors.New("a password must be set on this account before enabling two-factor authentication")
 )
 
 func IsErrInvalid(err error) bool {

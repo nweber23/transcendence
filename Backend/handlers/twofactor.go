@@ -43,8 +43,11 @@ func (uh *UserHandler) SetupTwoFactor(c *gin.Context) {
 	key, err := uh.userService.SetupTwoFactor(userID.(uint))
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, utils.ErrTwoFactorAlreadyEnabled) {
+		switch {
+		case errors.Is(err, utils.ErrTwoFactorAlreadyEnabled):
 			status = http.StatusConflict
+		case errors.Is(err, utils.ErrTwoFactorRequiresPassword):
+			status = http.StatusBadRequest
 		}
 		utils.RespondError(c, status, "two_factor_setup_failed", err.Error())
 		return
