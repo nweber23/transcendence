@@ -70,7 +70,14 @@ func main() {
 	gameService := services.NewGameService(db, engineService)
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
+	wsState := ws.CreateWebSocketState(
+		userService,
+		friendService,
+		notificationService,
+		gameService,
+		engineService,
+		chatService,
+	)
 	go wsState.Start()
 
 	// Initialize handlers

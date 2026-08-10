@@ -37,6 +37,28 @@ func (wsState *WebSocketState) handlePacket(packet packet) {
 			return
 		}
 		wsState.pokerPlay(packet.userID, payload.Action, payload.Amount)
+	case PacketTypeChatMessage:
+		var payload PacketChatMessage
+		if err := json.Unmarshal(packet.Payload, &payload); err != nil {
+			return
+		}
+		chatMessageInfo := ChatMessageInfo{
+			ChatID:       payload.ChatID,
+			SenderUserID: payload.SenderUserID,
+			Message:      payload.Message,
+			ImageURL:     payload.ImageURL,
+		}
+		_, err := wsState.chatService.AddChatMessage(chatMessageInfo)
+		if err != nil {
+			return
+		}
+		participants, err := wsState.chatService.EnumerateAllParticipantsOf(payload.ChatID)
+		if err != nil {
+			return
+		}
+		for _, participant := range participants {
+			wsState.SendToTopic(participant.UserID, TopicChat, PacketTypeChatMessage, payload)
+		}
 	default:
 		fmt.Printf("Received unknown packet type %q from %d\n", packet.PacketType, packet.userID)
 	}

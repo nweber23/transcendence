@@ -128,6 +128,15 @@ type PacketError struct {
 	Message string `json:"message"`
 }
 
+// PacketChatMessage is a meessage that is received from senders and echoed to
+// all receivers in thge same corresponding chat
+type PacketChatMessage struct {
+	ChatID       uint
+	SenderUserID uint
+	Message      string
+	ImageURL     string
+}
+
 const (
 	PacketTypeOnline       = "online"
 	PacketTypeNotification = "notification"
@@ -137,6 +146,7 @@ const (
 	PacketTypeSync         = "sync"
 	PacketTypePokerState   = "poker_state"
 	PacketTypeError        = "error"
+	PacketTypeChatMessage  = "chat_message"
 
 	// packetTypeDisconnected is a server-internal packet type — never sent
 	// by a real client — used to route a user's disconnect through the same
@@ -283,6 +293,7 @@ type WebSocketState struct {
 	notificationService *services.NotificationService
 	gameService         *services.GameService
 	engineService       *services.EngineService
+	chatService         *services.ChatService
 	pokerTable          *PokerTable
 }
 
@@ -301,6 +312,7 @@ func CreateWebSocketState(
 		notificationService: notificationService,
 		gameService:         gameService,
 		engineService:       engineService,
+		chatService:         chatService,
 		pokerTable:          newPokerTable(),
 	}
 }

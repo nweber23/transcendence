@@ -141,3 +141,11 @@ func (s *ChatService) EnumerateMessagesOf(chatID uint, offset int, limit int) ([
 	}
 	return chatMessages, nil
 }
+
+func (s *ChatService) EnumerateAllParticipantsOf(chatID uint) ([]models.ChatParticipant, error) {
+	var participants []models.ChatParticipant
+	if err := s.db.Where("chat_id = ?", chatID).Find(&participants).Error; err != nil {
+		return nil, err
+	}
+	return participants, nil
+}
