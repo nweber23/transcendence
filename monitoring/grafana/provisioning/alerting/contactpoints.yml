@@ -12,6 +12,13 @@ contactPoints:
           title: "{{ .CommonAnnotations.summary }}"
           message: |
             {{ range .Alerts }}
-            **{{ .Labels.alertname }}** [{{ .Labels.severity }}]
+            **{{ .Labels.alertname }}** [{{ .Labels.severity | toUpper }}]
             {{ .Annotations.description }}
+            {{ if .SilenceURL }}[View in Grafana]({{ .SilenceURL }}){{ end }}
             {{ end }}
+          # Optional: add email as fallback
+          # - uid: email-1
+          #   type: email
+          #   settings:
+          #     addresses: "alerts@example.com"
+          #     from_address: "grafana@example.com"
