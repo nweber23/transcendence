@@ -139,9 +139,7 @@ const ProfilePage: React.FC = () => {
   const setHaveNotificationTypesIndex = (index: number) => {
     return (value: boolean) => {
       var nextHaveNotificationTypes: boolean[] = structuredClone(haveNotificationTypes);
-      console.log("Before:", nextHaveNotificationTypes);
       nextHaveNotificationTypes[index] = value;
-      console.log("After:", nextHaveNotificationTypes);
       setHaveNotificationTypes(nextHaveNotificationTypes);
     };
   };
@@ -279,7 +277,6 @@ const ProfilePage: React.FC = () => {
       setNotificationSettingsSuccess(true);
       setTimeout(() => setNotificationSettingsSuccess(false), 3000);
     } catch(err) {
-      console.log(err instanceof Error ? err.message : 'Apply failed');
       setNotificationSettingsError(err instanceof Error ? err.message : 'Apply failed');
     } finally {
       setNotificationSettingsApplying(false);
