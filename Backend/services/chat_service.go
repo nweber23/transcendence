@@ -11,39 +11,54 @@ type ChatService struct {
 	db *gorm.DB
 }
 
+type ChatState struct {
+	ChatID       uint
+	YoureAdmin   bool
+	Participants []models.ChatParticipant
+}
+
 func NewChatService(db *gorm.DB) *ChatService {
 	return &ChatService{db: db}
 }
 
-func (s *ChatService) CreateChat(participantIDs []uint) (uint, error) {
+func (s *ChatService) CreateChat(chat models.Chat, participants []models.ChatParticipant) (uint, error) {
 	userService := NewUserService(s.db)
-	leftIndex := 0
-	for leftIndex < len(participantIDs) {
-		if !userService.DoesUserExist(participantIDs[leftIndex]) {
+	for _, participant := range participants {
+		if !userService.DoesUserExist(participant.UserID) {
 			return 0, utils.ErrInvalidUserID
 		}
-		rightIndex := leftIndex + 1
-		for rightIndex < len(participantIDs) {
-			if participantIDs[leftIndex] == participantIDs[rightIndex] {
-				return 0, utils.ErrDuplicateParticipantIDs
-			}
-			rightIndex++
-		}
-		leftIndex++
 	}
-	participants := make([]models.ChatParticipant, len(participantIDs))
-	for participantIndex, participantID := range participantIDs {
-		participants[participantIndex] = models.ChatParticipant{
-			UserID: participantID,
-		}
-	}
-	chat := &models.Chat{
-		Participants: participants,
-	}
-	if err := s.db.Create(chat).Error; err != nil {
+	if err := s.db.Create(&chat).Error; err != nil {
 		return 0, err
 	}
-	return chat.ID, nil
+	for participantIndex, _ := range participants {
+		participants[participantIndex].ChatID = chat.ID
+	}
+	return chat.ID, s.db.CreateInBatches(&participants, len(participants)).Error
+}
+
+func (s *ChatService) EnumerateChatsIncludingParticipants(userID uint, offset int, limit int) ([]ChatState, error) {
+	var participantsSelf []models.ChatParticipant
+	if err := s.db.Select("chat_id").Where("user_id = ?", userID).Find(&participantsSelf).Error; err != nil {
+		return nil, err
+	}
+	chatStates := make([]ChatState, len(participantsSelf))
+	for stateIndex, participantSelf := range participantsSelf {
+		var participants []models.ChatParticipant
+		if err := s.db.
+			Where("chat_id = ?", participantSelf.ChatID).
+			Find(&participants).
+			Offset(offset).
+			Limit(limit).
+		Error; err != nil {
+			return nil, err
+		}
+		chatState := &chatStates[stateIndex]
+		chatState.ChatID       = participantSelf.ChatID
+		chatState.YoureAdmin   = participantSelf.IsAdmin
+		chatState.Participants = participants
+	}
+	return chatStates, nil
 }
 
 func (s *ChatService) DoesChatExist(chatID uint) (bool) {
@@ -52,7 +67,12 @@ func (s *ChatService) DoesChatExist(chatID uint) (bool) {
 	return err == nil
 }
 
-func (s *ChatService) AddParticipant(participant models.ChatParticipant) (*models.ChatParticipant, error) {
+func (s *ChatService) GetParticipant(participant models.ChatParticipant) (*models.ChatParticipant, error) {
+	err := s.db.Where("chat_id = ? AND user_id = ?", participant.ChatID, participant.UserID).First(&participant).Error
+	return &participant, err
+}
+
+func (s *ChatService) SetParticipant(participant models.ChatParticipant) (*models.ChatParticipant, error) {
 	if !s.DoesChatExist(participant.ChatID) {
 		return nil, utils.ErrInvalidChatID
 	}
@@ -60,7 +80,7 @@ func (s *ChatService) AddParticipant(participant models.ChatParticipant) (*model
 	if !userService.DoesUserExist(participant.UserID) {
 		return nil, utils.ErrInvalidUserID
 	}
-	if err := s.db.Create(&participant).Error; err != nil {
+	if err := s.db.Save(&participant).Error; err != nil {
 		return nil, err
 	}
 	return &participant, nil
@@ -89,8 +109,10 @@ type ChatMessageInfo struct {
 }
 
 func (s *ChatService) AddChatMessage(info ChatMessageInfo) (*models.ChatMessage, error) {
-	var participant models.ChatParticipant
-	err := s.db.Where("chat_id = ? AND user_id = ?", info.ChatID, info.SenderUserID).First(&participant).Error
+	_, err := s.GetParticipant(models.ChatParticipant{
+		ChatID: info.ChatID,
+		UserID: info.SenderUserID,
+	})
 	if err != nil {
 		return nil, err
 	}

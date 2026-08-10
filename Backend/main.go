@@ -59,6 +59,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(userService, cfg.JWTSecret, cfg.JWTExpiration)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	chatHandler := handlers.NewChatHandler(chatService, friendService)
 	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
@@ -98,6 +99,21 @@ func main() {
 		gameRoutes.POST("", gameHandler.CreateGame)
 		gameRoutes.GET("/:id", gameHandler.GetGame)
 		gameRoutes.POST("/:id/action", gameHandler.ExecuteAction)
+	}
+
+	// Chat routes (protected)
+	chatRoutes := router.Group("/chat")
+	chatRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		chatRoutes.POST("", chatHandler.CreateChat)
+		chatRoutes.GET("", chatHandler.EnumerateChats)
+		internalChatRoutes := chatRoutes.Group("/:chat_id")
+		internalChatRoutes.Use(middleware.ValidateChatMembership(chatService))
+		{
+			chatRoutes.GET("/:chat_id", chatHandler.EnumerateMessages)
+			chatRoutes.PUT("/:chat_id/:user_id", chatHandler.SetParticipant)
+			chatRoutes.DELETE("/:chat_id/:user_id", chatHandler.RemoveParticipant)
+		}
 	}
 
 	// WebSocket route
