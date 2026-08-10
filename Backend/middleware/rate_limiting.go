@@ -1,38 +1,49 @@
 package middleware
 
 import (
+	"net/http"
+	"strconv"
+	"sync"
 	"time"
 
-	"net/http"
 	"transcendence/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
+var retryAfterMutex sync.Mutex
 var retryAfterShared time.Time
-var retryAfters map[uint]*time.Time = make(map[uint]*time.Time)
+var retryAfters = make(map[uint]time.Time)
 
 func CreateRateLimiter(minimumDelayInMilliseconds uint) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userInterfaceID, exists := c.Get("user_id")
-		var retryAfterPT *time.Time
+		currentTime := time.Now()
+
+		retryAfterMutex.Lock()
+		defer retryAfterMutex.Unlock()
+
+		var retryAfter time.Time
 		if exists {
 			userID := userInterfaceID.(uint)
-			if retryAfters[userID] == nil {
-				retryAfters[userID] = &time.Time{}
+			retryAfter = retryAfters[userID]
+			if currentTime.Before(retryAfter) {
+				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Sub(currentTime).Seconds()+1)))
+				utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "stop sending so many requests")
+				c.Abort()
+				return
 			}
-			retryAfterPT = retryAfters[userID]
+			retryAfters[userID] = currentTime.Add(time.Duration(minimumDelayInMilliseconds) * time.Millisecond)
 		} else {
-			retryAfterPT = &retryAfterShared
+			retryAfter = retryAfterShared
+			if currentTime.Before(retryAfter) {
+				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Sub(currentTime).Seconds()+1)))
+				utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "stop sending so many requests")
+				c.Abort()
+				return
+			}
+			retryAfterShared = currentTime.Add(time.Duration(minimumDelayInMilliseconds) * time.Millisecond)
 		}
-		var currentTime time.Time = time.Now()
-		if currentTime.Before(*retryAfterPT) {
-			c.Header("Retry-After", currentTime.Format("Wed, 01 02 2006 15:04:05 GMT"))
-			utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "stop sending so many requests")
-			c.Abort()
-			return
-		}
-		*retryAfterPT = currentTime.Add(time.Duration(minimumDelayInMilliseconds * 1000000))
 		c.Next()
 	}
 }
