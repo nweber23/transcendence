@@ -119,7 +119,7 @@ func main() {
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
 		userRoutes.POST("/2fa/setup", userHandler.SetupTwoFactor)
-		userRoutes.POST("/2fa/verify", userHandler.ConfirmTwoFactor)
+		userRoutes.POST("/2fa/verify", middleware.CreateRateLimiter(2000), userHandler.ConfirmTwoFactor)
 		userRoutes.DELETE("/2fa", userHandler.DisableTwoFactor)
 	}
 

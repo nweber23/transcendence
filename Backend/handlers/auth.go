@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"log"
 	"net/http"
+	"strconv"
 
 	"transcendence/middleware"
 	"transcendence/services"
@@ -24,12 +25,18 @@ func isSecureRequest(c *gin.Context) bool {
 }
 
 type AuthHandler struct {
-	userService  *services.UserService
-	oauthService *services.OauthService
-	jwtSecret    string
-	jwtExpiry    int64
-	frontendURL  string
+	userService        *services.UserService
+	oauthService       *services.OauthService
+	jwtSecret          string
+	jwtExpiry          int64
+	frontendURL        string
+	twoFactorRateLimit *middleware.KeyedRateLimiter
 }
+
+// twoFactorVerifyMinDelayMs throttles login-challenge attempts per user to
+// mitigate brute-forcing a 6-digit TOTP/backup code once an attacker already
+// has valid account credentials.
+const twoFactorVerifyMinDelayMs = 2000
 
 func NewAuthHandler(
 	userService *services.UserService,
@@ -38,11 +45,12 @@ func NewAuthHandler(
 	frontendURL string,
 ) *AuthHandler {
 	return &AuthHandler{
-		userService:  userService,
-		oauthService: oauthService,
-		jwtSecret:    jwtSecret,
-		jwtExpiry:    jwtExpiry,
-		frontendURL:  frontendURL,
+		userService:        userService,
+		oauthService:       oauthService,
+		jwtSecret:          jwtSecret,
+		jwtExpiry:          jwtExpiry,
+		frontendURL:        frontendURL,
+		twoFactorRateLimit: middleware.NewKeyedRateLimiter(twoFactorVerifyMinDelayMs),
 	}
 }
 
@@ -143,6 +151,11 @@ func (h *AuthHandler) VerifyTwoFactorLogin(c *gin.Context) {
 	claims, err := utils.ValidateToken(req.TempToken, h.jwtSecret)
 	if err != nil || claims.Purpose != utils.TwoFactorPurpose {
 		utils.RespondError(c, http.StatusUnauthorized, "invalid_token", "invalid or expired two-factor challenge")
+		return
+	}
+	if blocked, retryAfter := h.twoFactorRateLimit.Allow(claims.UserID); blocked {
+		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds()+1)))
+		utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "too many attempts, please wait before retrying")
 		return
 	}
 	ok, err := h.userService.VerifyTwoFactorCode(claims.UserID, req.Code)
