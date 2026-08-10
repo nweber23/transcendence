@@ -11,9 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const cleanupInterval = 5 * time.Minute
+
 func CreateRateLimiter(minimumDelayInMilliseconds uint) gin.HandlerFunc {
 	var mutex sync.Mutex
 	var shared time.Time
+	var lastCleanup time.Time
 	retryAfters := make(map[uint]time.Time)
 
 	return func(c *gin.Context) {
@@ -21,6 +24,14 @@ func CreateRateLimiter(minimumDelayInMilliseconds uint) gin.HandlerFunc {
 		currentTime := time.Now()
 
 		mutex.Lock()
+		if currentTime.Sub(lastCleanup) > cleanupInterval {
+			for userID, retryAfter := range retryAfters {
+				if currentTime.After(retryAfter) {
+					delete(retryAfters, userID)
+				}
+			}
+			lastCleanup = currentTime
+		}
 		var retryAfter time.Time
 		var blocked bool
 		if exists {
