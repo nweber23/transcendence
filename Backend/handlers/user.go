@@ -318,6 +318,7 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 	}
 	if _, err := io.Copy(dst, src); err != nil {
 		dst.Close()
+		os.Remove(filepath.Join("./uploads/", user.AvatarURL))
 		utils.RespondError(c, http.StatusInternalServerError, "save_uploaded_file_failed", err.Error())
 		return
 	}
