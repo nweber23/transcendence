@@ -156,7 +156,11 @@ type PacketPokerClosed struct {
 	TableID uint `json:"table_id"`
 }
 
+// TableID is populated for poker errors so a client watching more than one
+// table (multiple tabs on the same account) can tell which table an error
+// belongs to, same as PacketPokerState/PokerKicked/PokerClosed.
 type PacketError struct {
+	TableID uint   `json:"table_id,omitempty"`
 	Message string `json:"message"`
 }
 
