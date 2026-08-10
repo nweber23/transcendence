@@ -129,7 +129,7 @@ describe('useAuth - login', () => {
 
     const { result } = renderHook(() => useAuth());
 
-    let loginTask!: Promise<void>;
+    let loginTask!: Promise<{ requiresTwoFactor: boolean }>;
     act(() => {
       loginTask = result.current.login('testuser', 'password');
     });

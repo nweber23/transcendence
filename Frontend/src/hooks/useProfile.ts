@@ -8,6 +8,13 @@ export interface ProfileUser {
   email: string;
   avatarURL: string;
   joined_at: string;
+  two_factor_enabled: boolean;
+}
+
+export interface TwoFactorSetup {
+  secret: string;
+  qr_code: string;
+  otpauth_url: string;
 }
 
 export interface UseProfileReturn {
@@ -18,6 +25,9 @@ export interface UseProfileReturn {
   updateProfile: (username: string, email: string, password?: string) => Promise<void>;
   uploadAvatar: (file: File) => Promise<void>;
   profile_setNotificationTypes: (notificationTypes: string[]) => Promise<void>;
+  setupTwoFactor: () => Promise<TwoFactorSetup>;
+  confirmTwoFactor: (code: string) => Promise<string[]>;
+  disableTwoFactor: (password: string) => Promise<void>;
 }
 
 export function useProfile(): UseProfileReturn {
@@ -84,6 +94,21 @@ export function useProfile(): UseProfileReturn {
     }
   }
 
+  const setupTwoFactor = async () => {
+    return apiCall<TwoFactorSetup>('POST', '/user/2fa/setup');
+  };
+
+  const confirmTwoFactor = async (code: string) => {
+    const result = await apiCall<{ backup_codes: string[] }>('POST', '/user/2fa/verify', { code });
+    await fetchProfile();
+    return result.backup_codes;
+  };
+
+  const disableTwoFactor = async (password: string) => {
+    await apiCall('DELETE', '/user/2fa', { password });
+    await fetchProfile();
+  };
+
   useEffect(() => {
     if (getAuthToken()) {
       fetchProfile().catch(() => {});
@@ -91,5 +116,16 @@ export function useProfile(): UseProfileReturn {
     }
   }, [fetchProfile, getNotificationTypes]);
 
-  return { user, notificationTypes, isLoading, error, updateProfile, uploadAvatar, profile_setNotificationTypes };
+  return {
+    user,
+    notificationTypes,
+    isLoading,
+    error,
+    updateProfile,
+    uploadAvatar,
+    profile_setNotificationTypes,
+    setupTwoFactor,
+    confirmTwoFactor,
+    disableTwoFactor,
+  };
 }

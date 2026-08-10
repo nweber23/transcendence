@@ -15,13 +15,14 @@ interface LoginFormData {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error: authError, token } = useAuth();
+  const { login, verifyTwoFactor, cancelTwoFactor, twoFactorPending, isLoading, error: authError, token } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     password: '',
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [twoFactorCode, setTwoFactorCode] = useState('');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -69,12 +70,35 @@ const Login: React.FC = () => {
     }
 
     try {
-      await login(formData.username, formData.password, formData.rememberMe);
-      navigate('/account');
+      const { requiresTwoFactor } = await login(formData.username, formData.password, formData.rememberMe);
+      if (!requiresTwoFactor) {
+        navigate('/account');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setErrors({ submit: errorMessage });
     }
+  };
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorCode) {
+      setErrors({ twoFactorCode: 'Enter the code from your authenticator app' });
+      return;
+    }
+    try {
+      await verifyTwoFactor(twoFactorCode);
+      navigate('/account');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Verification failed';
+      setErrors({ submit: errorMessage });
+    }
+  };
+
+  const handleCancelTwoFactor = () => {
+    cancelTwoFactor();
+    setTwoFactorCode('');
+    setErrors({});
   };
 
   return (
@@ -107,6 +131,68 @@ const Login: React.FC = () => {
 
           {/* Card Container */}
           <div className="border border-[rgba(212,175,55,0.15)] rounded-2xl bg-[var(--surface)] p-8 md:p-10 hover:border-[rgba(212,175,55,0.25)] transition-colors duration-300">
+          {twoFactorPending ? (
+            <>
+              {/* Heading */}
+              <div className="mb-8">
+                <h2 className="font-serif text-2xl font-semibold text-[var(--text)] mb-2">
+                  Two-Factor Authentication
+                </h2>
+                <p className="text-sm text-[var(--text-2)]">
+                  Enter the 6-digit code from your authenticator app, or a backup code
+                </p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+                {errors.submit && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 animate-[fadeIn_300ms_ease-out_forwards]">
+                    {errors.submit}
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="twoFactorCode" className="block text-sm font-medium text-[var(--text)] mb-2">
+                    Authentication code
+                  </label>
+                  <input
+                    id="twoFactorCode"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    value={twoFactorCode}
+                    onChange={(e) => {
+                      setTwoFactorCode(e.target.value);
+                      if (errors.twoFactorCode || errors.submit) setErrors({});
+                    }}
+                    placeholder="123456"
+                    className={`w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border input-focus-transition text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-opacity-50 tracking-widest ${
+                      errors.twoFactorCode
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-[rgba(212,175,55,0.1)] focus:border-[var(--gold)]'
+                    }`}
+                  />
+                  {errors.twoFactorCode && (
+                    <p className="text-xs text-red-400 mt-2">{errors.twoFactorCode}</p>
+                  )}
+                </div>
+
+                <Button variant="gold" className="w-full mt-2" disabled={isLoading || !twoFactorCode}>
+                  {isLoading ? 'Verifying...' : 'Verify'}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelTwoFactor}
+                  className="w-full text-center text-sm text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                >
+                  Back to sign in
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
             {/* Heading */}
             <div className="mb-8">
               <h2 className="font-serif text-2xl font-semibold text-[var(--text)] mb-2">
@@ -251,6 +337,8 @@ const Login: React.FC = () => {
                 Sign up
               </Link>
             </p>
+            </>
+          )}
           </div>
         </div>
       </main>
