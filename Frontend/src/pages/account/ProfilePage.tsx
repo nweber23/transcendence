@@ -267,12 +267,19 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const TOTP_CODE_PATTERN = /^\d{6}$/;
+
   const handleConfirmTwoFactor = async (e: React.FormEvent) => {
     e.preventDefault();
     setTwoFactorError(null);
+    const trimmedCode = twoFactorCode.trim();
+    if (!TOTP_CODE_PATTERN.test(trimmedCode)) {
+      setTwoFactorError('Enter the 6-digit code from your authenticator app');
+      return;
+    }
     setTwoFactorLoading(true);
     try {
-      const codes = await confirmTwoFactor(twoFactorCode);
+      const codes = await confirmTwoFactor(trimmedCode);
       setBackupCodes(codes);
       setTwoFactorStep('backup-codes');
       setTwoFactorCode('');
@@ -524,8 +531,12 @@ const ProfilePage: React.FC = () => {
                           type="text"
                           inputMode="numeric"
                           autoComplete="one-time-code"
+                          maxLength={6}
                           value={twoFactorCode}
-                          onChange={(e) => setTwoFactorCode(e.target.value)}
+                          onChange={(e) => {
+                            setTwoFactorCode(e.target.value);
+                            if (twoFactorError) setTwoFactorError(null);
+                          }}
                           placeholder="123456"
                           className={`${inputClass} tracking-widest`}
                         />
@@ -575,7 +586,10 @@ const ProfilePage: React.FC = () => {
                         id="disable-password"
                         type="password"
                         value={disablePassword}
-                        onChange={(e) => setDisablePassword(e.target.value)}
+                        onChange={(e) => {
+                          setDisablePassword(e.target.value);
+                          if (twoFactorError) setTwoFactorError(null);
+                        }}
                         placeholder="Current password"
                         className={inputClass}
                       />
