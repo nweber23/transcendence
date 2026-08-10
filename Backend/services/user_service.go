@@ -118,6 +118,9 @@ func (s *UserService) FindOrCreateOauthUser(provider, providerID, username, emai
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, fmt.Errorf("failed to look up oauth user: %w", err)
 	}
+	if !utils.ValidateEmail(email) {
+		return nil, utils.ErrInvalidEmail
+	}
 
 	uniqueUsername, err := s.resolveUniqueUsername(username, email)
 	if err != nil {
