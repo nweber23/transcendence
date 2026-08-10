@@ -3,6 +3,7 @@ package handlers
 import (
 	//"fmt"
 	"crypto/subtle"
+	"hash/fnv"
 	"log"
 	"net/http"
 	"strconv"
@@ -31,12 +32,17 @@ type AuthHandler struct {
 	jwtExpiry          int64
 	frontendURL        string
 	twoFactorRateLimit *middleware.KeyedRateLimiter
+	loginRateLimit     *middleware.KeyedRateLimiter
 }
 
 // twoFactorVerifyMinDelayMs throttles login-challenge attempts per user to
 // mitigate brute-forcing a 6-digit TOTP/backup code once an attacker already
 // has valid account credentials.
 const twoFactorVerifyMinDelayMs = 2000
+
+// loginMinDelayMs throttles password login attempts per username to slow
+// down credential stuffing / password guessing.
+const loginMinDelayMs = 1000
 
 func NewAuthHandler(
 	userService *services.UserService,
@@ -51,7 +57,17 @@ func NewAuthHandler(
 		jwtExpiry:          jwtExpiry,
 		frontendURL:        frontendURL,
 		twoFactorRateLimit: middleware.NewKeyedRateLimiter(twoFactorVerifyMinDelayMs),
+		loginRateLimit:     middleware.NewKeyedRateLimiter(loginMinDelayMs),
 	}
+}
+
+// usernameRateLimitKey maps an arbitrary username to a rate-limit bucket
+// key without needing a DB lookup (and without revealing via timing
+// whether the username exists).
+func usernameRateLimitKey(username string) uint {
+	hasher := fnv.New32a()
+	_, _ = hasher.Write([]byte(username))
+	return uint(hasher.Sum32())
 }
 
 type RegisterRequest struct {
@@ -109,6 +125,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	if blocked, retryAfter := h.loginRateLimit.Allow(usernameRateLimitKey(req.Username)); blocked {
+		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds()+1)))
+		utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "too many attempts, please wait before retrying")
 		return
 	}
 	user, err := h.userService.LoginUser(req.Username, req.Password)
