@@ -408,7 +408,7 @@ func (gs *GameService) GetUserGames(userID uint, limit int, offset int) ([]model
 // CreatePokerGame reserves a seat's buy-in when a player sits down at the
 // table. The game stays in_progress until the hand is settled or the seat
 // is vacated before a hand starts.
-func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat int) (*models.Game, error) {
+func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat int, tableID uint) (*models.Game, error) {
 	if buyIn.LessThanOrEqual(decimal.Zero) {
 		return nil, utils.ErrAmountNotPositive
 	}
@@ -435,7 +435,7 @@ func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat 
 
 		pokerRow := &models.PokerGame{
 			GameID:         game.ID,
-			TableID:        1,
+			TableID:        tableID,
 			PlayerPosition: fmt.Sprintf("seat_%d", seat),
 			HoleCards:      []byte("[]"),
 		}

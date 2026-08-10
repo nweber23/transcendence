@@ -16,7 +16,8 @@ import OAuthCallback from '@/pages/auth/OAuthCallback';
 import Account from '@/pages/Account';
 import ProfilePage from '@/pages/account/ProfilePage';
 import Blackjack from '@/pages/games/Blackjack';
-import Poker from '@/pages/games/Poker';
+import PokerLobby from '@/pages/games/PokerLobby';
+import PokerTable from '@/pages/games/PokerTable';
 import SlotMachine from '@/pages/games/SlotMachine';
 import Privacy from '@/pages/legal/Privacy';
 import Terms from '@/pages/legal/Terms';
@@ -84,7 +85,15 @@ const AppLayout: React.FC = () => {
           path="/games/poker"
           element={
             <ProtectedRoute>
-              <Poker />
+              <PokerLobby />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/games/poker/:tableId"
+          element={
+            <ProtectedRoute>
+              <PokerTable />
             </ProtectedRoute>
           }
         />

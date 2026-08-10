@@ -65,15 +65,26 @@ func main() {
 		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
 	}
 	gameService := services.NewGameService(db, engineService)
+	pokerTableService := services.NewPokerTableService(db)
+	// Seat/hand state only ever lives in the ws package's in-memory poker
+	// registry, never persisted — so any table still "open" from before
+	// this process started is unrecoverable. Close them now, before the
+	// registry (which starts fully empty) begins accepting new tables, so
+	// a restart can't leave permanently unjoinable zombie tables sitting in
+	// every user's lobby listing.
+	if err := pokerTableService.CloseStaleOpenTables(); err != nil {
+		log.Fatalf("Failed to close stale poker tables: %v", err)
+	}
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService, pokerTableService)
 	go wsState.Start()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	pokerTableHandler := handlers.NewPokerTableHandler(pokerTableService, userService, wsState)
 	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
@@ -116,6 +127,19 @@ func main() {
 		gameRoutes.POST("", gameHandler.CreateGame)
 		gameRoutes.GET("/:id", gameHandler.GetGame)
 		gameRoutes.POST("/:id/action", gameHandler.ExecuteAction)
+	}
+
+	// Poker table routes (protected)
+	pokerTableRoutes := router.Group("/poker-tables")
+	pokerTableRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		pokerTableRoutes.GET("", pokerTableHandler.ListTables)
+		pokerTableRoutes.POST("", pokerTableHandler.CreateTable)
+		pokerTableRoutes.GET("/:id", pokerTableHandler.GetTable)
+		pokerTableRoutes.PUT("/:id/settings", pokerTableHandler.UpdateSettings)
+		pokerTableRoutes.POST("/:id/close", pokerTableHandler.CloseTable)
+		pokerTableRoutes.POST("/:id/invite", pokerTableHandler.InviteUser)
+		pokerTableRoutes.POST("/:id/kick", pokerTableHandler.KickUser)
 	}
 
 	// WebSocket route

@@ -56,17 +56,30 @@ type PacketNotification struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// PacketJoinLeave and PacketPlay are inbound-only — the userID a packet is
-// attributed to always comes from the authenticated connection (see
-// pumpFromConnection), never from client-supplied payload fields, so there
-// is no user/game id to carry here beyond the seat being acted on.
+// PacketJoinLeave, PacketPlay, PacketSync and PacketSpectate are
+// inbound-only — the userID a packet is attributed to always comes from the
+// authenticated connection (see pumpFromConnection), never from
+// client-supplied payload fields, so TableID is the only identifying data
+// any of them need to carry.
 type PacketJoinLeave struct {
-	Seat int `json:"seat"`
+	TableID uint `json:"table_id"`
+	Seat    int  `json:"seat"` // ignored for "leave"
 }
 
 type PacketPlay struct {
-	Action string `json:"action"`
-	Amount int64  `json:"amount"`
+	TableID uint   `json:"table_id"`
+	Action  string `json:"action"`
+	Amount  int64  `json:"amount"`
+}
+
+type PacketSync struct {
+	TableID uint `json:"table_id"`
+}
+
+// PacketSpectate joins a table's broadcast set as a view-only observer,
+// without taking a seat.
+type PacketSpectate struct {
+	TableID uint `json:"table_id"`
 }
 
 // PacketPokerSeat describes one seat of the poker table. HoleCards is only
@@ -102,11 +115,19 @@ type PacketPokerHandResult struct {
 	Pot     int64                   `json:"pot"`
 }
 
-// PacketPokerState is a full snapshot of the table, sent individually to
-// every seated player so hole cards can be redacted per recipient.
+// PacketPokerState is a full snapshot of one table, sent individually to
+// every seated player and spectator so hole cards can be redacted per
+// recipient. TableID lets a client filter broadcasts for the table it's
+// currently viewing, since the same shared WS connection can carry state
+// for more than one table (e.g. multiple tabs on the same account).
 type PacketPokerState struct {
+	TableID          uint              `json:"table_id"`
+	TableName        string            `json:"table_name"`
+	IsPrivate        bool              `json:"is_private"`
+	MaxSeats         int               `json:"max_seats"`
 	Seats            []PacketPokerSeat `json:"seats"`
 	YourSeat         int               `json:"your_seat"` // -1 if not seated
+	IsSpectator      bool              `json:"is_spectator"`
 	HandActive       bool              `json:"hand_active"`
 	Phase            string            `json:"phase"`
 	CommunityCards   []string          `json:"community_cards"`
@@ -124,7 +145,22 @@ type PacketPokerState struct {
 	HandResult   *PacketPokerHandResult `json:"hand_result,omitempty"`
 }
 
+// PacketPokerKicked and PacketPokerClosed are outbound-only notices sent to
+// a table's recipients when the host removes them or closes the table.
+type PacketPokerKicked struct {
+	TableID uint   `json:"table_id"`
+	Reason  string `json:"reason"`
+}
+
+type PacketPokerClosed struct {
+	TableID uint `json:"table_id"`
+}
+
+// TableID is populated for poker errors so a client watching more than one
+// table (multiple tabs on the same account) can tell which table an error
+// belongs to, same as PacketPokerState/PokerKicked/PokerClosed.
 type PacketError struct {
+	TableID uint   `json:"table_id,omitempty"`
 	Message string `json:"message"`
 }
 
@@ -135,7 +171,10 @@ const (
 	PacketTypeLeave        = "leave"
 	PacketTypePlay         = "play"
 	PacketTypeSync         = "sync"
+	PacketTypeSpectate     = "spectate"
 	PacketTypePokerState   = "poker_state"
+	PacketTypePokerKicked  = "poker_kicked"
+	PacketTypePokerClosed  = "poker_closed"
 	PacketTypeError        = "error"
 
 	// packetTypeDisconnected is a server-internal packet type — never sent
@@ -283,7 +322,8 @@ type WebSocketState struct {
 	notificationService *services.NotificationService
 	gameService         *services.GameService
 	engineService       *services.EngineService
-	pokerTable          *PokerTable
+	pokerTableService   *services.PokerTableService
+	pokerRegistry       *pokerRegistry
 }
 
 func CreateWebSocketState(
@@ -292,6 +332,7 @@ func CreateWebSocketState(
 	notificationService *services.NotificationService,
 	gameService *services.GameService,
 	engineService *services.EngineService,
+	pokerTableService *services.PokerTableService,
 ) *WebSocketState {
 	return &WebSocketState{
 		clients:             make(map[uint]*client),
@@ -301,6 +342,7 @@ func CreateWebSocketState(
 		notificationService: notificationService,
 		gameService:         gameService,
 		engineService:       engineService,
-		pokerTable:          newPokerTable(),
+		pokerTableService:   pokerTableService,
+		pokerRegistry:       newPokerRegistry(),
 	}
 }
