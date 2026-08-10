@@ -127,6 +127,7 @@ const ProfilePage: React.FC = () => {
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [identityLoading, setIdentityLoading] = useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
@@ -208,6 +209,10 @@ const ProfilePage: React.FC = () => {
     e.preventDefault();
     setPasswordSuccess(false);
     setPasswordError(null);
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
@@ -218,9 +223,10 @@ const ProfilePage: React.FC = () => {
     }
     setPasswordLoading(true);
     try {
-      await updateProfile(user?.username ?? '', user?.email ?? '', newPassword);
+      await updateProfile(user?.username ?? '', user?.email ?? '', newPassword, currentPassword);
       await refreshUser();
       setPasswordSuccess(true);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setPasswordSuccess(false), 3000);
@@ -414,6 +420,17 @@ const ProfilePage: React.FC = () => {
                 <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Change Password</h2>
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                   <div>
+                    <label htmlFor="current-password" className={labelClass}>Current password</label>
+                    <input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Your current password"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="new-password" className={labelClass}>New password</label>
                     <input
                       id="new-password"
@@ -438,7 +455,7 @@ const ProfilePage: React.FC = () => {
                   {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
                   {passwordSuccess && <p className="text-sm text-emerald-400">Password updated</p>}
                   <div className="flex justify-end">
-                    <button type="submit" disabled={passwordLoading || !newPassword} className={saveButtonClass}>
+                    <button type="submit" disabled={passwordLoading || !newPassword || !currentPassword} className={saveButtonClass}>
                       {passwordLoading ? 'Updating…' : 'Update password'}
                     </button>
                   </div>

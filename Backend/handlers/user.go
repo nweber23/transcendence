@@ -105,9 +105,10 @@ type NotificationsSeenResponse struct {
 }
 
 type UserProfileRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password" binding:"omitempty,min=8"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password" binding:"omitempty,min=8"`
+	CurrentPassword string `json:"current_password"`
 }
 
 type DepositRequest struct {
@@ -186,6 +187,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	if len(password) == 0 {
 		passwordHash = user.PasswordHash
 	} else {
+		// Changing an existing password requires proving you know the
+		// current one — otherwise a stolen session token alone would be
+		// enough to take over the account's password (and, e.g., disable
+		// 2FA by first setting a password of the attacker's choosing).
+		if user.PasswordHash != "" && !utils.VerifyPassword(user.PasswordHash, req.CurrentPassword) {
+			utils.RespondError(c, http.StatusUnauthorized, "invalid_current_password", "current password is incorrect")
+			return
+		}
 		passwordHash, err = utils.HashPassword(password)
 		if err != nil {
 			utils.RespondError(c, http.StatusInternalServerError, "hash_password_failed", err.Error())

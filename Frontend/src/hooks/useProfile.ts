@@ -22,7 +22,7 @@ export interface UseProfileReturn {
   notificationTypes: string[];
   isLoading: boolean;
   error: string | null;
-  updateProfile: (username: string, email: string, password?: string) => Promise<void>;
+  updateProfile: (username: string, email: string, password?: string, currentPassword?: string) => Promise<void>;
   uploadAvatar: (file: File) => Promise<void>;
   profile_setNotificationTypes: (notificationTypes: string[]) => Promise<void>;
   setupTwoFactor: () => Promise<TwoFactorSetup>;
@@ -46,12 +46,15 @@ export function useProfile(): UseProfileReturn {
     setNotificationTypes(result);
   }, []);
   
-  const updateProfile = async (username: string, email: string, password?: string) => {
+  const updateProfile = async (username: string, email: string, password?: string, currentPassword?: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const body: Record<string, string> = { username, email };
-      if (password) body.password = password;
+      if (password) {
+        body.password = password;
+        if (currentPassword) body.current_password = currentPassword;
+      }
       await apiCall('PUT', '/user/profile', body);
       await fetchProfile();
     } catch (err) {
