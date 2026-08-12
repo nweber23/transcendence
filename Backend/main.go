@@ -22,10 +22,20 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		// The /ws route receives its JWT as a query parameter (browsers can't
+		// set custom headers on a WebSocket handshake), so query strings must
+		// never be logged or the token ends up in plaintext logs.
+		SkipQueryString: true,
+	}))
+	router.Use(gin.Recovery())
 
 	// CORS middleware
 	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigin))
+
+	// Max body size middleware (limit to 5MB, matches frontend validation)
+	router.Use(middleware.MaxBodySize(5 * 1024 * 1024)) // 5MB
 
 	// Prometheus request metrics + scrape endpoint
 	router.Use(middleware.PrometheusMiddleware())
@@ -55,15 +65,26 @@ func main() {
 		log.Printf("Connection to engine running at %s:%s succeeded", cfg.EngineHost, cfg.EnginePort)
 	}
 	gameService := services.NewGameService(db, engineService)
+	pokerTableService := services.NewPokerTableService(db)
+	// Seat/hand state only ever lives in the ws package's in-memory poker
+	// registry, never persisted — so any table still "open" from before
+	// this process started is unrecoverable. Close them now, before the
+	// registry (which starts fully empty) begins accepting new tables, so
+	// a restart can't leave permanently unjoinable zombie tables sitting in
+	// every user's lobby listing.
+	if err := pokerTableService.CloseStaleOpenTables(); err != nil {
+		log.Fatalf("Failed to close stale poker tables: %v", err)
+	}
 
 	// Initialize WebSockets
-	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService)
-	go wsState.Main()
+	wsState := ws.CreateWebSocketState(userService, friendService, notificationService, gameService, engineService, pokerTableService)
+	go wsState.Start()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService, oauthService, cfg.JWTSecret, cfg.JWTExpiration, cfg.FrontendURL)
 	userHandler := handlers.NewUserHandler(userService, accountService, friendService, notificationService, wsState)
 	gameHandler := handlers.NewGameHandler(gameService, accountService)
+	pokerTableHandler := handlers.NewPokerTableHandler(pokerTableService, userService, wsState)
 	wsHandler := handlers.NewWebSocketHandler(wsState)
 
 	// Auth routes
@@ -74,6 +95,7 @@ func main() {
 		authRoutes.POST("/logout", authHandler.Logout)
 		authRoutes.GET("/:provider", authHandler.OauthLogin)
 		authRoutes.GET("/:provider/callback", authHandler.OauthCallback)
+		authRoutes.POST("/2fa/verify", authHandler.VerifyTwoFactorLogin)
 	}
 
 	// User routes (protected)
@@ -85,7 +107,7 @@ func main() {
 		userRoutes.POST("/avatar", userHandler.UploadAvatar)
 		userRoutes.GET("/account", userHandler.GetAccount)
 		userRoutes.GET("/account/transactions", userHandler.GetTransactionHistory)
-		userRoutes.POST("/account/deposit", userHandler.Deposit)
+		userRoutes.POST("/account/deposit", middleware.CreateRateLimiter(1000), userHandler.Deposit)
 		userRoutes.POST("/account/withdraw", userHandler.Withdraw)
 		userRoutes.POST("/:id/friends", userHandler.AddFriend)
 		userRoutes.DELETE("/:id/friends", userHandler.RemoveFriend)
@@ -96,6 +118,9 @@ func main() {
 		userRoutes.PUT("/notifications/seen", userHandler.MarkNotificationsSeen)
 		userRoutes.GET("/notification_types", userHandler.GetNotificationTypes)
 		userRoutes.PUT("/notification_types", userHandler.SetNotificationTypes)
+		userRoutes.POST("/2fa/setup", userHandler.SetupTwoFactor)
+		userRoutes.POST("/2fa/verify", middleware.CreateRateLimiter(2000), userHandler.ConfirmTwoFactor)
+		userRoutes.DELETE("/2fa", userHandler.DisableTwoFactor)
 	}
 
 	// Game routes (protected)
@@ -106,6 +131,19 @@ func main() {
 		gameRoutes.POST("", gameHandler.CreateGame)
 		gameRoutes.GET("/:id", gameHandler.GetGame)
 		gameRoutes.POST("/:id/action", gameHandler.ExecuteAction)
+	}
+
+	// Poker table routes (protected)
+	pokerTableRoutes := router.Group("/poker-tables")
+	pokerTableRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		pokerTableRoutes.GET("", pokerTableHandler.ListTables)
+		pokerTableRoutes.POST("", pokerTableHandler.CreateTable)
+		pokerTableRoutes.GET("/:id", pokerTableHandler.GetTable)
+		pokerTableRoutes.PUT("/:id/settings", pokerTableHandler.UpdateSettings)
+		pokerTableRoutes.POST("/:id/close", pokerTableHandler.CloseTable)
+		pokerTableRoutes.POST("/:id/invite", pokerTableHandler.InviteUser)
+		pokerTableRoutes.POST("/:id/kick", pokerTableHandler.KickUser)
 	}
 
 	// WebSocket route

@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"net/http"
@@ -48,11 +49,12 @@ func NewUserHandler(
 }
 
 type UserProfileResponse struct {
-	ID        uint   `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatarURL"`
-	JoinedAt  string `json:"joined_at"`
+	ID               uint   `json:"id"`
+	Username         string `json:"username"`
+	Email            string `json:"email"`
+	AvatarURL        string `json:"avatarURL"`
+	JoinedAt         string `json:"joined_at"`
+	TwoFactorEnabled bool   `json:"two_factor_enabled"`
 }
 
 type AccountResponse struct {
@@ -103,9 +105,10 @@ type NotificationsSeenResponse struct {
 }
 
 type UserProfileRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password" binding:"omitempty,min=8"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password" binding:"omitempty,min=8"`
+	CurrentPassword string `json:"current_password"`
 }
 
 type DepositRequest struct {
@@ -129,11 +132,12 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
@@ -183,6 +187,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	if len(password) == 0 {
 		passwordHash = user.PasswordHash
 	} else {
+		// Changing an existing password requires proving you know the
+		// current one — otherwise a stolen session token alone would be
+		// enough to take over the account's password (and, e.g., disable
+		// 2FA by first setting a password of the attacker's choosing).
+		if user.PasswordHash != "" && !utils.VerifyPassword(user.PasswordHash, req.CurrentPassword) {
+			utils.RespondError(c, http.StatusUnauthorized, "invalid_current_password", "current password is incorrect")
+			return
+		}
 		passwordHash, err = utils.HashPassword(password)
 		if err != nil {
 			utils.RespondError(c, http.StatusInternalServerError, "hash_password_failed", err.Error())
@@ -212,11 +224,12 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        userID.(uint),
-		Username:  username,
-		Email:     email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               userID.(uint),
+		Username:         username,
+		Email:            email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
@@ -234,22 +247,17 @@ func resolveAvatarURL(avatarURL string) string {
 	return avatarURL
 }
 
-func createRelatedURL(uploadFilePath string) (string, error) {
-	fileName := filepath.Base(uploadFilePath)
-	if fileName == "." || fileName == "/" {
-		return "", utils.ErrInvalidFilename
-	}
-	fileDots := strings.Split(fileName, ".")
-	fileExtension := ""
-	if len(fileDots) > 1 {
-		fileExtension = "." + fileDots[len(fileDots) - 1]
-	}
+// createUploadFilename generates a random filename with the given
+// (already-validated) extension. The extension must never be derived from a
+// client-supplied filename — see DetectAvatarExtension, which derives it
+// from the file's actual content instead.
+func createUploadFilename(extension string) (string, error) {
 	for {
 		fileURL, err := utils.GetRandomHexString(16)
 		if err != nil {
 			return "", utils.ErrRandomStringGenFailed
 		}
-		fileURL += fileExtension
+		fileURL += extension
 		if _, err := os.Stat(filepath.Join("./uploads/", fileURL)); err != nil {
 			if os.IsNotExist(err) {
 				return fileURL, nil
@@ -258,6 +266,30 @@ func createRelatedURL(uploadFilePath string) (string, error) {
 			}
 		}
 	}
+}
+
+// safeAvatarPath validates and returns the full path to an avatar file, ensuring
+// it's within the uploads directory. Returns empty string if the path is invalid.
+func safeAvatarPath(filename string) string {
+	if filename == "" {
+		return ""
+	}
+	// Extract only the basename to prevent directory traversal
+	base := filepath.Base(filename)
+	if base == "." || base == "/" || base == "" {
+		return ""
+	}
+	full := filepath.Join("./uploads/", base)
+	uploadsAbs, _ := filepath.Abs("./uploads/")
+	fullAbs, err := filepath.Abs(full)
+	if err != nil {
+		return ""
+	}
+	// Verify the resolved path is within uploads directory
+	if !strings.HasPrefix(fullAbs, uploadsAbs+string(os.PathSeparator)) && fullAbs != uploadsAbs {
+		return ""
+	}
+	return full
 }
 
 func (uh *UserHandler) UploadAvatar(c *gin.Context) {
@@ -271,6 +303,28 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
 		return
 	}
+	src, err := file.Open()
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	defer src.Close()
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_form_file", err.Error())
+		return
+	}
+	extension, err := utils.DetectAvatarExtension(header[:n])
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "unsupported_file_type", "Avatar must be a JPEG, PNG, GIF, or WebP image")
+		return
+	}
+	if _, err := src.Seek(0, io.SeekStart); err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "read_file_failed", err.Error())
+		return
+	}
+
 	err = os.Mkdir("./uploads/", os.ModeDir | os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		utils.RespondError(c, http.StatusInternalServerError, "create_uploads_directory_failed", err.Error())
@@ -282,18 +336,13 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	oldURL := user.AvatarURL
-	user.AvatarURL, err = createRelatedURL(file.Filename)
+	user.AvatarURL, err = createUploadFilename(extension)
 	if err != nil {
-		var status int
-		if errors.Is(err, utils.ErrInvalidFilename) {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-		utils.RespondError(c, status, "create_url_failed", err.Error())
+		utils.RespondError(c, http.StatusInternalServerError, "create_url_failed", err.Error())
 		return
 	}
-	if err := c.SaveUploadedFile(file, filepath.Join("./uploads/", user.AvatarURL)); err != nil {
+	dst, err := os.Create(filepath.Join("./uploads/", user.AvatarURL))
+	if err != nil {
 		var status int
 		if errors.Is(err, syscall.ENOSPC) {
 			status = http.StatusInsufficientStorage
@@ -303,6 +352,15 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		utils.RespondError(c, status, "save_uploaded_file_failed", err.Error())
 		return
 	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		if path := safeAvatarPath(user.AvatarURL); path != "" {
+			os.Remove(path)
+		}
+		utils.RespondError(c, http.StatusInternalServerError, "save_uploaded_file_failed", err.Error())
+		return
+	}
+	dst.Close()
 	user, err = uh.userService.UpdateUser(
 		userID.(uint),
 		user.Username,
@@ -316,18 +374,21 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        user.AvatarURL,
+		TwoFactorEnabled: user.TwoFactorEnabled,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")
 	utils.RespondSuccess(c, http.StatusCreated, "Avatar uploaded and updated successfully", response)
 	if oldURL != models.DefaultAvatarURL {
-		err = os.Remove(filepath.Join("./uploads/", oldURL))
-		if err != nil {
-			fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+		if path := safeAvatarPath(oldURL); path != "" {
+			err = os.Remove(path)
+			if err != nil {
+				fmt.Printf("Failed to remove avatar %s: %v\n", oldURL, err)
+			}
 		}
 	}
 }
@@ -450,6 +511,8 @@ func (uh *UserHandler) GetTransactionHistory(c *gin.Context) {
 	utils.RespondSuccess(c, http.StatusOK, "Transaction history retrieved successfully", response)
 }
 
+const maxDeposit = 1_000_000
+
 // Deposit adds funds to user's account
 func (uh *UserHandler) Deposit(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -462,7 +525,8 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return
@@ -471,6 +535,11 @@ func (uh *UserHandler) Deposit(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount must be greater than zero")
 		return
 	}
+	if amount.GreaterThan(decimal.NewFromInt(maxDeposit)) {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Deposit amount exceeds maximum allowed")
+		return
+	}
+
 	if err := uh.accountService.Deposit(userID.(uint), amount); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "deposit_failed", err.Error())
 		return
@@ -508,7 +577,7 @@ func (uh *UserHandler) Withdraw(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
-	amount, err := decimal.NewFromString(req.Amount)
+	amount, err := utils.ParseAmount(req.Amount)
 	if err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_amount", "Amount must be a valid number")
 		return

@@ -3,7 +3,10 @@ package handlers
 import (
 	//"fmt"
 	"crypto/subtle"
+	"hash/fnv"
+	"log"
 	"net/http"
+	"strconv"
 
 	"transcendence/middleware"
 	"transcendence/services"
@@ -23,12 +26,23 @@ func isSecureRequest(c *gin.Context) bool {
 }
 
 type AuthHandler struct {
-	userService  *services.UserService
-	oauthService *services.OauthService
-	jwtSecret    string
-	jwtExpiry    int64
-	frontendURL  string
+	userService        *services.UserService
+	oauthService       *services.OauthService
+	jwtSecret          string
+	jwtExpiry          int64
+	frontendURL        string
+	twoFactorRateLimit *middleware.KeyedRateLimiter
+	loginRateLimit     *middleware.KeyedRateLimiter
 }
+
+// twoFactorVerifyMinDelayMs throttles login-challenge attempts per user to
+// mitigate brute-forcing a 6-digit TOTP/backup code once an attacker already
+// has valid account credentials.
+const twoFactorVerifyMinDelayMs = 2000
+
+// loginMinDelayMs throttles password login attempts per username to slow
+// down credential stuffing / password guessing.
+const loginMinDelayMs = 1000
 
 func NewAuthHandler(
 	userService *services.UserService,
@@ -37,12 +51,23 @@ func NewAuthHandler(
 	frontendURL string,
 ) *AuthHandler {
 	return &AuthHandler{
-		userService:  userService,
-		oauthService: oauthService,
-		jwtSecret:    jwtSecret,
-		jwtExpiry:    jwtExpiry,
-		frontendURL:  frontendURL,
+		userService:        userService,
+		oauthService:       oauthService,
+		jwtSecret:          jwtSecret,
+		jwtExpiry:          jwtExpiry,
+		frontendURL:        frontendURL,
+		twoFactorRateLimit: middleware.NewKeyedRateLimiter(twoFactorVerifyMinDelayMs),
+		loginRateLimit:     middleware.NewKeyedRateLimiter(loginMinDelayMs),
 	}
+}
+
+// usernameRateLimitKey maps an arbitrary username to a rate-limit bucket
+// key without needing a DB lookup (and without revealing via timing
+// whether the username exists).
+func usernameRateLimitKey(username string) uint {
+	hasher := fnv.New32a()
+	_, _ = hasher.Write([]byte(username))
+	return uint(hasher.Sum32())
 }
 
 type RegisterRequest struct {
@@ -59,6 +84,20 @@ type LoginRequest struct {
 type AuthResponse struct {
 	Token  string `json:"token"`
 	UserID uint   `json:"user_id"`
+}
+
+// TwoFactorChallengeResponse is returned from /auth/login in place of
+// AuthResponse when the account has 2FA enabled. TempToken is scoped only to
+// completing the challenge at /auth/2fa/verify (see AuthMiddleware).
+type TwoFactorChallengeResponse struct {
+	TwoFactorRequired bool   `json:"two_factor_required"`
+	TempToken         string `json:"temp_token"`
+	UserID            uint   `json:"user_id"`
+}
+
+type TwoFactorLoginRequest struct {
+	TempToken string `json:"temp_token" binding:"required"`
+	Code      string `json:"code" binding:"required"`
 }
 
 // Register handles POST /auth/register
@@ -88,6 +127,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
+	if blocked, retryAfter := h.loginRateLimit.Allow(usernameRateLimitKey(req.Username)); blocked {
+		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds()+1)))
+		utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "too many attempts, please wait before retrying")
+		return
+	}
 	user, err := h.userService.LoginUser(req.Username, req.Password)
 	if err != nil {
 		middleware.LoginsTotal.WithLabelValues("failure").Inc()
@@ -100,11 +144,57 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondError(c, http.StatusConflict, "login_fail", message)
 		return
 	}
+	if user.TwoFactorEnabled {
+		tempToken := utils.GenerateTwoFactorToken(user.ID, h.jwtSecret)
+		utils.RespondSuccess(c, http.StatusOK, "two-factor authentication required", TwoFactorChallengeResponse{
+			TwoFactorRequired: true,
+			TempToken:         tempToken,
+			UserID:            user.ID,
+		})
+		return
+	}
 	middleware.LoginsTotal.WithLabelValues("success").Inc()
 	token := utils.GenerateToken(user.ID, h.jwtSecret, h.jwtExpiry)
 	utils.RespondSuccess(c, http.StatusOK, "user logged in successfully", AuthResponse{
 		Token:  token,
 		UserID: user.ID,
+	})
+}
+
+// VerifyTwoFactorLogin handles POST /auth/2fa/verify, completing a login
+// that Login() paused on because the account has 2FA enabled.
+func (h *AuthHandler) VerifyTwoFactorLogin(c *gin.Context) {
+	var req TwoFactorLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	claims, err := utils.ValidateToken(req.TempToken, h.jwtSecret)
+	if err != nil || claims.Purpose != utils.TwoFactorPurpose {
+		utils.RespondError(c, http.StatusUnauthorized, "invalid_token", "invalid or expired two-factor challenge")
+		return
+	}
+	if blocked, retryAfter := h.twoFactorRateLimit.Allow(claims.UserID); blocked {
+		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds()+1)))
+		utils.RespondError(c, http.StatusTooManyRequests, "rate_limited", "too many attempts, please wait before retrying")
+		return
+	}
+	ok, err := h.userService.VerifyTwoFactorCode(claims.UserID, req.Code)
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "two_factor_verify_failed", err.Error())
+		return
+	}
+	if !ok {
+		log.Printf("invalid TOTP login attempt for user %d", claims.UserID)
+		middleware.LoginsTotal.WithLabelValues("failure").Inc()
+		utils.RespondError(c, http.StatusUnauthorized, "invalid_code", "invalid two-factor authentication code")
+		return
+	}
+	middleware.LoginsTotal.WithLabelValues("success").Inc()
+	token := utils.GenerateToken(claims.UserID, h.jwtSecret, h.jwtExpiry)
+	utils.RespondSuccess(c, http.StatusOK, "user logged in successfully", AuthResponse{
+		Token:  token,
+		UserID: claims.UserID,
 	})
 }
 

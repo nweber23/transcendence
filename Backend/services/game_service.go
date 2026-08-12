@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"transcendence/models"
@@ -296,8 +297,11 @@ func (gs *GameService) CreateSlotsGame(userID uint, betPerLine decimal.Decimal, 
 	if betPerLine.LessThanOrEqual(decimal.Zero) {
 		return nil, utils.ErrAmountNotPositive
 	}
-	if lines <= 0 {
+	if lines <= 0 || lines > math.MaxUint8 {
 		return nil, utils.ErrInvalidLineCount
+	}
+	if betPerLine.IntPart() > math.MaxUint32 {
+		return nil, utils.ErrAmountTooLarge
 	}
 	totalBet := betPerLine.Mul(decimal.NewFromInt(int64(lines)))
 
@@ -408,7 +412,7 @@ func (gs *GameService) GetUserGames(userID uint, limit int, offset int) ([]model
 // CreatePokerGame reserves a seat's buy-in when a player sits down at the
 // table. The game stays in_progress until the hand is settled or the seat
 // is vacated before a hand starts.
-func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat int) (*models.Game, error) {
+func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat int, tableID uint) (*models.Game, error) {
 	if buyIn.LessThanOrEqual(decimal.Zero) {
 		return nil, utils.ErrAmountNotPositive
 	}
@@ -435,7 +439,7 @@ func (gs *GameService) CreatePokerGame(userID uint, buyIn decimal.Decimal, seat 
 
 		pokerRow := &models.PokerGame{
 			GameID:         game.ID,
-			TableID:        1,
+			TableID:        tableID,
 			PlayerPosition: fmt.Sprintf("seat_%d", seat),
 			HoleCards:      []byte("[]"),
 		}

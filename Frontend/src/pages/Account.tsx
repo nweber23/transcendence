@@ -50,7 +50,15 @@ const Account: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<TransactionCategory>('all');
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const depositExceedsLimit = Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+  const isValidPositiveAmount = (value: string) => {
+    const parsed = Number(value);
+    return value.trim() !== '' && Number.isFinite(parsed) && parsed > 0;
+  };
+
+  const depositExceedsLimit = isValidPositiveAmount(depositAmount) && Number(depositAmount) > MAX_TRANSACTION_AMOUNT;
+  const withdrawIsInvalid = withdrawAmount.trim() !== '' && !isValidPositiveAmount(withdrawAmount);
+  const withdrawExceedsBalance =
+    isValidPositiveAmount(withdrawAmount) && !!account && Number(withdrawAmount) > Number(account.balance);
 
   useEffect(() => {
     if (!justDeposited) return;
@@ -87,7 +95,7 @@ const Account: React.FC = () => {
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depositAmount || depositExceedsLimit) return;
+    if (!isValidPositiveAmount(depositAmount) || depositExceedsLimit) return;
     setOperationError(null);
     setDepositLoading(true);
     try {
@@ -103,7 +111,7 @@ const Account: React.FC = () => {
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withdrawAmount) return;
+    if (!isValidPositiveAmount(withdrawAmount) || withdrawExceedsBalance) return;
     setOperationError(null);
     setWithdrawLoading(true);
     try {
@@ -269,10 +277,14 @@ const Account: React.FC = () => {
                     placeholder="0.00"
                     className="w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(139,38,53,0.2)] text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[rgba(139,38,53,0.5)] focus:ring-2 focus:ring-[rgba(139,38,53,0.15)] input-focus-transition"
                   />
+                  <p className="text-sm text-red-400">
+                    {withdrawIsInvalid && 'Please enter a valid amount'}
+                    {!withdrawIsInvalid && withdrawExceedsBalance && 'Amount exceeds your balance'}
+                  </p>
                 </div>
                 <button
                   type="submit"
-                  disabled={withdrawLoading || !withdrawAmount}
+                  disabled={withdrawLoading || !isValidPositiveAmount(withdrawAmount) || withdrawExceedsBalance}
                   className="w-full py-3 rounded-lg bg-[var(--red)] text-[#f6e3e6] font-semibold text-sm uppercase tracking-wider hover:bg-[#a12e40] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {withdrawLoading ? 'Processing…' : 'Cash Out'}

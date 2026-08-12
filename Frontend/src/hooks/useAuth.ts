@@ -9,6 +9,19 @@ export interface User {
   username: string;
   email: string;
   avatarURL: string;
+  two_factor_enabled?: boolean;
+}
+
+interface LoginResponse {
+  token?: string;
+  user_id: number;
+  two_factor_required?: boolean;
+  temp_token?: string;
+}
+
+interface TwoFactorChallenge {
+  tempToken: string;
+  rememberMe: boolean;
 }
 
 export interface UseAuthReturn {
@@ -16,7 +29,11 @@ export interface UseAuthReturn {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
+  /** Set once /auth/login responds with two_factor_required — prompt for a TOTP code and call verifyTwoFactor. */
+  twoFactorPending: boolean;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<{ requiresTwoFactor: boolean }>;
+  verifyTwoFactor: (code: string) => Promise<void>;
+  cancelTwoFactor: () => void;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -27,6 +44,7 @@ export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<User | null>(() => getAuthUser<User>());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
 
   useEffect(() => {
     const syncFromStorage = () => {
@@ -37,31 +55,36 @@ export function useAuth(): UseAuthReturn {
     return () => window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncFromStorage);
   }, []);
 
+  // Stores the token and fetches/persists the user profile that goes with it.
+  // Shared by login, register, and the 2FA challenge, which all end the same way.
+  const completeLogin = async (authToken: string, rememberMe: boolean) => {
+    setAuthToken(authToken, rememberMe);
+    setToken(authToken);
+    try {
+      const profile = await apiCall<User>('GET', '/user/profile');
+      setAuthUser(profile);
+      setUser(profile);
+      window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
+    } catch (profileErr) {
+      // If profile fetch fails, clear the token and error out
+      clearAuthStorage();
+      setToken(null);
+      const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
+      throw new Error(errorMessage);
+    }
+  };
+
   const login = async (username: string, password: string, rememberMe = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiCall<{ token: string; user_id: number }>(
-        'POST',
-        '/auth/login',
-        { username, password }
-      );
-      setAuthToken(response.token, rememberMe);
-      setToken(response.token);
-      // Fetch user profile after login
-      try {
-        const profile = await apiCall<User>('GET', '/user/profile');
-        setAuthUser(profile);
-        setUser(profile);
-        window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
-      } catch (profileErr) {
-        // If profile fetch fails, clear the token and error out
-        clearAuthStorage();
-        setToken(null);
-        const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
-        setError(errorMessage);
-        throw new Error(errorMessage);
+      const response = await apiCall<LoginResponse>('POST', '/auth/login', { username, password });
+      if (response.two_factor_required) {
+        setTwoFactorChallenge({ tempToken: response.temp_token!, rememberMe });
+        return { requiresTwoFactor: true };
       }
+      await completeLogin(response.token!, rememberMe);
+      return { requiresTwoFactor: false };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -69,6 +92,33 @@ export function useAuth(): UseAuthReturn {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const verifyTwoFactor = async (code: string) => {
+    if (!twoFactorChallenge) {
+      throw new Error('No two-factor challenge in progress');
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiCall<{ token: string; user_id: number }>('POST', '/auth/2fa/verify', {
+        temp_token: twoFactorChallenge.tempToken,
+        code,
+      });
+      await completeLogin(response.token, twoFactorChallenge.rememberMe);
+      setTwoFactorChallenge(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Verification failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelTwoFactor = () => {
+    setTwoFactorChallenge(null);
+    setError(null);
   };
 
   const register = async (
@@ -84,22 +134,7 @@ export function useAuth(): UseAuthReturn {
         '/auth/register',
         { username, email, password }
       );
-      setAuthToken(response.token, true);
-      setToken(response.token);
-      // Fetch user profile after registration
-      try {
-        const profile = await apiCall<User>('GET', '/user/profile');
-        setAuthUser(profile);
-        setUser(profile);
-        window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
-      } catch (profileErr) {
-        // If profile fetch fails, clear the token and error out
-        clearAuthStorage();
-        setToken(null);
-        const errorMessage = profileErr instanceof Error ? profileErr.message : 'Failed to fetch user profile';
-        setError(errorMessage);
-        throw new Error(errorMessage);
-      }
+      await completeLogin(response.token, true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);
@@ -133,7 +168,10 @@ export function useAuth(): UseAuthReturn {
     user,
     isLoading,
     error,
+    twoFactorPending: twoFactorChallenge !== null,
     login,
+    verifyTwoFactor,
+    cancelTwoFactor,
     register,
     logout,
     refreshUser,

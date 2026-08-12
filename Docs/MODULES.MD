@@ -11,8 +11,8 @@
 | 7 | Support additional browsers | Minor | 1 | Done | Niklas |
 | 8 | Custom-made design system (min. 10 reusable components) | Minor | 1 | Done | Niklas |
 | 9 | Standard User Management and auth | Major | 2 | Done | Gabriel |
-| 10 | Implement OAuth 2.0 | Minor | 1 | Pending | Nate |
-| 12 | Implement 2FA | Minor | 1 | Pending | Matthias |
+| 10 | Implement OAuth 2.0 | Minor | 1 | Done | Nate |
+| 12 | Implement 2FA | Minor | 1 | Done | Niklas |
 | 13 | AI Opponent (Blackjack Dealer) | Major | 2 | Done | Florian |
 | 14 | Implement web-based game (poker, blackjack) | Major | 2 | Done | Gabriel, Florian, Niklas|
 | 15 | Remote Players | Major | 2 | Done | Gabriel, Florian|

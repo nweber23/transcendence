@@ -36,6 +36,23 @@ var (
 
 	ErrAvatarDownloadFailed  = errors.New("failed to download avatar")
 	ErrAvatarTooLarge        = errors.New("avatar image too large")
+	ErrUnsupportedAvatarType = errors.New("unsupported avatar file type")
+
+	ErrPokerTableNotFound         = errors.New("poker table not found")
+	ErrPokerTableClosed           = errors.New("poker table is closed")
+	ErrPokerTableAccessDenied     = errors.New("you don't have access to this poker table")
+	ErrPokerNotTableHost          = errors.New("only the table host can do that")
+	ErrPokerInvalidSeatCount      = errors.New("max seats must be between 2 and 9")
+	ErrPokerInvalidBlinds         = errors.New("small blind must be less than big blind")
+	ErrPokerFractionalAmount      = errors.New("buy-in and blinds must be whole numbers")
+	ErrPokerTableHasSeatedPlayers = errors.New("buy-in, blinds, and max seats can't change while players are seated")
+	ErrPokerHandInProgress        = errors.New("can't close the table while a hand is in progress, try again shortly")
+
+	ErrTwoFactorAlreadyEnabled   = errors.New("two-factor authentication is already enabled")
+	ErrTwoFactorNotSetUp         = errors.New("two-factor authentication setup was not started")
+	ErrTwoFactorNotEnabled       = errors.New("two-factor authentication is not enabled")
+	ErrInvalidTwoFactorCode      = errors.New("invalid two-factor authentication code")
+	ErrTwoFactorRequiresPassword = errors.New("a password must be set on this account before enabling two-factor authentication")
 )
 
 func IsErrInvalid(err error) bool {

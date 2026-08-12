@@ -56,8 +56,14 @@ func (wsState *WebSocketState) cleanupConnection(userID uint, connection *websoc
 	fmt.Printf("Connection removed for user %d\n", userID)
 }
 
+// maxInboundMessageSize caps a single client->server WS frame. Inbound
+// packets are small control messages (join/leave/play/...), so this is far
+// below the 1MB HTTP body limit.
+const maxInboundMessageSize = 8 << 10 // 8KB
+
 func (wsState *WebSocketState) pumpFromConnection(userID uint, connection *websocket.Conn) {
 	defer wsState.cleanupConnection(userID, connection)
+	connection.SetReadLimit(maxInboundMessageSize)
 	for {
 		var packet packet
 		if err := connection.ReadJSON(&packet); err != nil {
