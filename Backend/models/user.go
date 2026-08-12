@@ -18,6 +18,9 @@ type User struct {
 	AvatarURL            string
 	NotificationTypes    string
 	NotificationsSeenAt  *time.Time
+	TwoFactorSecret      string     `gorm:"size:64"`
+	TwoFactorEnabled     bool       `gorm:"default:false"`
+	TwoFactorBackupCodes string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	DeletedAt            *time.Time `gorm:"index"`

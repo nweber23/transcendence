@@ -12,9 +12,25 @@ import (
 	"transcendence/models"
 	"transcendence/utils"
 
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
+const twoFactorIssuer = "Transcendence Casino"
+const backupCodeCount = 10
+
+// twoFactorSecretEncryptionKey returns the key material used to encrypt
+// TOTP secrets at rest. It's derived from JWT_SECRET (prefixed so it's not
+// literally the same key used to sign tokens) rather than requiring a
+// separate deployment secret.
+func twoFactorSecretEncryptionKey() string {
+	base := os.Getenv("JWT_SECRET")
+	if base == "" {
+		base = "secret" // matches config.LoadConfig's fallback for JWT_SECRET
+	}
+	return "totp-secret-encryption:" + base
+}
 // usernamePattern restricts usernames to characters that are safe to render
 // and search on: letters, digits, underscore, hyphen, and dot.
 var usernamePattern = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
@@ -200,6 +216,172 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	return &user, nil
+}
+
+// SetupTwoFactor generates a new (unconfirmed) TOTP secret for the user and
+// returns the otpauth key so the caller can render a QR code / show the
+// secret for manual entry. 2FA isn't enabled until ConfirmTwoFactor succeeds.
+func (s *UserService) SetupTwoFactor(userID uint) (*otp.Key, error) {
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.TwoFactorEnabled {
+		return nil, utils.ErrTwoFactorAlreadyEnabled
+	}
+	if user.PasswordHash == "" {
+		return nil, utils.ErrTwoFactorRequiresPassword
+	}
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      twoFactorIssuer,
+		AccountName: user.Username,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate TOTP secret: %w", err)
+	}
+	encryptedSecret, err := utils.EncryptString(key.Secret(), twoFactorSecretEncryptionKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt TOTP secret: %w", err)
+	}
+	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Update("two_factor_secret", encryptedSecret).Error; err != nil {
+		return nil, fmt.Errorf("failed to store TOTP secret: %w", err)
+	}
+	return key, nil
+}
+
+// ConfirmTwoFactor verifies a TOTP code against the secret staged by
+// SetupTwoFactor and, if valid, enables 2FA and issues one-time backup
+// codes. The codes are returned in plaintext exactly once; only their
+// bcrypt hashes are persisted.
+func (s *UserService) ConfirmTwoFactor(userID uint, code string) ([]string, error) {
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.TwoFactorEnabled {
+		return nil, utils.ErrTwoFactorAlreadyEnabled
+	}
+	if user.TwoFactorSecret == "" {
+		return nil, utils.ErrTwoFactorNotSetUp
+	}
+	secret, err := utils.DecryptString(user.TwoFactorSecret, twoFactorSecretEncryptionKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
+	}
+	if !isSixDigitCode(code) || !totp.Validate(code, secret) {
+		return nil, utils.ErrInvalidTwoFactorCode
+	}
+	backupCodes, hashedCodes, err := generateBackupCodes()
+	if err != nil {
+		return nil, err
+	}
+	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"two_factor_enabled":      true,
+		"two_factor_backup_codes": strings.Join(hashedCodes, ","),
+	}).Error; err != nil {
+		return nil, fmt.Errorf("failed to enable two-factor authentication: %w", err)
+	}
+	return backupCodes, nil
+}
+
+// VerifyTwoFactorCode checks a login-time code against the user's TOTP
+// secret, falling back to single-use backup codes. A matching backup code is
+// consumed (removed) so it can't be replayed.
+func (s *UserService) VerifyTwoFactorCode(userID uint, code string) (bool, error) {
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return false, err
+	}
+	if !user.TwoFactorEnabled {
+		return false, utils.ErrTwoFactorNotEnabled
+	}
+	if isSixDigitCode(code) {
+		secret, err := utils.DecryptString(user.TwoFactorSecret, twoFactorSecretEncryptionKey())
+		if err != nil {
+			return false, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
+		}
+		if totp.Validate(code, secret) {
+			return true, nil
+		}
+	}
+	hashedCodes := utils.OrdinalSplit(user.TwoFactorBackupCodes, ",")
+	for i, hashedCode := range hashedCodes {
+		if utils.VerifyPassword(hashedCode, code) {
+			remaining := append(hashedCodes[:i:i], hashedCodes[i+1:]...)
+			// Conditional update (compare-and-swap on the stored codes
+			// string) so two concurrent requests racing on the same
+			// backup code can't both succeed — the loser sees no rows
+			// affected and reports the code as already used.
+			result := s.db.Model(&models.User{}).
+				Where("id = ? AND two_factor_backup_codes = ?", userID, user.TwoFactorBackupCodes).
+				Update("two_factor_backup_codes", strings.Join(remaining, ","))
+			if result.Error != nil {
+				return false, fmt.Errorf("failed to consume backup code: %w", result.Error)
+			}
+			if result.RowsAffected == 0 {
+				return false, nil
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// DisableTwoFactor turns off 2FA after re-verifying the account password.
+func (s *UserService) DisableTwoFactor(userID uint, password string) error {
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+	if !user.TwoFactorEnabled {
+		return utils.ErrTwoFactorNotEnabled
+	}
+	if user.PasswordHash == "" || !utils.VerifyPassword(user.PasswordHash, password) {
+		return utils.ErrInvalidPassword
+	}
+	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"two_factor_enabled":      false,
+		"two_factor_secret":       "",
+		"two_factor_backup_codes": "",
+	}).Error; err != nil {
+		return fmt.Errorf("failed to disable two-factor authentication: %w", err)
+	}
+	return nil
+}
+
+// isSixDigitCode reports whether code has the shape of a TOTP code (exactly
+// six digits) so obviously-malformed input can be rejected outright instead
+// of running it through totp.Validate.
+func isSixDigitCode(code string) bool {
+	if len(code) != 6 {
+		return false
+	}
+	for _, r := range code {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// generateBackupCodes returns backupCodeCount single-use recovery codes
+// alongside their bcrypt hashes (plaintext codes are never stored).
+func generateBackupCodes() ([]string, []string, error) {
+	codes := make([]string, backupCodeCount)
+	hashed := make([]string, backupCodeCount)
+	for i := 0; i < backupCodeCount; i++ {
+		raw, err := utils.GetRandomHexString(5)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to generate backup code: %w", err)
+		}
+		codes[i] = raw
+		hash, err := utils.HashPassword(raw)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to hash backup code: %w", err)
+		}
+		hashed[i] = hash
+	}
+	return codes, hashed, nil
 }
 
 // MarkNotificationsSeen persists the current time as the user's notifications

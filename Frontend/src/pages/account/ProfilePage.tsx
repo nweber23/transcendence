@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useProfile } from '@/hooks/useProfile';
+import { useProfile, type TwoFactorSetup } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/ui/Avatar';
 import CasinoBackground from '@/components/ui/CasinoBackground';
@@ -108,7 +108,16 @@ const NotificationTypeToggle: React.FC<{
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, notificationTypes, updateProfile, uploadAvatar, profile_setNotificationTypes } = useProfile();
+  const {
+    user,
+    notificationTypes,
+    updateProfile,
+    uploadAvatar,
+    profile_setNotificationTypes,
+    setupTwoFactor,
+    confirmTwoFactor,
+    disableTwoFactor,
+  } = useProfile();
   const { refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +127,7 @@ const ProfilePage: React.FC = () => {
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [identityLoading, setIdentityLoading] = useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
@@ -126,6 +136,14 @@ const ProfilePage: React.FC = () => {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const [twoFactorStep, setTwoFactorStep] = useState<'idle' | 'setup' | 'backup-codes' | 'disable'>('idle');
+  const [twoFactorSetupData, setTwoFactorSetupData] = useState<TwoFactorSetup | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [disablePassword, setDisablePassword] = useState('');
 
   const [haveNotificationTypes, setHaveNotificationTypes] = useState<boolean[]>(
     new Array(NOTIFICATION_TYPE_STRINGS.length).fill(true)
@@ -208,6 +226,10 @@ const ProfilePage: React.FC = () => {
     e.preventDefault();
     setPasswordSuccess(false);
     setPasswordError(null);
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
@@ -218,9 +240,10 @@ const ProfilePage: React.FC = () => {
     }
     setPasswordLoading(true);
     try {
-      await updateProfile(user?.username ?? '', user?.email ?? '', newPassword);
+      await updateProfile(user?.username ?? '', user?.email ?? '', newPassword, currentPassword);
       await refreshUser();
       setPasswordSuccess(true);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setPasswordSuccess(false), 3000);
@@ -257,6 +280,71 @@ const ProfilePage: React.FC = () => {
     } finally {
       setAvatarUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleStartTwoFactorSetup = async () => {
+    setTwoFactorError(null);
+    setTwoFactorLoading(true);
+    try {
+      const data = await setupTwoFactor();
+      setTwoFactorSetupData(data);
+      setTwoFactorStep('setup');
+    } catch (err) {
+      setTwoFactorError(err instanceof Error ? err.message : 'Failed to start setup');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const TOTP_CODE_PATTERN = /^\d{6}$/;
+
+  const handleConfirmTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTwoFactorError(null);
+    const trimmedCode = twoFactorCode.trim();
+    if (!TOTP_CODE_PATTERN.test(trimmedCode)) {
+      setTwoFactorError('Enter the 6-digit code from your authenticator app');
+      return;
+    }
+    setTwoFactorLoading(true);
+    try {
+      const codes = await confirmTwoFactor(trimmedCode);
+      setBackupCodes(codes);
+      setTwoFactorStep('backup-codes');
+      setTwoFactorCode('');
+    } catch (err) {
+      setTwoFactorError(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleFinishTwoFactorSetup = () => {
+    setTwoFactorStep('idle');
+    setTwoFactorSetupData(null);
+    setBackupCodes([]);
+  };
+
+  const handleCancelTwoFactorSetup = () => {
+    setTwoFactorStep('idle');
+    setTwoFactorSetupData(null);
+    setTwoFactorCode('');
+    setTwoFactorError(null);
+  };
+
+  const handleDisableTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTwoFactorError(null);
+    setTwoFactorLoading(true);
+    try {
+      await disableTwoFactor(disablePassword);
+      setDisablePassword('');
+      setTwoFactorStep('idle');
+    } catch (err) {
+      setTwoFactorError(err instanceof Error ? err.message : 'Failed to disable two-factor authentication');
+    } finally {
+      setTwoFactorLoading(false);
     }
   };
 
@@ -368,6 +456,17 @@ const ProfilePage: React.FC = () => {
                 <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-5">Change Password</h2>
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                   <div>
+                    <label htmlFor="current-password" className={labelClass}>Current password</label>
+                    <input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Your current password"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="new-password" className={labelClass}>New password</label>
                     <input
                       id="new-password"
@@ -392,11 +491,157 @@ const ProfilePage: React.FC = () => {
                   {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
                   {passwordSuccess && <p className="text-sm text-emerald-400">Password updated</p>}
                   <div className="flex justify-end">
-                    <button type="submit" disabled={passwordLoading || !newPassword} className={saveButtonClass}>
+                    <button type="submit" disabled={passwordLoading || !newPassword || !currentPassword} className={saveButtonClass}>
                       {passwordLoading ? 'Updating…' : 'Update password'}
                     </button>
                   </div>
                 </form>
+              </div>
+
+              <div className="rounded-2xl border border-[rgba(212,175,55,0.12)] bg-[var(--surface)] p-6">
+                <h2 className="font-serif text-xl font-semibold text-[var(--text)] mb-1">Two-Factor Authentication</h2>
+                <p className="text-sm text-[var(--text-3)] mb-5">
+                  Require a code from an authenticator app when signing in.
+                </p>
+
+                {twoFactorStep === 'idle' && (
+                  <>
+                    {user?.two_factor_enabled ? (
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm text-emerald-400">Two-factor authentication is enabled.</p>
+                        <button
+                          type="button"
+                          onClick={() => setTwoFactorStep('disable')}
+                          className="px-6 py-2.5 rounded-lg bg-[rgba(220,38,38,0.1)] border border-[rgba(220,38,38,0.3)] text-red-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(220,38,38,0.18)] hover:border-[rgba(220,38,38,0.5)] active:scale-[0.99] transition-all duration-200"
+                        >
+                          Disable
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm text-[var(--text-2)]">Two-factor authentication is disabled.</p>
+                        <button
+                          type="button"
+                          onClick={handleStartTwoFactorSetup}
+                          disabled={twoFactorLoading}
+                          className={saveButtonClass}
+                        >
+                          {twoFactorLoading ? 'Starting…' : 'Enable'}
+                        </button>
+                      </div>
+                    )}
+                    {twoFactorError && <p className="text-sm text-red-400 mt-4">{twoFactorError}</p>}
+                  </>
+                )}
+
+                {twoFactorStep === 'setup' && twoFactorSetupData && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-[var(--text-2)]">
+                      Scan this QR code with your authenticator app (e.g. Google Authenticator, Authy).
+                    </p>
+                    <div className="flex justify-center">
+                      <img
+                        src={twoFactorSetupData.qr_code}
+                        alt="Two-factor authentication QR code"
+                        className="w-48 h-48 rounded-lg border border-[rgba(212,175,55,0.15)] bg-white p-2"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Can't scan? Enter this code manually</label>
+                      <code className="block w-full px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)] text-[var(--text)] text-sm break-all">
+                        {twoFactorSetupData.secret}
+                      </code>
+                    </div>
+                    <form onSubmit={handleConfirmTwoFactor} className="space-y-4">
+                      <div>
+                        <label htmlFor="two-factor-code" className={labelClass}>Enter the 6-digit code to confirm</label>
+                        <input
+                          id="two-factor-code"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          value={twoFactorCode}
+                          onChange={(e) => {
+                            setTwoFactorCode(e.target.value);
+                            if (twoFactorError) setTwoFactorError(null);
+                          }}
+                          placeholder="123456"
+                          className={`${inputClass} tracking-widest`}
+                        />
+                      </div>
+                      {twoFactorError && <p className="text-sm text-red-400">{twoFactorError}</p>}
+                      <div className="flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={handleCancelTwoFactorSetup}
+                          className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button type="submit" disabled={twoFactorLoading || !twoFactorCode} className={saveButtonClass}>
+                          {twoFactorLoading ? 'Confirming…' : 'Confirm & enable'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {twoFactorStep === 'backup-codes' && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-emerald-400">Two-factor authentication is now enabled.</p>
+                    <p className="text-sm text-[var(--text-2)]">
+                      Save these backup codes somewhere safe. Each one can be used once to sign in if you lose
+                      access to your authenticator app. They won't be shown again.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[rgba(212,175,55,0.15)]">
+                      {backupCodes.map((code) => (
+                        <code key={code} className="text-sm text-[var(--text)] tracking-wider">{code}</code>
+                      ))}
+                    </div>
+                    <div className="flex justify-end">
+                      <button type="button" onClick={handleFinishTwoFactorSetup} className={saveButtonClass}>
+                        I've saved my backup codes
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {twoFactorStep === 'disable' && (
+                  <form onSubmit={handleDisableTwoFactor} className="space-y-4">
+                    <div>
+                      <label htmlFor="disable-password" className={labelClass}>Confirm your password to disable</label>
+                      <input
+                        id="disable-password"
+                        type="password"
+                        value={disablePassword}
+                        onChange={(e) => {
+                          setDisablePassword(e.target.value);
+                          if (twoFactorError) setTwoFactorError(null);
+                        }}
+                        placeholder="Current password"
+                        className={inputClass}
+                      />
+                    </div>
+                    {twoFactorError && <p className="text-sm text-red-400">{twoFactorError}</p>}
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setTwoFactorStep('idle'); setDisablePassword(''); setTwoFactorError(null); }}
+                        className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={twoFactorLoading || !disablePassword}
+                        className="px-6 py-2.5 rounded-lg bg-[rgba(220,38,38,0.1)] border border-[rgba(220,38,38,0.3)] text-red-400 font-semibold text-sm uppercase tracking-wider hover:bg-[rgba(220,38,38,0.18)] hover:border-[rgba(220,38,38,0.5)] active:scale-[0.99] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {twoFactorLoading ? 'Disabling…' : 'Disable'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
 
               <div className="rounded-2xl border border-[rgba(212,175,55,0.12)] bg-[var(--surface)] p-6">

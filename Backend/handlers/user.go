@@ -49,11 +49,12 @@ func NewUserHandler(
 }
 
 type UserProfileResponse struct {
-	ID        uint   `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatarURL"`
-	JoinedAt  string `json:"joined_at"`
+	ID               uint   `json:"id"`
+	Username         string `json:"username"`
+	Email            string `json:"email"`
+	AvatarURL        string `json:"avatarURL"`
+	JoinedAt         string `json:"joined_at"`
+	TwoFactorEnabled bool   `json:"two_factor_enabled"`
 }
 
 type AccountResponse struct {
@@ -104,9 +105,10 @@ type NotificationsSeenResponse struct {
 }
 
 type UserProfileRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password" binding:"omitempty,min=8"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password" binding:"omitempty,min=8"`
+	CurrentPassword string `json:"current_password"`
 }
 
 type DepositRequest struct {
@@ -130,11 +132,12 @@ func (uh *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	utils.RespondSuccess(c, http.StatusOK, "Profile retrieved successfully", response)
 }
@@ -184,6 +187,14 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 	if len(password) == 0 {
 		passwordHash = user.PasswordHash
 	} else {
+		// Changing an existing password requires proving you know the
+		// current one — otherwise a stolen session token alone would be
+		// enough to take over the account's password (and, e.g., disable
+		// 2FA by first setting a password of the attacker's choosing).
+		if user.PasswordHash != "" && !utils.VerifyPassword(user.PasswordHash, req.CurrentPassword) {
+			utils.RespondError(c, http.StatusUnauthorized, "invalid_current_password", "current password is incorrect")
+			return
+		}
 		passwordHash, err = utils.HashPassword(password)
 		if err != nil {
 			utils.RespondError(c, http.StatusInternalServerError, "hash_password_failed", err.Error())
@@ -213,11 +224,12 @@ func (uh *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        userID.(uint),
-		Username:  username,
-		Email:     email,
-		AvatarURL: resolveAvatarURL(user.AvatarURL),
-		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               userID.(uint),
+		Username:         username,
+		Email:            email,
+		AvatarURL:        resolveAvatarURL(user.AvatarURL),
+		JoinedAt:         user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		TwoFactorEnabled: user.TwoFactorEnabled,
 	}
 	uh.postSystemNotification(userID.(uint), "Profile updated", "Your profile details were saved", "/account/profile")
 	utils.RespondSuccess(c, http.StatusOK, "Profile updated successfully", response)
@@ -362,10 +374,11 @@ func (uh *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	response := UserProfileResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		AvatarURL:        user.AvatarURL,
+		TwoFactorEnabled: user.TwoFactorEnabled,
 		JoinedAt:  user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	uh.postSystemNotification(userID.(uint), "Avatar updated", "Your profile picture was updated", "/account/profile")
