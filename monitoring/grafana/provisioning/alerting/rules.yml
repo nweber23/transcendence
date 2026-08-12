@@ -70,7 +70,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Caddy unreachable"
+          summary: "Caddy reverse proxy unreachable"
+          description: "Prometheus has been unable to scrape the Caddy reverse proxy metrics for over 1 minute. Users may experience connectivity issues."
 
       - uid: cadvisor-down
         title: CadvisorDown
@@ -101,7 +102,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "cAdvisor unreachable"
+          summary: "cAdvisor container metrics unreachable"
+          description: "Prometheus has been unable to scrape cAdvisor metrics for over 2 minutes. Container resource dashboards will be incomplete."
 
   # ---------------------------------------------------------------------
   # Caddy error rates. "backend" aggregates the backend_http (:81) and
@@ -147,7 +149,7 @@ groups:
           severity: critical
         annotations:
           summary: "Backend 5xx rate above 5%"
-          description: "{{ $values.A }} of backend requests over the last 5m are failing with 5xx."
+          description: "{{ $values.A }} of backend requests over the last 5m are failing with 5xx errors. Check backend logs for panics, unhandled exceptions, or resource exhaustion."
 
       - uid: caddy-frontend-5xx-high
         title: CaddyFrontend5xxHigh
@@ -181,6 +183,7 @@ groups:
           severity: warning
         annotations:
           summary: "Frontend 5xx rate above 5%"
+          description: "{{ $values.A }} of frontend requests over the last 5m are failing with 5xx errors. This may indicate issues with the web server or backend."
 
       - uid: caddy-backend-4xx-spike
         title: CaddyBackend4xxSpike
@@ -213,8 +216,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Ungewöhnlich viele 4xx auf dem Backend (>25%)"
-          description: "Could indicate a broken client, scraping/bot traffic, or auth issues."
+          summary: "Backend 4xx rate above 25%"
+          description: "Unusually high 4xx rate on backend (>25% of requests). Could indicate broken clients, bot traffic, auth misconfigurations, or API contract changes."
 
   # ---------------------------------------------------------------------
   # Caddy latency
@@ -254,7 +257,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Backend p95-Latenz > 1s"
+          summary: "Backend p95 latency above 1s"
 
       - uid: caddy-backend-latency-p99
         title: CaddyBackendLatencyHighP99
@@ -286,7 +289,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Backend p99-Latenz > 2.5s"
+          summary: "Backend p99 latency above 2.5s"
 
   # ---------------------------------------------------------------------
   # Application logic (auth, websockets, deposits/withdrawals)
@@ -327,8 +330,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Over 50% failed logins"
-          description: "Possible brute-force attempt or auth bug."
+          summary: "Over 50% login failures"
+          description: "{{ $values.A | humanizePercentage }} of login attempts are failing. Could indicate a brute-force attack, authentication system bug, or database connectivity issue. Check auth service logs."
 
       - uid: no-active-websocket-connections
         title: NoActiveWebsocketConnections
@@ -359,8 +362,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "No active WebSocket connections for 10 minutes"
-          description: "Check whether the ws hub is stuck or there is simply no traffic."
+          summary: "No active WebSocket connections for 10+ minutes"
+          description: "Either the WebSocket hub is stuck/crashed, or there is genuinely no user traffic. Check server logs for connection errors or verify if traffic is expected at this time."
 
       - uid: withdrawals-exceed-deposits
         title: WithdrawalsExceedDeposits
@@ -393,7 +396,7 @@ groups:
           severity: warning
         annotations:
           summary: "Withdrawals significantly exceed deposits (30m window)"
-          description: "Not necessarily a security incident, but worth watching economically - check for bonus abuse or exploits."
+          description: "Unusual cash flow pattern detected. Not necessarily a security incident, but worth monitoring - could indicate bonus abuse, exploits, or unusual user behavior. Review transaction patterns and balance sheets."
 
   # ---------------------------------------------------------------------
   # Container resources (cAdvisor). name=~"transcendence-.*|frontend" covers
@@ -439,7 +442,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} using >90% of one CPU core for 10m"
+          summary: "Container {{ $labels.name }} using >90% of one CPU core"
+          description: "Sustained high CPU usage for 10+ minutes. This may cause performance degradation or timeouts. Consider optimizing code, adding more resources, or scaling horizontally."
 
       - uid: container-high-memory
         title: ContainerHighMemory
@@ -480,6 +484,7 @@ groups:
           severity: warning
         annotations:
           summary: "Container {{ $labels.name }} using over 1GiB of memory"
+          description: "Sustained high memory usage for 10+ minutes. May indicate a memory leak, inefficient data structures, or insufficient caching. Check container logs for errors."
 
       - uid: container-restarting-frequently
         title: ContainerRestartingFrequently
@@ -511,7 +516,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} was restarted"
+          summary: "Container {{ $labels.name }} restarted in the last 15 minutes"
+          description: "The container restarted at least once. This may indicate crashes, OOM kills, or deployment updates. Check Docker daemon logs for exit codes and error messages."
 
   # ---------------------------------------------------------------------
   # Prometheus self-monitoring
@@ -550,7 +556,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Target {{ $labels.job }}/{{ $labels.instance }} down seit >5m"
+          summary: "Prometheus target {{ $labels.job }}/{{ $labels.instance }} down for >5 minutes"
 
       - uid: prometheus-scrape-slow
         title: PrometheusScrapeSlow
@@ -581,4 +587,5 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Scrape of {{ $labels.job }} taking >5s"
+          summary: "Prometheus scrape of {{ $labels.job }}/{{ $labels.instance }} taking >5 seconds"
+          description: "Slow scrape times can cause data gaps or staleness. Check if the target is under load, has network issues, or is exporting too many metrics."

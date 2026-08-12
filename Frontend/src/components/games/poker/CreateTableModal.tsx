@@ -22,9 +22,30 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({ onClose, onCreate }
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const parsePositive = (value: string) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const validationError = (): string | null => {
+    if (!name.trim()) return 'Table name is required';
+    const buyInNum = parsePositive(buyIn);
+    const smallBlindNum = parsePositive(smallBlind);
+    const bigBlindNum = parsePositive(bigBlind);
+    if (buyInNum === null) return 'Buy-in must be a positive number';
+    if (smallBlindNum === null || bigBlindNum === null) return 'Blinds must be positive numbers';
+    if (smallBlindNum >= bigBlindNum) return 'Small blind must be less than big blind';
+    if (!Number.isFinite(maxSeats) || maxSeats < 2 || maxSeats > 9) return 'Max seats must be between 2 and 9';
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const validationMessage = validationError();
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -91,7 +112,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({ onClose, onCreate }
 
         <button
           type="submit"
-          disabled={!name.trim() || isSubmitting}
+          disabled={validationError() !== null || isSubmitting}
           className="mt-1 px-6 py-3 rounded-xl font-semibold text-sm tracking-[0.22em] uppercase transition-all duration-150 bg-[var(--gold)] text-[#0a0e12] hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSubmitting ? 'Creating…' : 'Create Table'}
