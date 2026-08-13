@@ -35,13 +35,23 @@ const Terms: React.FC = () => {
             </p>
           </section>
 
-          {/* Account Responsibility */}
+          {/* Eligibility */}
           <section className="space-y-4">
             <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
-              Account Responsibility
+              Eligibility
             </h2>
             <p className="text-[var(--text-3)]">
-              You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized access to your account.
+              You must be at least 18 years old to create an account and use ft_casino. By registering, you represent that you meet this age requirement and that all information you provide is accurate.
+            </p>
+          </section>
+
+          {/* Account Creation & Authentication */}
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
+              Account Creation & Authentication
+            </h2>
+            <p className="text-[var(--text-3)]">
+              You may create an account using an email address and password, or by signing in through a third-party provider such as Google or GitHub. You are responsible for maintaining the confidentiality of your login credentials, your two-factor authentication (2FA) secrets and backup codes if enabled, and for all activities that occur under your account. You agree to notify us immediately of any unauthorized access to your account. We strongly recommend enabling 2FA for additional account security.
             </p>
           </section>
 
@@ -68,18 +78,40 @@ const Terms: React.FC = () => {
               </li>
               <li className="flex gap-3">
                 <span className="text-[var(--gold)]">•</span>
+                <span>Impersonate another player, including through your username or avatar</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[var(--gold)]">•</span>
+                <span>Upload avatar images that are illegal, infringing, or otherwise objectionable</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[var(--gold)]">•</span>
+                <span>Create or use multiple accounts to circumvent platform limits or abuse fictional currency</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[var(--gold)]">•</span>
                 <span>Violate any applicable laws or regulations</span>
               </li>
             </ul>
           </section>
 
-          {/* Fictional Currency */}
+          {/* Fictional Currency & Games */}
           <section className="space-y-4">
             <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
-              Fictional Currency
+              Fictional Currency & Games
             </h2>
             <p className="text-[var(--text-3)]">
-              All currency on ft_casino is fictional and has no real-world value. You cannot exchange, withdraw, or convert in-game currency into actual money. Your account balance is for entertainment purposes only.
+              ft_casino offers Blackjack, Texas Hold'em poker, and Slots for entertainment purposes only. All currency on the platform is fictional and has no real-world value. "Deposits" and "withdrawals" only adjust the fictional balance tracked on your account &mdash; no real money, payment method, or payment processor is ever involved. You cannot exchange, cash out, or convert in-game currency into actual money.
+            </p>
+          </section>
+
+          {/* Friends & Social Features */}
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
+              Friends & Social Features
+            </h2>
+            <p className="text-[var(--text-3)]">
+              ft_casino lets you send and manage friend requests and view other players' online presence in real time. Your username and avatar may be visible to other players through these features. We do not currently offer in-app chat or messaging between players.
             </p>
           </section>
 

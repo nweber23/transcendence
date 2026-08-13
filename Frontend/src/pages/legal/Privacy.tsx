@@ -46,7 +46,15 @@ const Privacy: React.FC = () => {
                   Account Information
                 </h3>
                 <p className="text-[var(--text-3)]">
-                  When you create an account, we collect your email address, username, and password.
+                  When you create an account, we collect your email address, username, and password (stored as a salted hash, never in plain text). If you sign in through a third-party provider such as Google or GitHub, we receive the basic profile information (such as your name and email address) needed to create and link your account. If you enable two-factor authentication (2FA), we store your 2FA secret and backup codes to secure your account.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-sans font-semibold text-[var(--text-2)] mb-2">
+                  Avatar Images
+                </h3>
+                <p className="text-[var(--text-3)]">
+                  You may upload an avatar image or import one from a URL. Uploaded images are validated and stored on our servers and may be publicly visible to other players.
                 </p>
               </div>
               <div>
@@ -54,7 +62,15 @@ const Privacy: React.FC = () => {
                   Game Activity
                 </h3>
                 <p className="text-[var(--text-3)]">
-                  We collect information about your gameplay, including game statistics and in-game currency transactions.
+                  We collect information about your gameplay, including game statistics and fictional in-game currency transactions (deposits, withdrawals, wagers, and balances).
+                </p>
+              </div>
+              <div>
+                <h3 className="font-sans font-semibold text-[var(--text-2)] mb-2">
+                  Social & Presence Information
+                </h3>
+                <p className="text-[var(--text-3)]">
+                  We collect information related to friend requests and connections, and your online/offline presence, which may be visible to other players in real time.
                 </p>
               </div>
               <div>
@@ -84,7 +100,15 @@ const Privacy: React.FC = () => {
               </li>
               <li className="flex gap-3">
                 <span className="text-[var(--gold)]">•</span>
-                <span>To communicate with you about updates and support</span>
+                <span>To deliver in-app notifications about friend requests, games, and account activity</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[var(--gold)]">•</span>
+                <span>To show your online presence, friend connections, and avatar to other players</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[var(--gold)]">•</span>
+                <span>To generate internal, aggregated analytics on platform and game activity</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-[var(--gold)]">•</span>
@@ -93,13 +117,33 @@ const Privacy: React.FC = () => {
             </ul>
           </section>
 
+          {/* Sessions & Local Storage */}
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
+              Sessions & Local Storage
+            </h2>
+            <p className="text-[var(--text-3)]">
+              ft_casino uses signed authentication tokens (JWTs) instead of tracking cookies. Depending on whether you choose "remember me" at login, this token is stored in your browser's local storage or session storage to keep you signed in. We do not use third-party advertising or analytics tracking scripts.
+            </p>
+          </section>
+
+          {/* Third-Party Services */}
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
+              Third-Party Services
+            </h2>
+            <p className="text-[var(--text-3)]">
+              If you choose to sign in with Google or GitHub, those providers process your authentication on their own platforms according to their respective privacy policies. We only receive the minimal profile information needed to create and link your account.
+            </p>
+          </section>
+
           {/* Data Security */}
           <section className="space-y-4">
             <h2 className="font-serif text-2xl font-semibold text-[var(--text)]">
               Data Security
             </h2>
             <p className="text-[var(--text-3)]">
-              We implement appropriate security measures to protect your personal data. However, no method of transmission over the internet is completely secure. We cannot guarantee absolute security.
+              Passwords are hashed and never stored in plain text, and connections to ft_casino are encrypted in transit. We offer optional two-factor authentication (2FA) as an additional layer of account protection. However, no method of transmission or storage over the internet is completely secure, and we cannot guarantee absolute security.
             </p>
           </section>
 
@@ -109,7 +153,7 @@ const Privacy: React.FC = () => {
               Your Rights
             </h2>
             <p className="text-[var(--text-3)]">
-              You have the right to access, update, or delete your personal data at any time. To exercise these rights, please contact us through your account settings.
+              You have the right to access, correct, or request deletion of your personal data. ft_casino does not currently offer self-service account deletion or data export tools; to exercise these rights, please contact us directly using the details below.
             </p>
           </section>
 
@@ -119,7 +163,7 @@ const Privacy: React.FC = () => {
               Contact Us
             </h2>
             <p className="text-[var(--text-3)]">
-              If you have any questions about this Privacy Policy, please reach out through our support channels in your account.
+              If you have any questions about this Privacy Policy or wish to exercise your data rights, please reach out to the ft_casino team directly, as we do not currently send or receive email through the platform itself.
             </p>
           </section>
 
