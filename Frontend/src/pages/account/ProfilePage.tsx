@@ -7,12 +7,14 @@ import CasinoBackground from '@/components/ui/CasinoBackground';
 const NOTIFICATION_TYPE_STRINGS: string[] = [
   'friends',
   'games',
+  'chat',
   'system',
 ]
 
 const NOTIFICATION_TYPE_DESCRIPTIONS: string[] = [
   'Friend requests and acceptances.',
   'Game invites, your turn reminders, and match results.',
+  'Chat messages from friends.',
   'Deposit, Withdraw and Account Updates.',
 ]
 
@@ -33,6 +35,11 @@ const NOTIFICATION_TYPE_ICONS: React.ReactNode[] = [
       <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
       <circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" />
       <circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="butt" d="M 4,4 M 8,4 M 8,8 M 4,8 z" />
     </svg>
   ),
   (
@@ -395,6 +402,13 @@ const ProfilePage: React.FC = () => {
                       icon={NOTIFICATION_TYPE_ICONS[2]}
                       checked={haveNotificationTypes[2]}
                       setter={setHaveNotificationTypesIndex(2)}
+                    />
+                    <NotificationTypeToggle
+                      title={NOTIFICATION_TYPE_STRINGS[3]}
+                      description={NOTIFICATION_TYPE_DESCRIPTIONS[3]}
+                      icon={NOTIFICATION_TYPE_ICONS[3]}
+                      checked={haveNotificationTypes[3]}
+                      setter={setHaveNotificationTypesIndex(3)}
                     />
                   </div>
                   {notificationSettingsError && <p className="text-sm text-red-400 mt-4">{notificationSettingsError}</p>}

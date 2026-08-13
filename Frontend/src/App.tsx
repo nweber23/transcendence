@@ -20,6 +20,7 @@ import Poker from '@/pages/games/Poker';
 import SlotMachine from '@/pages/games/SlotMachine';
 import Privacy from '@/pages/legal/Privacy';
 import Terms from '@/pages/legal/Terms';
+import Chat from '@/pages/Chat';
 import { NotFound } from '@/pages/errors/NotFound';
 import { AccessDenied } from '@/pages/errors/AccessDenied';
 import { ServerError } from '@/pages/errors/ServerError';
@@ -69,6 +70,14 @@ const AppLayout: React.FC = () => {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Chat />
             </ProtectedRoute>
           }
         />
