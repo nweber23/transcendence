@@ -253,20 +253,22 @@ func (wsState *WebSocketState) pokerLeave(userID uint, tableID uint) {
 	}
 	if seatIdx := table.seatOf(userID); seatIdx >= 0 {
 		if !table.handActive {
+			recipients := table.recipients() // captured before the seat is cleared below, so the leaving player also gets the confirming snapshot
 			table.removeSeat(wsState, seatIdx, "left")
 			table.reconcile(wsState)
 			table.tryStartHand(wsState)
 			table.armOrDisarmAbandonedTimer(wsState)
-			table.broadcastState(wsState, table.recipients(), nil)
+			table.broadcastState(wsState, recipients, nil)
 			return
 		}
 		table.foldSeatForLeaving(wsState, seatIdx)
 		return
 	}
 	if table.spectators[userID] {
+		recipients := table.recipients() // captured before the spectator is dropped below, for the same reason
 		delete(table.spectators, userID)
 		table.armOrDisarmAbandonedTimer(wsState)
-		table.broadcastState(wsState, table.recipients(), nil)
+		table.broadcastState(wsState, recipients, nil)
 		return
 	}
 	wsState.sendPokerError(userID, tableID, "not part of this table")
@@ -617,7 +619,7 @@ func (table *PokerTable) advanceAfterAction(wsState *WebSocketState) {
 	table.removeFinishedSeats(wsState)
 	table.reconcile(wsState)
 	table.armOrDisarmAbandonedTimer(wsState)
-	table.broadcastState(wsState, table.recipients(), nil)
+	table.broadcastState(wsState, recipients, nil) // reuse the pre-removal list so anyone who busted or left this hand also gets the final confirming snapshot
 
 	if table.seatedCount() >= 2 && table.engineGame != nil {
 		currentGame := table.engineGame

@@ -188,6 +188,13 @@ const PokerTable: React.FC = () => {
         const payload = packet.payload as { table_id: number };
         if (payload.table_id !== numericTableId) return;
         navigate('/games/poker', { state: { pokerNotice: 'The host closed this table.' } });
+      } else if (packet.packet_type === 'ws_reconnected') {
+        // The socket silently dropped and just came back — our last state
+        // snapshot may be stale (or never arrived), so re-request it rather
+        // than leaving the page stuck until a manual reload.
+        if (hasEnteredTableRef.current) {
+          sendWebSocketPacket('spectate', { table_id: numericTableId });
+        }
       }
     });
     return unsubscribe;
