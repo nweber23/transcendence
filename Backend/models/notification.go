@@ -23,5 +23,6 @@ func (Notification) TableName() string {
 const (
 	NotificationTypeFriends = "friends"
 	NotificationTypeGames   = "games"
+	NotificationTypeChat    = "chat"
 	NotificationTypeSystem  = "system"
 )

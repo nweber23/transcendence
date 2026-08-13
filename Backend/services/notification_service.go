@@ -22,8 +22,9 @@ type NotificationService struct {
 var (
 	NotificationTypeInformations = map[string]*NotificationTypeInformation{
 		models.NotificationTypeFriends: &NotificationTypeInformation{true,  true},
-		models.NotificationTypeGames:   &NotificationTypeInformation{false, true },
-		models.NotificationTypeSystem:  &NotificationTypeInformation{false, true },
+		models.NotificationTypeGames:   &NotificationTypeInformation{false, true},
+		models.NotificationTypeChat:    &NotificationTypeInformation{true,  true},
+		models.NotificationTypeSystem:  &NotificationTypeInformation{false, true},
 	}
 )
 

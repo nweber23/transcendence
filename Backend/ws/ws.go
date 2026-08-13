@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"encoding/json"
+	"transcendence/models"
 	"transcendence/services"
 )
 
@@ -59,7 +60,15 @@ func (wsState *WebSocketState) handlePacket(packet packet) {
 			return
 		}
 		for _, participant := range participants {
-			wsState.SendToTopic(participant.UserID, TopicChat, PacketTypeChatMessage, payload)
+			_ = wsState.SendToTopic(participant.UserID, TopicChat, PacketTypeChatMessage, payload)
+			notification := models.Notification{
+				UserID:    participant.UserID,
+				Type:      models.NotificationTypeChat,
+				Head:      "New message",
+				Body:      payload.Message,
+				ActionURL: "/chat",
+			}
+			_ = wsState.PostNotification(notification)
 		}
 	default:
 		fmt.Printf("Received unknown packet type %q from %d\n", packet.PacketType, packet.userID)
