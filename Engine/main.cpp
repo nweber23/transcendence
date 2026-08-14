@@ -4,13 +4,35 @@
 #include <grpcpp/grpcpp.h>
 #include <iostream>
 
+/**
+ * @class GameEngineServiceImpl
+ * @brief gRPC service implementation that exposes the game engine over the
+ *        GameEngine service defined in engine.proto.
+ *
+ * Acts as a thin translation layer between the protobuf request/response
+ * types and the Engine facade: every RPC maps the incoming request to an
+ * Engine call and packages the resulting JSON game state into a
+ * GameResponse. All rule errors are reported as success=false with an empty
+ * game_state_json rather than a gRPC error status.
+ */
 class GameEngineServiceImpl final : public engine::GameEngine::Service {
     Engine& engine_;
 
 public:
+    /**
+     * @brief Constructs the service with a reference to the shared Engine.
+     * @param engine The engine instance backing all game logic.
+     */
     explicit GameEngineServiceImpl(Engine& engine)
         : engine_(engine) {}
 
+    /**
+     * @brief Handles blackjack actions (create/hit/stand).
+     * @param ctx The gRPC server context (unused).
+     * @param req The incoming blackjack request.
+     * @param res The response to fill with success and JSON game state.
+     * @return gRPC status; always OK, failures are signalled via res->success().
+     */
     grpc::Status BlackjackAction(grpc::ServerContext*,
                                  const engine::BlackjackRequest* req,
                                  engine::GameResponse* res) override {
@@ -38,6 +60,13 @@ public:
         return grpc::Status::OK;
     }
 
+    /**
+     * @brief Handles Texas Hold'em actions (create/close/post_blinds/act).
+     * @param ctx The gRPC server context (unused).
+     * @param req The incoming Texas request.
+     * @param res The response to fill with success and JSON game state.
+     * @return gRPC status; always OK, failures are signalled via res->success().
+     */
     grpc::Status TexasAction(grpc::ServerContext*,
                              const engine::TexasRequest* req,
                              engine::GameResponse* res) override {
@@ -86,6 +115,13 @@ public:
         return grpc::Status::OK;
     }
 
+    /**
+     * @brief Handles slot machine spins.
+     * @param ctx The gRPC server context (unused).
+     * @param req The incoming slot request.
+     * @param res The response to fill with success and JSON game state.
+     * @return gRPC status; always OK, failures are signalled via res->success().
+     */
     grpc::Status SlotsAction(grpc::ServerContext*,
                              const engine::SlotsRequest* req,
                              engine::GameResponse* res) override {
@@ -106,6 +142,14 @@ public:
     }
 };
 
+/**
+ * @brief Entry point of the engine service.
+ * @return 0 on graceful shutdown.
+ *
+ * Creates the Engine instance, binds the gRPC server to 0.0.0.0:ENGINE_PORT
+ * (defaults to 777 when the environment variable is unset), registers the
+ * service and blocks until the server is stopped.
+ */
 int main() {
     Engine engine;
 

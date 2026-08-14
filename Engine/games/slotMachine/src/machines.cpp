@@ -16,6 +16,13 @@ fs::path Machine::config_directory() {
 
 namespace {
 
+/**
+ * Builds the visible symbol grid from per-reel stop positions.
+ *
+ * @param config The slot configuration describing reels, rows and cols.
+ * @param stops The per-reel stop position for each column.
+ * @return A rows x cols grid of symbol ids as they appear on screen.
+ */
 std::vector<std::vector<std::string>> resolve_grid(const SlotConfig& config,
                                                     const std::vector<std::uint8_t>& stops)
 {

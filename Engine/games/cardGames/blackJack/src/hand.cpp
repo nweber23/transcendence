@@ -8,6 +8,12 @@ void Hand::add_card(card::Card c) {
     _cards.push_back(std::move(c));
 }
 
+/**
+ * Maps a card to its blackjack face value.
+ *
+ * @param c The card.
+ * @return 2-10 for pip cards, 10 for face cards, 11 for aces.
+ */
 constexpr std::uint8_t get_card_value(card::Card c) {
     auto v = static_cast<std::uint8_t>(c.rank());
     return v > 10 ? 10 : v;

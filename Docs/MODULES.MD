@@ -1,7 +1,7 @@
 # Project Modules
 
 | # | Task | Type | Points | Status | Assigned To |
-|---|------|------|--------|--------|-------------|
+|---|------|------|--------|--------|------------|
 | 1 | Framework for both Front and Backend | Major | 2 | Done | Gabriel, Niklas |
 | 2 | Frontend Framework | Minor | 1 | Done | Niklas |
 | 3 | Backend Framework | Minor | 1 | Done | Gabriel |
@@ -18,4 +18,4 @@
 | 15 | Remote Players | Major | 2 | Done | Gabriel, Florian|
 | 16 | Multiplayer Game (Poker) | Major | 2 | Done | Gabriel, Florian|
 | 17 | Monitoring system with Prometheus and Grafana | Major | 2 | Done | Nate |
-| 18 | Implement spectator mode for games | Minor | 1 | Done | Gabriel, Niklas |
+| 18 | Implement spectator mode for games | Minor | 1 | Done | Niklas |
