@@ -6,6 +6,15 @@
 namespace texas {
 namespace {
 
+/**
+ * Computes a comparable score for a 5-card hand.
+ *
+ * The hand rank is encoded in the top bits, followed by the tie-breaking
+ * ranks, so a plain numeric comparison orders hands correctly.
+ *
+ * @param cards The 5 cards to score.
+ * @return A sortable score for the hand.
+ */
 [[nodiscard]] std::uint64_t score_5(const std::array<card::Card, 5>& cards) {
     std::array<card::Card, 5> s = cards;
     std::sort(s.begin(), s.end(), [](const card::Card& a, const card::Card& b) {
