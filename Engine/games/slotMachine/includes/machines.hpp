@@ -167,32 +167,92 @@ struct glz::meta<SlotConfig> {
     );
 };
 
+/**
+ * Slot machine engine, driven by JSON slot configurations.
+ *
+ * Owns the random number generator and a map of loaded configs. Each spin is
+ * stateless; a full game cycle (base spin plus any triggered free spins) is
+ * produced by get_monetary_result / play_full_iteration.
+ */
 class Machine {
     private:
         std::mt19937_64 rng_;
         std::vector<std::string> game_names;
         std::unordered_map<std::string, SlotConfig> configs;
 
+        /**
+         * Resolves the directory containing slot config JSON files.
+         *
+         * Honors the SLOT_CONFIG_DIR env var, falling back to
+         * "games/slotMachine/configs".
+         *
+         * @return The filesystem path to the config directory.
+         */
         static fs::path config_directory();
 
+        /**
+         * Evaluates one spin's payouts for the given reel stops.
+         *
+         * @param config The slot configuration to evaluate against.
+         * @param stops The per-reel stop positions.
+         * @param line_count Number of active paylines.
+         * @return The payline win, scatter win, scatter count and whether the
+         *         bonus was triggered.
+         */
         static SpinEvalResult evaluate_spin(const SlotConfig& config,
                                             const std::vector<std::uint8_t>& stops,
                                             std::uint8_t line_count);
 
     public:
+        /**
+         * Constructs a Machine seeded from the system random device.
+         */
         Machine();
+
+        /**
+         * Constructs a Machine with a fixed RNG seed.
+         *
+         * @param seed Seed for reproducible spin sequences.
+         */
         explicit Machine(std::uint64_t seed);
 
+        /**
+         * Plays one complete game cycle, including any free-spin timeline.
+         *
+         * @param game_name The slot config name (e.g. "lucky-sevens").
+         * @param line_count Number of active paylines.
+         * @param bet_per_line Bet amount per payline.
+         * @return Serialized CompleteGameCycle JSON.
+         */
         [[nodiscard]]
         std::string play_full_iteration(std::string_view game_name,
                                         std::uint8_t line_count,
                                         std::uint32_t bet_per_line);
 
+        /**
+         * Plays a full slot iteration for a known game.
+         *
+         * @param game_name The slot config name.
+         * @param line_count Number of active paylines.
+         * @param bet_per_line Bet amount per payline.
+         * @return Serialized CompleteGameCycle JSON, or an empty string if the
+         *         game does not exist.
+         */
         [[nodiscard]]
         std::string run_slot(std::string_view game_name,
                              std::uint8_t line_count,
                              std::uint32_t bet_per_line);
 
+        /**
+         * Spins the reels once and reports the monetary outcome.
+         *
+         * @param game_name The slot config name.
+         * @param line_count Number of active paylines.
+         * @param bet_per_line Bet amount per payline.
+         * @param fs_state In/out free-spin state, advanced per spin.
+         * @param is_free_spin Whether this spin is part of a free-spin round.
+         * @return The stops, win, bonus/scatter info and resulting grid.
+         */
         [[nodiscard]]
         SpinResult get_monetary_result(std::string_view game_name,
                                        std::uint8_t line_count,
@@ -200,6 +260,12 @@ class Machine {
                                        FreeSpinState& fs_state,
                                        bool is_free_spin = false);
 
+        /**
+         * Checks whether a slot configuration is loaded.
+         *
+         * @param game_name The slot config name.
+         * @return true if the config exists, false otherwise.
+         */
         [[nodiscard]]
         bool game_exists(std::string_view game_name);
 };
