@@ -73,9 +73,6 @@ test:
 
 retest: rebuild test
 
-# nginx on the VPS host terminates public TLS and forwards to caddy's
-# loopback ports; caddy stays in the stack behind it for access logs and
-# the Prometheus metrics Grafana's dashboards use.
 PROD_SERVICES := postgres postgres-exporter engine backend frontend prometheus grafana caddy cadvisor node-exporter
 
 prod-up:
