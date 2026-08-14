@@ -7,6 +7,9 @@
 
 namespace blackjack {
 
+/**
+ * Serializable view of the full blackjack game state.
+ */
 struct GameState {
     std::int64_t bet;
     std::string phase;
@@ -17,6 +20,12 @@ struct GameState {
     std::vector<std::string> dealer_cards;
 };
 
+/**
+ * Serializes a blackjack game to JSON.
+ *
+ * @param game The game to serialize.
+ * @return The full game state as a JSON string.
+ */
 [[nodiscard]] std::string serialize_game_state(const Game& game);
 
 } // namespace blackjack

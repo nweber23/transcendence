@@ -7,6 +7,9 @@
 
 namespace texas {
 
+/**
+ * Serializable view of one player's state.
+ */
 struct PlayerState {
     std::int64_t stack;
     std::int64_t current_bet;
@@ -15,6 +18,9 @@ struct PlayerState {
     std::vector<std::string> hole_cards;
 };
 
+/**
+ * Serializable view of the full game state.
+ */
 struct GameState {
     std::string phase;
     std::size_t dealer;
@@ -27,6 +33,12 @@ struct GameState {
     std::int64_t last_action_amount;
 };
 
+/**
+ * Serializes a Texas Hold'em game to JSON.
+ *
+ * @param game The game to serialize.
+ * @return The full game state as a JSON string.
+ */
 [[nodiscard]] std::string serialize_game_state(const Game& game);
 
 } // namespace texas
