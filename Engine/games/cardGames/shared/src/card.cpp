@@ -2,6 +2,12 @@
 
 namespace card {
 
+/**
+ * Maps a Rank to its display string.
+ *
+ * @param r The rank.
+ * @return "2"-"10" for pips, "J"/"Q"/"K"/"A" for face cards, "?" if unknown.
+ */
 constexpr std::string_view rank_to_string(Rank r) {
     switch (r) {
         case Rank::Two:   return "2";
@@ -21,6 +27,12 @@ constexpr std::string_view rank_to_string(Rank r) {
     return "?";
 }
 
+/**
+ * Maps a Suit to its display symbol.
+ *
+ * @param s The suit.
+ * @return The Unicode suit glyph, "?" if unknown.
+ */
 constexpr std::string_view suit_to_string(Suit s) {
     switch (s) {
         case Suit::Clubs:    return "♣";
