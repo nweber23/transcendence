@@ -3,6 +3,7 @@ package handlers
 import (
 	//"fmt"
 	"crypto/subtle"
+	"errors"
 	"hash/fnv"
 	"log"
 	"net/http"
@@ -109,7 +110,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 	user, err := h.userService.RegisterUser(req.Username, req.Email, req.Password)
 	if err != nil {
-		utils.RespondError(c, http.StatusConflict, "registration_fail", err.Error())
+		var status int
+		switch {
+		case utils.IsErrInvalid(err), errors.Is(err, utils.ErrUsernameWrongLength):
+			status = http.StatusBadRequest
+		case errors.Is(err, utils.ErrEntryExists):
+			status = http.StatusConflict
+		default:
+			status = http.StatusInternalServerError
+		}
+		utils.RespondError(c, status, "registration_fail", err.Error())
 		return
 	}
 	middleware.AccountsCreatedTotal.Inc()
@@ -135,13 +145,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	user, err := h.userService.LoginUser(req.Username, req.Password)
 	if err != nil {
 		middleware.LoginsTotal.WithLabelValues("failure").Inc()
+		var status int
 		var message string
 		if utils.IsErrInvalid(err) {
+			status = http.StatusUnauthorized
 			message = "invalid user or password"
 		} else {
+			status = http.StatusInternalServerError
 			message = err.Error()
 		}
-		utils.RespondError(c, http.StatusConflict, "login_fail", message)
+		utils.RespondError(c, status, "login_fail", message)
 		return
 	}
 	if user.TwoFactorEnabled {
